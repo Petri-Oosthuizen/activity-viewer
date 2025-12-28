@@ -1,0 +1,207 @@
+/**
+ * Chart configuration utilities for ECharts
+ * Extracted from store to improve maintainability and testability
+ */
+
+import type { Activity, ActivityRecord } from "~/types/activity";
+
+// Metric type definition
+export type MetricType = "hr" | "alt" | "pwr" | "cad";
+
+// X-axis type definition
+export type XAxisType = "time" | "distance" | "localTime";
+
+// Delta mode options
+export type DeltaMode = "overlay" | "delta-only";
+
+// Human-readable labels for metrics
+export const METRIC_LABELS: Readonly<Record<MetricType, string>> = {
+  hr: "Heart Rate (bpm)",
+  alt: "Altitude (m)",
+  pwr: "Power (W)",
+  cad: "Cadence (rpm)",
+};
+
+// Default color palette for activities
+export const ACTIVITY_COLORS = [
+  "#5470c6", // 0: Blue
+  "#91cc75", // 1: Green
+  "#fac858", // 2: Yellow
+  "#ee6666", // 3: Red
+  "#73c0de", // 4: Light Blue
+  "#3ba272", // 5: Dark Green
+  "#fc8452", // 6: Orange
+  "#9a60b4", // 7: Purple
+  "#ea7ccc", // 8: Pink
+  "#ffd93d", // 9: Bright Yellow
+] as const;
+
+// Delta series color
+export const DELTA_COLOR = "#ff6b6b";
+
+/**
+ * Check if an activity has data for a specific metric
+ */
+export function activityHasMetric(activity: Activity, metric: MetricType): boolean {
+  return activity.records.some(
+    (record) => record[metric] !== null && record[metric] !== undefined
+  );
+}
+
+/**
+ * Count how many records in an activity have data for a specific metric
+ */
+export function countRecordsWithMetric(activity: Activity, metric: MetricType): number {
+  return activity.records.filter(
+    (record) => record[metric] !== null && record[metric] !== undefined
+  ).length;
+}
+
+/**
+ * Get available metrics across all activities
+ */
+export function getAvailableMetrics(activities: Activity[]): MetricType[] {
+  if (activities.length === 0) return [];
+
+  const metrics = new Set<MetricType>();
+  for (const activity of activities) {
+    for (const record of activity.records) {
+      if (record.hr !== undefined && record.hr !== null) metrics.add("hr");
+      if (record.alt !== undefined && record.alt !== null) metrics.add("alt");
+      if (record.pwr !== undefined && record.pwr !== null) metrics.add("pwr");
+      if (record.cad !== undefined && record.cad !== null) metrics.add("cad");
+    }
+  }
+  return Array.from(metrics);
+}
+
+/**
+ * Get metric availability map (which activities have which metrics)
+ */
+export function getMetricAvailability(
+  activities: Activity[]
+): Record<MetricType, string[]> {
+  const availability: Record<MetricType, string[]> = {
+    hr: [],
+    alt: [],
+    pwr: [],
+    cad: [],
+  };
+
+  activities.forEach((activity) => {
+    (["hr", "alt", "pwr", "cad"] as MetricType[]).forEach((metric) => {
+      if (activityHasMetric(activity, metric)) {
+        availability[metric].push(activity.id);
+      }
+    });
+  });
+
+  return availability;
+}
+
+/**
+ * Calculate X value for a record based on axis type
+ */
+export function calculateXValue(
+  record: ActivityRecord,
+  activity: Activity,
+  xAxisType: XAxisType
+): number {
+  if (xAxisType === "localTime") {
+    if (activity.startTime) {
+      return activity.startTime.getTime() + (record.t + activity.offset) * 1000;
+    }
+    return record.t + activity.offset;
+  } else if (xAxisType === "time") {
+    return record.t + activity.offset;
+  }
+  return record.d;
+}
+
+/**
+ * Format X-axis value for display
+ */
+export function formatXAxisValue(value: number, xAxisType: XAxisType): string {
+  if (xAxisType === "localTime") {
+    const date = new Date(value);
+    const hours = date.getHours().toString().padStart(2, "0");
+    const minutes = date.getMinutes().toString().padStart(2, "0");
+    const seconds = date.getSeconds().toString().padStart(2, "0");
+    return `${hours}:${minutes}:${seconds}`;
+  } else if (xAxisType === "time") {
+    return `${value.toFixed(1)}s`;
+  } else {
+    if (value >= 1000) {
+      return `${(value / 1000).toFixed(2)}km`;
+    }
+    return `${value.toFixed(0)}m`;
+  }
+}
+
+/**
+ * Generate unique activity ID
+ */
+export function generateActivityId(): string {
+  return `activity-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
+
+/**
+ * Get color for an activity based on its index
+ * Index 0 = blue, index 1 = green, etc.
+ * Colors repeat after 10+ activities
+ */
+export function getActivityColorByIndex(index: number): string {
+  return ACTIVITY_COLORS[index % ACTIVITY_COLORS.length];
+}
+
+// Chart data point type
+export type ChartDataPoint = [number, number | null];
+
+/**
+ * Transform activity records to chart data points
+ */
+export function transformToChartData(
+  activity: Activity,
+  metric: MetricType,
+  xAxisType: XAxisType
+): ChartDataPoint[] {
+  return activity.records
+    .map((record): ChartDataPoint => {
+      const x = calculateXValue(record, activity, xAxisType);
+      const y = record[metric] ?? null;
+      return [x, y];
+    })
+    .filter((point): point is [number, number] => point[1] !== null)
+    .sort((a, b) => a[0] - b[0]);
+}
+
+/**
+ * Find nearest value in a data map using nearest-neighbor interpolation
+ */
+export function findNearestValue(
+  dataMap: Map<number, number>,
+  targetX: number,
+  maxDiff: number = 1000
+): number | null {
+  if (dataMap.has(targetX)) {
+    return dataMap.get(targetX)!;
+  }
+
+  let nearestX = targetX;
+  let minDiff = Infinity;
+
+  dataMap.forEach((_, x) => {
+    const diff = Math.abs(x - targetX);
+    if (diff < minDiff) {
+      minDiff = diff;
+      nearestX = x;
+    }
+  });
+
+  if (minDiff < maxDiff) {
+    return dataMap.get(nearestX) ?? null;
+  }
+  return null;
+}
+
+

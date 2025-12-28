@@ -1,0 +1,179 @@
+---
+alwaysApply: true
+---
+
+# Nuxt 3 & TypeScript Senior Development Standards
+
+This document defines the architectural and coding standards for this project. Adherence ensures consistency, performance (Web Vitals), and long-term maintainability.
+
+---
+
+## 1. Project Architecture & Conventions
+
+### 1.1 Directory Roles
+
+Nuxt 3 is highly opinionated; follow the structure to leverage auto-imports and Nitro optimization.
+
+- **`components/`**: UI components. Use PascalCase. Group by domain (e.g., `components/auth/`).
+- **`composables/`**: Shared stateful logic (`useAuth.ts`). Auto-imported.
+- **`server/`**: Nitro API routes (`server/api/`) and server utilities.
+- **`layouts/`**: Top-level page wrappers.
+- **`middleware/`**: Navigation guards (e.g., `auth.global.ts`).
+
+### 1.2 Naming Conventions
+
+- **Components**: `PascalCase.vue` (e.g., `BaseButton.vue`).
+- **Pages/Middleware**: `kebab-case.vue` (e.g., `user-profile.vue`).
+- **Composables**: `use` prefix (e.g., `useFetchData.ts`).
+
+---
+
+## 2. Type-Safe Development (TypeScript)
+
+Treat TypeScript as a hard requirement. Avoid `any` to prevent technical debt.
+
+### 2.1 Interface Contracts
+
+Always define interfaces for props, emits, and API responses.
+
+❌ **BAD**
+
+```typescript
+const props = defineProps(["item"]); // Untyped
+```
+
+✅ **GOOD**
+
+```typescript
+interface Product {
+  id: string;
+  price: number;
+}
+
+const props = defineProps<{
+  item: Product;
+  variant?: "list" | "grid";
+}>();
+```
+
+### 2.2 Narrowing "Unknown" Data
+
+Treat external API data as `unknown` until it passes a type guard or Zod validation.
+
+---
+
+## 3. Data Fetching & SSR Performance
+
+### 3.1 Fetching Strategy
+
+Use Nuxt's built-in composables. Standard `axios` or `fetch` will cause double-fetching (client + server).
+
+- **`useFetch`**: Use for simple URL-based fetching.
+- **`useAsyncData`**: Use for complex logic or wrapping multiple calls.
+
+❌ **BAD: Fetching inside `onMounted**`
+
+```vue
+<script setup>
+onMounted(async () => {
+  const data = await $fetch("/api/data"); // No SEO, causes layout shift
+});
+</script>
+```
+
+✅ **GOOD: SSR-friendly Fetching**
+
+```vue
+<script setup lang="ts">
+// Fetches on server, hydrates on client without re-requesting
+const { data, pending } = await useFetch("/api/products", {
+  lazy: true,
+  transform: (res) => res.items, // Clean data before it enters state
+  pick: ["id", "title"], // Only send necessary fields to client
+});
+</script>
+```
+
+### 3.2 Performance Optimizations
+
+- **Lazy Loading**: Prefix heavy components with `Lazy` (e.g., `<LazyDashboardChart />`).
+- **Image Optimization**: Use `<NuxtImg>` for automatic WebP/AVIF resizing and lazy loading.
+- **Hybrid Rendering**: Use `routeRules` in `nuxt.config.ts` for SWR (Stale-While-Revalidate).
+
+---
+
+## 4. Component Patterns
+
+### 4.1 Composition API Setup
+
+Always use `<script setup lang="ts">`. It is more concise and offers better IDE support.
+
+### 4.2 Slot-Based Flexibility
+
+Design "Headless" or "Compound" components to avoid prop-drilling.
+
+✅ **GOOD: Slot pattern**
+
+```vue
+<template>
+  <div class="card">
+    <header><slot name="header" /></header>
+    <main><slot /></main>
+  </div>
+</template>
+```
+
+---
+
+## 5. Security & Server Logic
+
+### 5.1 Secret Management
+
+Never use `process.env` on the client. Use `useRuntimeConfig()`.
+
+```typescript
+// nuxt.config.ts
+export default defineNuxtConfig({
+  runtimeConfig: {
+    apiSecret: "", // Server-only
+    public: {
+      apiBase: "/api", // Available on client
+    },
+  },
+});
+```
+
+### 5.2 Server Handlers
+
+Validate all inputs using **Zod** in `server/api` routes.
+
+✅ **GOOD**
+
+```typescript
+import { z } from "zod";
+
+const userSchema = z.object({
+  email: z.string().email(),
+});
+
+export default defineEventHandler(async (event) => {
+  const body = await readBody(event);
+  const result = userSchema.safeParse(body);
+
+  if (!result.success) {
+    throw createError({ statusCode: 400, statusMessage: "Invalid Input" });
+  }
+  return { success: true };
+});
+```
+
+---
+
+## 6. Checklist (Pre-PR)
+
+- [ ] **Hydration**: No `v-if` based on `window` existence (prevents Hydration Mismatch).
+- [ ] **Memory**: Event listeners in `onMounted` are removed in `onUnmounted`.
+- [ ] **State**: Pinia is used for global state; `useState` for cross-component SSR state.
+- [ ] **Accessibility**: Semantic HTML tags are used instead of `<div>` soup.
+- [ ] **Async**: All `await` calls in `setup` are handled correctly to prevent blocking the UI.
+- [ ] **readme**: Update README.md with the new features and changes.

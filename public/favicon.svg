@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#5470c6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#73c0de;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="100" height="100" rx="20" fill="url(#grad)"/>
+  <!-- Activity path 1 (A shape) -->
+  <path d="M 15 75 C 18 65, 22 55, 28 45 C 32 38, 36 32, 42 28 C 45 26, 48 24, 50 22 C 52 24, 55 26, 58 28 C 64 32, 68 38, 72 45 C 78 55, 82 65, 85 75" 
+        stroke="white" 
+        stroke-width="5" 
+        fill="none" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"
+        opacity="0.9"/>
+  <!-- Activity path 2 (V shape) -->
+  <path d="M 15 25 C 18 35, 22 45, 28 55 C 32 62, 36 68, 42 72 C 45 74, 48 76, 50 78 C 52 76, 55 74, 58 72 C 64 68, 68 62, 72 55 C 78 45, 82 35, 85 25" 
+        stroke="white" 
+        stroke-width="5" 
+        fill="none" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"
+        opacity="0.9"/>
+  <!-- Data points for path 1 -->
+  <circle cx="15" cy="75" r="5" fill="white" opacity="0.9"/>
+  <circle cx="50" cy="22" r="5" fill="white" opacity="0.9"/>
+  <circle cx="85" cy="75" r="5" fill="white" opacity="0.9"/>
+  <!-- Data points for path 2 -->
+  <circle cx="15" cy="25" r="5" fill="white" opacity="0.9"/>
+  <circle cx="50" cy="78" r="5" fill="white" opacity="0.9"/>
+  <circle cx="85" cy="25" r="5" fill="white" opacity="0.9"/>
+</svg>

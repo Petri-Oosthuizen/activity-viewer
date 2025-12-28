@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #5470c6;
+  --animate-spin: spin 0.6s linear infinite;
+}
+
+@layer base {
+  body {
+    @apply m-0 bg-gray-100 p-0 font-sans leading-relaxed text-gray-800;
+    -webkit-text-size-adjust: 100%;
+  }
+}
+
+@layer utilities {
+  /* Touch-friendly improvements */
+  .touch-manipulation {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+.delta-select {
+  @apply bg-white text-gray-900;
+}
+
+.delta-select option {
+  @apply bg-white text-gray-900;
+}
+
+.echarts-tooltip {
+  @apply absolute z-[99999] opacity-100;
+  pointer-events: auto;
+  visibility: visible;
+}
+
+.echarts-tooltip-content {
+  @apply z-[99999];
+  pointer-events: auto;
+}

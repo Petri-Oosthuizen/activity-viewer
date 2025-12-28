@@ -1,0 +1,243 @@
+<template>
+  <div class="flex min-h-screen flex-col">
+    <header class="border-b border-gray-200 bg-white p-4 text-center sm:p-6 md:p-8">
+      <h1 class="m-0 mb-1 text-xl font-bold text-gray-800 sm:mb-2 sm:text-2xl md:text-3xl">
+        Activity Viewer
+      </h1>
+      <p class="m-0 text-sm text-gray-600 sm:text-base">Compare GPX, FIT, and TCX files side by side</p>
+    </header>
+    <main class="mx-auto w-full max-w-[1400px] flex-1 p-4 sm:p-6 md:p-8">
+      <div class="flex flex-col gap-4 sm:gap-6 md:gap-8">
+        <section class="w-full">
+          <ActivityList />
+        </section>
+        <section v-if="hasActivities" class="w-full">
+          <div
+            v-if="shouldShowLayoutToggle"
+            class="mb-3 hidden items-center justify-end sm:mb-4 lg:flex"
+          >
+            <button
+              type="button"
+              class="flex touch-manipulation items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50 sm:px-4 sm:py-2 sm:text-sm"
+              @click="toggleSideBySide"
+              :title="activityStore.chartMapSideBySide ? 'View stacked' : 'View side by side'"
+            >
+              <svg
+                v-if="activityStore.chartMapSideBySide"
+                class="h-4 w-4 sm:h-5 sm:w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <!-- Stacked icon (vertical lines) -->
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              </svg>
+              <svg
+                v-else
+                class="h-4 w-4 sm:h-5 sm:w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <!-- Side-by-side icon (grid) -->
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+                />
+              </svg>
+              <span class="hidden sm:inline">
+                {{ activityStore.chartMapSideBySide ? "View stacked" : "View side by side" }}
+              </span>
+            </button>
+          </div>
+          <div
+            :class="[
+              activityStore.chartMapSideBySide
+                ? 'grid grid-cols-1 gap-4 sm:gap-6 md:gap-8 lg:grid-cols-2 lg:items-start'
+                : 'flex flex-col gap-4 sm:gap-6 md:gap-8',
+            ]"
+          >
+            <div class="w-full">
+              <ActivityChart />
+            </div>
+            <div class="w-full">
+              <ActivityMap />
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+    <footer
+      class="mt-auto border-t border-gray-200 bg-white p-4 text-center text-xs text-gray-500 sm:p-6 sm:text-sm"
+    >
+      <p class="m-0">
+        Created by Petri
+        <span v-if="buildNumber && buildNumber !== 'dev'" class="mx-2">•</span>
+        <span v-if="buildNumber && buildNumber !== 'dev'" class="font-mono"
+          >Build #{{ buildNumber }}</span
+        >
+      </p>
+    </footer>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed } from "vue";
+import { useActivityStore } from "~/stores/activity";
+import ActivityMap from "~/components/ActivityMap.vue";
+
+const config = useRuntimeConfig();
+const buildNumber = computed(() => config.public.buildNumber);
+
+const activityStore = useActivityStore();
+const hasActivities = computed(() => activityStore.activities.length > 0);
+
+// Only show layout toggle on large screens (lg breakpoint) where side-by-side actually works
+// The layout is always stacked on smaller screens regardless of the setting
+const shouldShowLayoutToggle = computed(() => {
+  return hasActivities.value; // Only show if there are activities
+});
+
+const toggleSideBySide = () => {
+  activityStore.setChartMapSideBySide(!activityStore.chartMapSideBySide);
+};
+
+const baseURL = computed(() => {
+  if (process.client) {
+    const path = window.location.pathname;
+    return path.endsWith("/") ? path.slice(0, -1) : path || "/";
+  }
+  // Fallback for build time
+  const repoName = process.env.GITHUB_REPOSITORY?.split("/")[1] || "activity_viewer";
+  return `/${repoName}`;
+});
+const fullURL = computed(() => {
+  if (process.client) {
+    return window.location.origin + baseURL.value;
+  }
+  // Fallback for build time
+  const repoName = process.env.GITHUB_REPOSITORY?.split("/")[1] || "activity_viewer";
+  return `https://petri.github.io/${repoName}`;
+});
+
+const structuredData = computed(() => ({
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  name: "Activity Viewer",
+  description:
+    "Free web-based tool to visualize and compare GPX, FIT, and TCX activity files. View heart rate, power, cadence, altitude, and GPS tracks with interactive charts and maps.",
+  url: fullURL.value,
+  applicationCategory: "UtilityApplication",
+  operatingSystem: "Any",
+  offers: {
+    "@type": "Offer",
+    price: "0",
+    priceCurrency: "USD",
+  },
+  author: {
+    "@type": "Person",
+    name: "Petri",
+  },
+  featureList: [
+    "GPX, FIT, and TCX file parsing",
+    "Multi-activity comparison",
+    "Interactive charts and maps",
+    "Heart rate, power, cadence, altitude visualization",
+    "GPS track visualization",
+  ],
+}));
+
+useHead({
+  title: "Activity Viewer - Compare GPX, FIT, and TCX Files",
+  htmlAttrs: {
+    lang: "en",
+  },
+  link: [{ rel: "canonical", href: () => fullURL.value }],
+  meta: [
+    // Basic SEO
+    {
+      name: "description",
+      content:
+        "Free web-based tool to visualize and compare GPX, FIT, and TCX activity files. View heart rate, power, cadence, altitude, and GPS tracks with interactive charts and maps.",
+    },
+    {
+      name: "keywords",
+      content:
+        "GPX viewer, FIT file viewer, TCX viewer, activity tracker, GPS visualization, cycling data, running data, heart rate analysis, power meter data, cadence analysis, activity comparison",
+    },
+    {
+      name: "author",
+      content: "Petri",
+    },
+    {
+      name: "robots",
+      content: "index, follow",
+    },
+    {
+      name: "viewport",
+      content: "width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes",
+    },
+    {
+      name: "theme-color",
+      content: "#5470c6",
+    },
+    // Open Graph / Facebook
+    {
+      property: "og:type",
+      content: "website",
+    },
+    {
+      property: "og:title",
+      content: "Activity Viewer - Compare GPX, FIT, and TCX Files",
+    },
+    {
+      property: "og:description",
+      content:
+        "Free web-based tool to visualize and compare GPX, FIT, and TCX activity files. View heart rate, power, cadence, altitude, and GPS tracks with interactive charts and maps.",
+    },
+    {
+      property: "og:url",
+      content: () => fullURL.value,
+    },
+    {
+      property: "og:site_name",
+      content: "Activity Viewer",
+    },
+    {
+      property: "og:locale",
+      content: "en_US",
+    },
+    // Twitter Card
+    {
+      name: "twitter:card",
+      content: "summary",
+    },
+    {
+      name: "twitter:title",
+      content: "Activity Viewer - Compare GPX, FIT, and TCX Files",
+    },
+    {
+      name: "twitter:description",
+      content:
+        "Free web-based tool to visualize and compare GPX, FIT, and TCX activity files. View heart rate, power, cadence, altitude, and GPS tracks.",
+    },
+    {
+      name: "twitter:creator",
+      content: "@petri",
+    },
+  ],
+  script: [
+    {
+      type: "application/ld+json",
+      innerHTML: () => JSON.stringify(structuredData.value),
+    },
+  ],
+});
+</script>
