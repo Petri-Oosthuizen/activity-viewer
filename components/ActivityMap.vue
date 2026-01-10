@@ -39,33 +39,9 @@
     ></div>
 
     <!-- Advanced Settings (below map, consistent with chart) -->
-    <div class="mt-4 rounded-lg border-2 border-gray-200 bg-gray-50 p-3 sm:mt-6 sm:p-4">
-      <button
-        type="button"
-        class="flex w-full touch-manipulation items-center justify-between"
-        @click="showGpsSettings = !showGpsSettings"
-        :aria-expanded="showGpsSettings"
-      >
-        <span class="text-sm font-semibold text-gray-800 sm:text-base">Advanced Settings</span>
-        <svg
-          :class="[
-            'h-5 w-5 text-gray-600 transition-transform',
-            showGpsSettings ? 'rotate-180' : '',
-          ]"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M19 9l-7 7-7-7"
-          />
-        </svg>
-      </button>
-
-      <div v-show="showGpsSettings" class="mt-4 space-y-4 sm:mt-6 sm:space-y-6">
+    <CollapsibleSection class="mt-4 sm:mt-6">
+      <template #title>Advanced Settings</template>
+      <div class="space-y-4 sm:space-y-6">
         <div class="space-y-3 sm:space-y-4">
           <h4 class="m-0 text-sm font-semibold text-gray-800 sm:text-base">GPS Smoothing</h4>
           <p class="text-xs text-gray-500 sm:text-sm">
@@ -101,7 +77,7 @@
           </div>
         </div>
       </div>
-    </div>
+    </CollapsibleSection>
   </div>
 </template>
 
@@ -112,6 +88,7 @@ import type { Activity, ActivityRecord } from "~/types/activity";
 import { buildPointTooltip, buildMultiActivityTooltip } from "~/utils/tooltip-builder";
 import { formatTime, formatDistance } from "~/utils/format";
 import { smoothGpsPoints } from "~/utils/series-transforms";
+import CollapsibleSection from "./CollapsibleSection.vue";
 
 let L: typeof import("leaflet") | null = null;
 
@@ -162,8 +139,6 @@ const activityStore = useActivityStore();
 const activities = computed(() => activityStore.activities);
 const hoveredPoint = computed(() => activityStore.mapHoveredPoint);
 const chartTransforms = computed(() => activityStore.chartTransforms);
-
-const showGpsSettings = ref(false);
 
 const toggleGpsSmoothing = (event: Event) => {
   const target = event.target as HTMLInputElement;

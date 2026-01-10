@@ -1,23 +1,7 @@
 <template>
-  <div class="rounded-lg border-2 border-gray-200 bg-gray-50 p-3 sm:p-4">
-    <button
-      type="button"
-      class="flex w-full touch-manipulation items-center justify-between"
-      @click="open = !open"
-      :aria-expanded="open"
-    >
-      <span class="text-sm font-semibold text-gray-800 sm:text-base">Advanced Settings</span>
-      <svg
-        :class="['h-5 w-5 text-gray-600 transition-transform', open ? 'rotate-180' : '']"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-      </svg>
-    </button>
-
-    <div v-show="open" class="mt-4 space-y-4 sm:mt-6 sm:space-y-6">
+  <CollapsibleSection v-if="hasGpxFiles">
+    <template #title>Advanced Settings</template>
+    <div class="space-y-4 sm:space-y-6">
       <div class="space-y-3 sm:space-y-4">
         <h4 class="m-0 text-sm font-semibold text-gray-800 sm:text-base">GPX distance</h4>
         <p class="text-xs text-gray-500 sm:text-sm">
@@ -75,16 +59,20 @@
         </div>
       </div>
     </div>
-  </div>
+  </CollapsibleSection>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed } from "vue";
 import { useActivityStore } from "~/stores/activity";
+import CollapsibleSection from "./CollapsibleSection.vue";
 
 const activityStore = useActivityStore();
-const open = ref(false);
 const opts = computed(() => activityStore.gpsDistanceOptions);
+
+const hasGpxFiles = computed(() => {
+  return activityStore.activities.some((activity) => activity.sourceType === "gpx");
+});
 
 const setIncludeElevation = (event: Event) => {
   const target = event.target as HTMLInputElement;

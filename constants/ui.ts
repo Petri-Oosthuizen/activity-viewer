@@ -88,9 +88,9 @@ export const SPACING = {
  * Metric display configuration
  */
 export const METRIC_CONFIG = {
-  hr: { icon: "❤️", label: "Heart Rate" },
-  alt: { icon: "⛰️", label: "Altitude" },
-  pwr: { icon: "⚡", label: "Power" },
-  cad: { icon: "🔄", label: "Cadence" },
+  hr: { icon: "❤️", label: "Heart Rate", iconYOffset: 0 },
+  alt: { icon: "⛰️", label: "Altitude", iconYOffset: -2 },
+  pwr: { icon: "⚡", label: "Power", iconYOffset: 0 },
+  cad: { icon: "🔄", label: "Cadence", iconYOffset: 0 },
 } as const;
 

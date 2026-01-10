@@ -34,13 +34,10 @@
           :style="{ backgroundColor: activity.color, opacity: isDisabled ? 0.6 : 1 }"
           aria-hidden="true"
         ></div>
-        <span
-          class="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium sm:text-[0.9375rem]"
-          :class="isDisabled ? 'text-gray-400 opacity-60' : 'text-gray-800'"
-          :title="activity.name"
-        >
-          {{ displayName }}
-        </span>
+        <FileNameDisplay
+          :filename="activity.name"
+          :class="`flex-1 text-sm font-medium sm:text-[0.9375rem] ${isDisabled ? 'text-gray-400 opacity-60' : 'text-gray-800'}`"
+        />
         <button
           type="button"
           class="ml-auto flex h-8 w-8 shrink-0 cursor-pointer touch-manipulation items-center justify-center rounded-full border-0 bg-red-100 text-red-600 transition-all active:scale-110 active:bg-red-200 sm:h-6 sm:w-6 sm:hover:scale-110 sm:hover:bg-red-200"
@@ -71,7 +68,6 @@
 import { computed } from "vue";
 import type { Activity } from "~/types/activity";
 import { useActivityStore } from "~/stores/activity";
-import { useResponsiveTruncate } from "~/composables/useResponsiveTruncate";
 
 interface Props {
   activity: Activity;
@@ -87,10 +83,4 @@ const emit = defineEmits<{
 }>();
 
 const isDisabled = computed(() => activityStore.isActivityDisabled(props.activity.id));
-
-// Truncate activity name for display with responsive length
-const { truncate } = useResponsiveTruncate();
-const displayName = computed(() => {
-  return truncate(props.activity.name);
-});
 </script>

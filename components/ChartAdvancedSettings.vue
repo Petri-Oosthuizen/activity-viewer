@@ -1,30 +1,7 @@
 <template>
-  <div class="rounded-lg border-2 border-gray-200 bg-gray-50 p-3 sm:p-4">
-    <button
-      type="button"
-      class="flex w-full touch-manipulation items-center justify-between"
-      @click="showAdvanced = !showAdvanced"
-    >
-      <span class="text-sm font-semibold text-gray-800 sm:text-base">Advanced Settings</span>
-      <svg
-        :class="[
-          'h-5 w-5 text-gray-600 transition-transform',
-          showAdvanced ? 'rotate-180' : '',
-        ]"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M19 9l-7 7-7-7"
-        />
-      </svg>
-    </button>
-
-    <div v-show="showAdvanced" class="mt-4 space-y-4 sm:mt-6 sm:space-y-6">
+  <CollapsibleSection>
+    <template #title>Advanced Settings</template>
+    <div class="space-y-4 sm:space-y-6">
       <!-- View Mode -->
       <div>
         <h4 class="m-0 mb-2 text-sm font-semibold text-gray-800 sm:text-base">View Mode</h4>
@@ -372,14 +349,15 @@
         </div>
       </div>
     </div>
-  </div>
+  </CollapsibleSection>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { computed } from "vue";
 import { useActivityStore } from "~/stores/activity";
 import AxisTypeSelector from "./AxisTypeSelector.vue";
 import TimeOffsetControl from "./TimeOffsetControl.vue";
+import CollapsibleSection from "./CollapsibleSection.vue";
 import type {
   ChartViewMode,
   CumulativeMode,
@@ -389,7 +367,6 @@ import type {
 } from "~/utils/chart-settings";
 
 const activityStore = useActivityStore();
-const showAdvanced = ref(false);
 
 const activities = computed(() => activityStore.activities);
 const activeActivities = computed(() =>

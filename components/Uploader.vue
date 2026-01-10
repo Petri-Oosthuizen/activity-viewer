@@ -51,7 +51,7 @@
         <p class="text-xs text-gray-500">
           Privacy: processing is local in your browser—nothing is uploaded to a server.
         </p>
-        <div class="flex items-center justify-center gap-2" @click.stop>
+        <div class="flex items-center justify-start gap-2" @click.stop>
           <input
             id="localStorageEnabled"
             type="checkbox"
@@ -61,7 +61,7 @@
           />
           <label
             for="localStorageEnabled"
-            class="pointer-events-auto cursor-pointer text-sm text-gray-600"
+            class="pointer-events-auto cursor-pointer text-left text-sm text-gray-600"
           >
             Save files locally in browser (persist across page refreshes)
           </label>

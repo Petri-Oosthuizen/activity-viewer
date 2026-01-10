@@ -9,7 +9,7 @@
         <label
           v-for="metric in availableMetrics"
           :key="metric.value"
-          class="flex cursor-pointer touch-manipulation items-center gap-2 rounded-md border-2 border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-800 transition-all hover:border-primary hover:bg-blue-50 hover:text-primary"
+          class="metric-label flex cursor-pointer touch-manipulation items-center gap-2 rounded-md border-2 border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-800 transition-all hover:border-primary hover:bg-blue-50 hover:text-primary"
           :class="selectedMetrics.includes(metric.value) ? 'border-primary bg-blue-50' : ''"
         >
           <input
@@ -24,10 +24,15 @@
             type="radio"
             :checked="selectedMetrics.includes(metric.value)"
             name="metric-select"
-            class="h-4 w-4 cursor-pointer touch-manipulation rounded-full border-gray-300 text-primary focus:ring-2 focus:ring-primary focus:ring-offset-0"
+            class="radio-input h-4 w-4 cursor-pointer touch-manipulation text-primary"
             @change="$emit('toggle', metric.value)"
           />
-          <span class="shrink-0 text-base leading-none sm:text-lg">{{ metric.icon }}</span>
+          <span
+            class="inline-flex shrink-0 items-center text-base leading-none sm:text-lg"
+            :style="metric.iconYOffset !== 0 ? `transform: translateY(${metric.iconYOffset}px);` : ''"
+          >
+            {{ metric.icon }}
+          </span>
           <span class="flex-1 text-xs sm:text-sm">{{ metric.label }}</span>
           <div
             v-if="getActivityIdsForMetric(metric.value).length > 0"
@@ -73,6 +78,7 @@ interface Metric {
   value: MetricType;
   label: string;
   icon: string;
+  iconYOffset: number;
 }
 
 interface Props {
@@ -102,10 +108,30 @@ const emit = defineEmits<{
 }>();
 
 const allMetrics: Metric[] = [
-  { value: "hr", label: METRIC_CONFIG.hr.label, icon: METRIC_CONFIG.hr.icon },
-  { value: "alt", label: METRIC_CONFIG.alt.label, icon: METRIC_CONFIG.alt.icon },
-  { value: "pwr", label: METRIC_CONFIG.pwr.label, icon: METRIC_CONFIG.pwr.icon },
-  { value: "cad", label: METRIC_CONFIG.cad.label, icon: METRIC_CONFIG.cad.icon },
+  {
+    value: "hr",
+    label: METRIC_CONFIG.hr.label,
+    icon: METRIC_CONFIG.hr.icon,
+    iconYOffset: METRIC_CONFIG.hr.iconYOffset,
+  },
+  {
+    value: "alt",
+    label: METRIC_CONFIG.alt.label,
+    icon: METRIC_CONFIG.alt.icon,
+    iconYOffset: METRIC_CONFIG.alt.iconYOffset,
+  },
+  {
+    value: "pwr",
+    label: METRIC_CONFIG.pwr.label,
+    icon: METRIC_CONFIG.pwr.icon,
+    iconYOffset: METRIC_CONFIG.pwr.iconYOffset,
+  },
+  {
+    value: "cad",
+    label: METRIC_CONFIG.cad.label,
+    icon: METRIC_CONFIG.cad.icon,
+    iconYOffset: METRIC_CONFIG.cad.iconYOffset,
+  },
 ];
 
 const availableMetrics = computed(() => {
@@ -139,14 +165,28 @@ const getActivityTooltip = (activityId: string, _metric: MetricType): string => 
 </script>
 
 <style scoped>
-input[type="radio"]:focus {
-  outline: none;
+.radio-input {
+  appearance: none;
+  -webkit-appearance: none;
   border-radius: 9999px;
+  outline: none;
+  border: 1px solid rgb(209 213 219);
 }
 
-input[type="radio"]:focus-visible {
-  outline: 2px solid var(--color-primary);
+.radio-input:checked {
+  background-color: currentColor;
+  background-image: radial-gradient(circle, white 30%, transparent 30%);
+}
+
+.metric-label {
+  outline: 2px solid transparent;
   outline-offset: 2px;
-  border-radius: 9999px;
+  transition: outline 0.2s ease-in-out;
+}
+
+.metric-label:has(.radio-input:focus),
+.metric-label:has(.radio-input:focus-visible) {
+  outline: 2px solid rgb(59 130 246);
+  outline-offset: 2px;
 }
 </style>

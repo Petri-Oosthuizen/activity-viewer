@@ -20,43 +20,38 @@
       <div v-if="showBaseline" class="flex flex-col gap-1 sm:items-end">
         <label class="text-[10px] font-medium text-gray-600 sm:text-xs">Baseline</label>
         <select
-          :value="baselineActivityId"
-          class="focus:border-primary focus:ring-primary/10 w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:ring-2 focus:outline-hidden sm:w-auto sm:px-2 sm:py-1.5"
+          :value="baselineActivityId || ''"
+          class="baseline-select focus:border-primary focus:ring-primary/10 w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:ring-2 focus:outline-hidden sm:w-auto sm:min-w-[200px] sm:max-w-[400px] md:max-w-[500px] sm:px-3 sm:py-1.5"
           @change="setBaselineActivityId"
         >
-          <option v-for="a in activeActivities" :key="a.id" :value="a.id" :title="a.name">
-            {{ activityDisplayNames[a.id] || a.name }}
+          <option v-for="a in activeActivities" :key="a.id" :value="a.id">
+            {{ a.name }}
           </option>
         </select>
       </div>
     </div>
 
     <div class="overflow-x-auto rounded-md border border-gray-200 bg-white">
-      <table class="w-full min-w-[900px] table-auto border-collapse text-left text-xs sm:text-sm">
+      <table class="w-full table-auto border-collapse text-left text-xs sm:text-sm">
         <thead class="bg-gray-50 text-gray-700">
           <tr>
             <th
-              class="sticky left-0 z-10 border-b border-gray-200 bg-gray-50 px-3 py-2.5 font-semibold sm:px-4"
+              class="sticky left-0 z-10 w-20 border-b border-gray-200 bg-gray-50 px-2 py-2.5 font-semibold sm:w-24 sm:px-3"
             >
               Metric
             </th>
             <th
               v-for="a in activeActivities"
               :key="a.id"
-              class="w-auto max-w-[200px] border-b border-gray-200 px-3 py-2.5 font-semibold sm:px-4"
+              class="max-w-[120px] border-b border-gray-200 px-2 py-2.5 text-right font-semibold sm:max-w-[160px] sm:px-3 md:max-w-[200px]"
             >
-              <div class="flex items-center gap-2">
+              <div class="flex min-w-0 items-center justify-end gap-1.5 sm:gap-2">
                 <span
                   class="h-2.5 w-2.5 shrink-0 rounded-full"
                   :style="{ backgroundColor: a.color }"
                   aria-hidden="true"
                 />
-                <span
-                  class="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap"
-                  :title="a.name"
-                >
-                  {{ activityDisplayNames[a.id] || a.name }}
-                </span>
+                <FileNameDisplay :filename="a.name" class="shrink" />
               </div>
             </th>
           </tr>
@@ -65,17 +60,21 @@
         <tbody class="text-gray-800">
           <tr class="bg-white">
             <td
-              class="sticky left-0 z-10 border-b border-gray-100 bg-white px-3 py-2.5 font-medium sm:px-4"
+              class="sticky left-0 z-10 w-20 border-b border-gray-100 bg-white px-2 py-2.5 font-medium sm:w-24 sm:px-3"
             >
               Duration
             </td>
             <td
               v-for="a in activeActivities"
               :key="a.id"
-              class="border-b border-gray-100 px-3 py-2.5 sm:px-4"
+              class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
             >
               <div>{{ formatTime(statsById[a.id]?.durationSeconds ?? 0) }}</div>
-              <div v-if="showBaseline" class="mt-0.5 text-[10px] text-gray-400 sm:text-xs">
+              <div
+                v-if="showBaseline"
+                class="mt-0.5 text-[10px] text-gray-400 sm:text-xs"
+                :title="formatDelta('durationSeconds', a.id) === '—' ? 'Same as baseline' : ''"
+              >
                 {{ formatDelta("durationSeconds", a.id) }}
               </div>
             </td>
@@ -83,17 +82,21 @@
 
           <tr class="bg-white">
             <td
-              class="sticky left-0 z-10 border-b border-gray-100 bg-white px-3 py-2.5 font-medium sm:px-4"
+              class="sticky left-0 z-10 w-20 border-b border-gray-100 bg-white px-2 py-2.5 font-medium sm:w-24 sm:px-3"
             >
               Distance
             </td>
             <td
               v-for="a in activeActivities"
               :key="a.id"
-              class="border-b border-gray-100 px-3 py-2.5 sm:px-4"
+              class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
             >
               <div>{{ formatDistance(statsById[a.id]?.distanceMeters ?? 0) }}</div>
-              <div v-if="showBaseline" class="mt-0.5 text-[10px] text-gray-400 sm:text-xs">
+              <div
+                v-if="showBaseline"
+                class="mt-0.5 text-[10px] text-gray-400 sm:text-xs"
+                :title="formatDelta('distanceMeters', a.id) === '—' ? 'Same as baseline' : ''"
+              >
                 {{ formatDelta("distanceMeters", a.id) }}
               </div>
             </td>
@@ -102,26 +105,27 @@
           <template v-if="hasAnyElevation">
             <tr class="bg-gray-50">
               <td
-                class="sticky left-0 z-10 border-b border-gray-200 bg-gray-50 px-3 py-2 font-semibold sm:px-4"
+                colspan="2"
+                class="sticky left-0 z-10 w-20 border-b border-gray-200 bg-gray-50 px-2 py-2 font-semibold sm:w-24 sm:px-3"
               >
                 Elevation
               </td>
               <td
-                v-for="a in activeActivities"
+                v-for="a in activeActivities.slice(1)"
                 :key="a.id"
                 class="border-b border-gray-200 bg-gray-50"
               ></td>
             </tr>
             <tr class="bg-white">
               <td
-                class="sticky left-0 z-10 border-b border-gray-100 bg-white px-3 py-2.5 font-medium sm:px-4"
+                class="sticky left-0 z-10 w-20 border-b border-gray-100 bg-white px-2 py-2.5 font-medium sm:w-24 sm:px-3"
               >
                 <span class="text-[10px] text-gray-500 sm:text-xs">gained</span>
               </td>
               <td
                 v-for="a in activeActivities"
                 :key="a.id"
-                class="border-b border-gray-100 px-3 py-2.5 sm:px-4"
+                class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
               >
                 <div>
                   {{
@@ -131,21 +135,25 @@
                       : `${Math.round(statsById[a.id]!.elevationGainMeters!)} m`
                   }}
                 </div>
-                <div v-if="showBaseline" class="mt-0.5 text-[10px] text-gray-400 sm:text-xs">
+                <div
+                  v-if="showBaseline"
+                  class="mt-0.5 text-[10px] text-gray-400 sm:text-xs"
+                  :title="formatNullableDelta('elevationGainMeters', a.id) === '—' ? 'Same as baseline' : ''"
+                >
                   {{ formatNullableDelta("elevationGainMeters", a.id) }}
                 </div>
               </td>
             </tr>
             <tr class="bg-white">
               <td
-                class="sticky left-0 z-10 border-b border-gray-100 bg-white px-3 py-2.5 font-medium sm:px-4"
+                class="sticky left-0 z-10 w-20 border-b border-gray-100 bg-white px-2 py-2.5 font-medium sm:w-24 sm:px-3"
               >
                 <span class="text-[10px] text-gray-500 sm:text-xs">lost</span>
               </td>
               <td
                 v-for="a in activeActivities"
                 :key="a.id"
-                class="border-b border-gray-100 px-3 py-2.5 sm:px-4"
+                class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
               >
                 <div>
                   {{
@@ -155,7 +163,11 @@
                       : `${Math.round(statsById[a.id]!.elevationLossMeters!)} m`
                   }}
                 </div>
-                <div v-if="showBaseline" class="mt-0.5 text-[10px] text-gray-400 sm:text-xs">
+                <div
+                  v-if="showBaseline"
+                  class="mt-0.5 text-[10px] text-gray-400 sm:text-xs"
+                  :title="formatNullableDelta('elevationLossMeters', a.id) === '—' ? 'Same as baseline' : ''"
+                >
                   {{ formatNullableDelta("elevationLossMeters", a.id) }}
                 </div>
               </td>
@@ -165,26 +177,27 @@
           <template v-for="metric in metrics" :key="metric">
             <tr class="bg-gray-50">
               <td
-                class="sticky left-0 z-10 border-b border-gray-200 bg-gray-50 px-3 py-2 font-semibold sm:px-4"
+                colspan="2"
+                class="sticky left-0 z-10 w-20 border-b border-gray-200 bg-gray-50 px-2 py-2 font-semibold sm:w-24 sm:px-3"
               >
                 {{ getMetricName(metric) }}
               </td>
               <td
-                v-for="a in activeActivities"
+                v-for="a in activeActivities.slice(1)"
                 :key="a.id"
                 class="border-b border-gray-200 bg-gray-50"
               ></td>
             </tr>
             <tr class="bg-white">
               <td
-                class="sticky left-0 z-10 border-b border-gray-100 bg-white px-3 py-2.5 font-medium sm:px-4"
+                class="sticky left-0 z-10 w-20 border-b border-gray-100 bg-white px-2 py-2.5 font-medium sm:w-24 sm:px-3"
               >
                 <span class="text-[10px] text-gray-500 sm:text-xs">min</span>
               </td>
               <td
                 v-for="a in activeActivities"
                 :key="a.id"
-                class="border-b border-gray-100 px-3 py-2.5 sm:px-4"
+                class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
               >
                 <div>
                   {{
@@ -194,21 +207,25 @@
                       : "—"
                   }}
                 </div>
-                <div v-if="showBaseline" class="mt-0.5 text-[10px] text-gray-400 sm:text-xs">
+                <div
+                  v-if="showBaseline"
+                  class="mt-0.5 text-[10px] text-gray-400 sm:text-xs"
+                  :title="formatMetricMinDelta(metric, a.id) === '—' ? 'Same as baseline' : ''"
+                >
                   {{ formatMetricMinDelta(metric, a.id) }}
                 </div>
               </td>
             </tr>
             <tr class="bg-white">
               <td
-                class="sticky left-0 z-10 border-b border-gray-100 bg-white px-3 py-2.5 font-medium sm:px-4"
+                class="sticky left-0 z-10 w-20 border-b border-gray-100 bg-white px-2 py-2.5 font-medium sm:w-24 sm:px-3"
               >
                 <span class="text-[10px] text-gray-500 sm:text-xs">average</span>
               </td>
               <td
                 v-for="a in activeActivities"
                 :key="a.id"
-                class="border-b border-gray-100 px-3 py-2.5 sm:px-4"
+                class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
               >
                 <div>
                   {{
@@ -218,21 +235,25 @@
                       : "—"
                   }}
                 </div>
-                <div v-if="showBaseline" class="mt-0.5 text-[10px] text-gray-400 sm:text-xs">
+                <div
+                  v-if="showBaseline"
+                  class="mt-0.5 text-[10px] text-gray-400 sm:text-xs"
+                  :title="formatMetricAvgDelta(metric, a.id) === '—' ? 'Same as baseline' : ''"
+                >
                   {{ formatMetricAvgDelta(metric, a.id) }}
                 </div>
               </td>
             </tr>
             <tr class="bg-white">
               <td
-                class="sticky left-0 z-10 border-b border-gray-100 bg-white px-3 py-2.5 font-medium sm:px-4"
+                class="sticky left-0 z-10 w-20 border-b border-gray-100 bg-white px-2 py-2.5 font-medium sm:w-24 sm:px-3"
               >
                 <span class="text-[10px] text-gray-500 sm:text-xs">max</span>
               </td>
               <td
                 v-for="a in activeActivities"
                 :key="a.id"
-                class="border-b border-gray-100 px-3 py-2.5 sm:px-4"
+                class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
               >
                 <div>
                   {{
@@ -242,7 +263,11 @@
                       : "—"
                   }}
                 </div>
-                <div v-if="showBaseline" class="mt-0.5 text-[10px] text-gray-400 sm:text-xs">
+                <div
+                  v-if="showBaseline"
+                  class="mt-0.5 text-[10px] text-gray-400 sm:text-xs"
+                  :title="formatMetricMaxDelta(metric, a.id) === '—' ? 'Same as baseline' : ''"
+                >
                   {{ formatMetricMaxDelta(metric, a.id) }}
                 </div>
               </td>
@@ -257,7 +282,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { useActivityStore } from "~/stores/activity";
-import { useResponsiveTruncate } from "~/composables/useResponsiveTruncate";
 import { computeActivityStatsFromRecords } from "~/utils/activity-stats";
 import { formatDistance, formatMetricValue, formatTime } from "~/utils/format";
 import type { MetricType } from "~/utils/chart-config";
@@ -269,34 +293,18 @@ import {
 } from "~/utils/windowing";
 
 const activityStore = useActivityStore();
-const { truncate, windowWidth } = useResponsiveTruncate();
 
 const activeActivities = computed(() =>
   activityStore.activities.filter((a) => !activityStore.disabledActivities.has(a.id)),
 );
 
-const activityDisplayNames = computed(() => {
-  let maxLength: number;
-  if (windowWidth.value < 640) {
-    maxLength = 18;
-  } else if (windowWidth.value < 1024) {
-    maxLength = 30;
-  } else {
-    maxLength = 40;
-  }
 
-  const names: Record<string, string> = {};
-  activeActivities.value.forEach((activity) => {
-    names[activity.id] = truncate(activity.name, maxLength);
-  });
-  return names;
-});
 
 const showBaseline = computed(() => activeActivities.value.length >= 2);
 const descriptionText = computed(() =>
   showBaseline.value
-    ? "Summary stats per activity (min - average - max) with change vs baseline."
-    : "Summary stats for the loaded activity.",
+    ? "Min, average, and max values per activity, compared to the baseline."
+    : "Min, average, and max values for this activity.",
 );
 
 const baselineActivityId = ref<string | null>(null);
