@@ -130,10 +130,10 @@ export function generateChartSeries(config: SeriesConfig): EChartsSeries[] {
     return activeActivities.map((activity) => {
       const totals = pivot.totalsSecondsByActivityId[activity.id] ?? [];
       const totalSeconds = totals.reduce((acc, v) => acc + v, 0);
-      const data = totals.map((seconds, idx) => {
+      const data: Array<[number, number]> = totals.map((seconds, idx) => {
         const x = pivot.binCenters[idx] ?? idx;
         const pct = totalSeconds > 0 ? (seconds / totalSeconds) * 100 : 0;
-        return [x, pct] as const;
+        return [x, pct];
       });
 
       return {
@@ -165,22 +165,23 @@ export function generateChartSeries(config: SeriesConfig): EChartsSeries[] {
   }
 
   // Generate base series
-  const series = generateBaseSeries(activities, disabledActivityIds, metrics, xAxisType, transforms);
+  const series = generateBaseSeries(
+    activities,
+    disabledActivityIds,
+    metrics,
+    xAxisType,
+    transforms,
+  );
 
   // Add delta series if enabled
   if (showDelta && series.length >= 2) {
-    const baseId = deltaBaseActivityId || activities[0]?.id;
-    const compareId = deltaCompareActivityId || activities[1]?.id;
+    const effectiveBaseId = deltaBaseActivityId || activeActivities[0]?.id;
+    const effectiveCompareId = deltaCompareActivityId || activeActivities[1]?.id;
 
-    const baseActivity = activities.find((a) => a.id === baseId);
-    const compareActivity = activities.find((a) => a.id === compareId);
+    const baseActivity = activeActivities.find((a) => a.id === effectiveBaseId);
+    const compareActivity = activeActivities.find((a) => a.id === effectiveCompareId);
 
-    if (
-      baseActivity &&
-      compareActivity &&
-      !disabledActivityIds.has(baseActivity.id) &&
-      !disabledActivityIds.has(compareActivity.id)
-    ) {
+    if (baseActivity && compareActivity) {
       // Find series for each activity
       const baseSeriesIdx = series.findIndex((s) => s.name?.startsWith(baseActivity.name));
       const compareSeriesIdx = series.findIndex((s) => s.name?.startsWith(compareActivity.name));
@@ -189,11 +190,21 @@ export function generateChartSeries(config: SeriesConfig): EChartsSeries[] {
         // Get the metric from the series name (assumes first metric for delta)
         const metric = metrics[0] || "hr";
 
+        const baseSeries = series[baseSeriesIdx];
+        const compareSeries = series[compareSeriesIdx];
+
+        if (!baseSeries || !compareSeries) return series;
+
+        // Type assertion: delta calculation expects ChartDataPoint[]
+        // but EChartsSeries.data is a union type that includes ChartDataPoint[]
+        const baseSeriesData = baseSeries.data as ChartDataPoint[];
+        const compareSeriesData = compareSeries.data as ChartDataPoint[];
+
         const deltaConfig: DeltaSeriesConfig = {
           baseActivity,
           compareActivity,
-          baseSeriesData: series[baseSeriesIdx].data,
-          compareSeriesData: series[compareSeriesIdx].data,
+          baseSeriesData,
+          compareSeriesData,
           metric,
           metricCount: metrics.length,
           deltaMode,
@@ -211,4 +222,3 @@ export function generateChartSeries(config: SeriesConfig): EChartsSeries[] {
 
   return series;
 }
-

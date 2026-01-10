@@ -24,7 +24,7 @@ export function buildTooltipConfig(
   return {
     show: true,
     trigger: "axis" as const,
-    confine: true,
+    confine: false,
     maxWidth: 300,
     enterable: false,
     renderMode: "html" as const,
@@ -162,10 +162,14 @@ export function buildYAxisConfig(
 
   // Single metric mode
   if (metrics.length === 1 && !showDelta) {
+    const firstMetric = metrics[0];
+    if (!firstMetric) {
+      throw new Error("Expected at least one metric");
+    }
     return {
       type: "value",
       show: true,
-      name: METRIC_LABELS[metrics[0]],
+      name: METRIC_LABELS[firstMetric],
       nameLocation: "middle",
       nameGap: 35,
       nameRotate: 90,

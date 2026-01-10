@@ -7,6 +7,7 @@ import type { Activity } from "~/types/activity";
 import type { ChartDataPoint, MetricType, DeltaMode } from "./chart-config";
 import { DELTA_COLOR, METRIC_LABELS } from "./chart-config";
 import { findNearestValue } from "./chart-config";
+import type { EChartsSeries } from "./chart-series";
 
 export interface DeltaSeriesConfig {
   baseActivity: Activity;
@@ -24,7 +25,7 @@ export interface DeltaSeriesConfig {
 export function calculateDeltaData(
   baseData: ChartDataPoint[],
   compareData: ChartDataPoint[],
-  deltaMode: DeltaMode
+  deltaMode: DeltaMode,
 ): ChartDataPoint[] {
   // Build data maps for interpolation
   const baseMap = new Map<number, number>();
@@ -63,8 +64,16 @@ export function calculateDeltaData(
 /**
  * Build ECharts delta series configuration
  */
-export function buildDeltaSeries(config: DeltaSeriesConfig): any {
-  const { baseActivity, compareActivity, baseSeriesData, compareSeriesData, metric, metricCount, deltaMode } = config;
+export function buildDeltaSeries(config: DeltaSeriesConfig): EChartsSeries {
+  const {
+    baseActivity,
+    compareActivity,
+    baseSeriesData,
+    compareSeriesData,
+    metric,
+    metricCount,
+    deltaMode,
+  } = config;
 
   const deltaData = calculateDeltaData(baseSeriesData, compareSeriesData, deltaMode);
 
@@ -91,4 +100,3 @@ export function buildDeltaSeries(config: DeltaSeriesConfig): any {
     animation: false,
   };
 }
-

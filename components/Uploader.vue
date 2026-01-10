@@ -22,7 +22,7 @@
     <div class="pointer-events-none select-none">
       <svg
         v-if="!compact"
-        class="mx-auto mb-3 h-10 w-10 text-gray-400 sm:mb-4 sm:h-12 sm:w-12"
+        class="mx-auto mb-4 h-12 w-12 text-gray-400 sm:mb-5 sm:h-14 sm:w-14"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -34,25 +34,51 @@
           d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
         />
       </svg>
-      <p :class="['text-gray-600', compact ? 'mb-0 text-xs sm:text-sm' : 'mb-2 text-sm sm:text-base']">
-        <span v-if="!compact">Drag and drop GPX, FIT, or TCX files here, or </span>
+      <div v-if="!compact" class="space-y-4">
+        <div>
+          <p class="mb-2 text-base font-medium text-gray-700 sm:text-lg">
+            Drag and drop files here, or
+            <button
+              type="button"
+              class="pointer-events-auto text-primary underline"
+              @click.stop="triggerFileInput"
+            >
+              browse
+            </button>
+          </p>
+          <p class="text-sm text-gray-500">Supports .gpx, .fit, and .tcx files</p>
+        </div>
+        <p class="text-xs text-gray-500">
+          Privacy: processing is local in your browser—nothing is uploaded to a server.
+        </p>
+        <div class="flex items-center justify-center gap-2" @click.stop>
+          <input
+            id="localStorageEnabled"
+            type="checkbox"
+            :checked="localStorageEnabled"
+            @change="handleLocalStorageToggle"
+            class="pointer-events-auto h-4 w-4 cursor-pointer rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+          />
+          <label
+            for="localStorageEnabled"
+            class="pointer-events-auto cursor-pointer text-sm text-gray-600"
+          >
+            Save files locally in browser (persist across page refreshes)
+          </label>
+        </div>
+      </div>
+      <div v-else class="space-y-1">
+        <p class="text-xs text-gray-600 sm:text-sm">
           <button
             type="button"
-            :class="[
-              'text-primary font-inherit pointer-events-auto touch-manipulation cursor-pointer border-0 bg-transparent text-inherit underline min-h-[44px]',
-              compact && 'rounded-sm px-3 py-2 font-medium no-underline transition-all active:bg-blue-50 sm:px-2 sm:py-1 sm:hover:bg-blue-50',
-            ]"
+            class="pointer-events-auto rounded-sm px-3 py-2 font-medium text-primary transition-all active:bg-blue-50 sm:px-2 sm:py-1 sm:hover:bg-blue-50"
             @click.stop="triggerFileInput"
           >
-          {{ compact ? "Add more files" : "browse" }}
-        </button>
-      </p>
-      <p v-if="!compact" class="text-xs text-gray-400 sm:text-sm">
-        Supports .gpx, .fit, and .tcx files • Hold Ctrl/Cmd to select multiple files
-      </p>
-      <p v-if="compact" class="mt-1 text-[10px] text-gray-400 sm:text-xs">
-        Drop files here or click to add more • Hold Ctrl/Cmd for multiple files
-      </p>
+            Add more files
+          </button>
+        </p>
+        <p class="text-[10px] text-gray-400 sm:text-xs">Drop files here or click to add more</p>
+      </div>
     </div>
     <div v-if="isProcessing" class="text-primary mt-4 flex items-center justify-center gap-2">
       <span
@@ -69,6 +95,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useActivityStore } from "~/stores/activity";
+import { useLocalStoragePersistence } from "~/composables/useLocalStoragePersistence";
 import { detectFileType, isSupportedFileType } from "~/utils/file-detector";
 import { parseGPX } from "~/utils/gpx-parser";
 import { parseFIT } from "~/utils/fit-parser";
@@ -88,6 +115,16 @@ const isProcessing = ref(false);
 const error = ref<string | null>(null);
 
 const activityStore = useActivityStore();
+
+const {
+  isEnabled: localStorageEnabled,
+  setEnabled: setLocalStorageEnabled,
+} = useLocalStoragePersistence();
+
+const handleLocalStorageToggle = (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  setLocalStorageEnabled(target.checked);
+};
 
 const triggerFileInput = () => {
   fileInput.value?.click();

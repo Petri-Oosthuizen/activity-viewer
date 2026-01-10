@@ -12,6 +12,7 @@ export interface ActivityStats {
   durationSeconds: number;
   distanceMeters: number;
   elevationGainMeters: number | null;
+  elevationLossMeters: number | null;
   metrics: Record<MetricType, MetricStats>;
 }
 
@@ -71,11 +72,31 @@ function safeElevationGainMeters(records: ActivityRecord[]): number | null {
   return sawAlt ? total : null;
 }
 
+function safeElevationLossMeters(records: ActivityRecord[]): number | null {
+  let total = 0;
+  let prev: number | null = null;
+  let sawAlt = false;
+
+  for (const r of records) {
+    const alt = r.alt;
+    if (alt === undefined || alt === null) continue;
+    sawAlt = true;
+    if (prev !== null) {
+      const delta = alt - prev;
+      if (delta < 0) total += Math.abs(delta);
+    }
+    prev = alt;
+  }
+
+  return sawAlt ? total : null;
+}
+
 export function computeActivityStatsFromRecords(records: ActivityRecord[]): ActivityStats {
   return {
     durationSeconds: safeDurationSeconds(records),
     distanceMeters: safeDistanceMeters(records),
     elevationGainMeters: safeElevationGainMeters(records),
+    elevationLossMeters: safeElevationLossMeters(records),
     metrics: {
       hr: safeMetricStats(records, "hr"),
       alt: safeMetricStats(records, "alt"),

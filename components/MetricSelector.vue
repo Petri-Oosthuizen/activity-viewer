@@ -24,7 +24,7 @@
             type="radio"
             :checked="selectedMetrics.includes(metric.value)"
             name="metric-select"
-            class="h-4 w-4 cursor-pointer touch-manipulation border-gray-300 text-primary focus:ring-2 focus:ring-primary focus:ring-offset-0"
+            class="h-4 w-4 cursor-pointer touch-manipulation rounded-full border-gray-300 text-primary focus:ring-2 focus:ring-primary focus:ring-offset-0"
             @change="$emit('toggle', metric.value)"
           />
           <span class="shrink-0 text-base leading-none sm:text-lg">{{ metric.icon }}</span>
@@ -137,3 +137,16 @@ const getActivityTooltip = (activityId: string, _metric: MetricType): string => 
   return activityData.name;
 };
 </script>
+
+<style scoped>
+input[type="radio"]:focus {
+  outline: none;
+  border-radius: 9999px;
+}
+
+input[type="radio"]:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 9999px;
+}
+</style>

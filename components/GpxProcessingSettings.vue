@@ -13,12 +13,7 @@
         stroke="currentColor"
         viewBox="0 0 24 24"
       >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M19 9l-7 7-7-7"
-        />
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
       </svg>
     </button>
 
@@ -34,7 +29,7 @@
             <input
               type="checkbox"
               :checked="opts.includeElevation"
-              class="h-5 w-5 cursor-pointer touch-manipulation rounded-sm border-gray-300 text-primary focus:ring-primary sm:h-4 sm:w-4"
+              class="text-primary focus:ring-primary h-5 w-5 cursor-pointer touch-manipulation rounded-sm border-gray-300 sm:h-4 sm:w-4"
               @change="setIncludeElevation"
             />
             <span class="text-xs text-gray-700 sm:text-sm">Include elevation in distance (3D)</span>
@@ -47,18 +42,20 @@
                 type="number"
                 min="0"
                 step="0.1"
-                class="w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/10 sm:px-2 sm:py-1.5"
+                class="focus:border-primary focus:ring-primary/10 w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:ring-2 focus:outline-hidden sm:px-2 sm:py-1.5"
                 :value="opts.minMoveMeters"
                 @input="setMinMove"
               />
             </div>
             <div>
-              <label class="mb-1 block text-xs font-medium text-gray-700">Max speed (m/s)</label>
+              <label class="mb-1 block text-xs font-medium text-gray-700"
+                >Max speed jump (m/s)</label
+              >
               <input
                 type="number"
                 min="0"
                 step="1"
-                class="w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/10 sm:px-2 sm:py-1.5"
+                class="focus:border-primary focus:ring-primary/10 w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:ring-2 focus:outline-hidden sm:px-2 sm:py-1.5"
                 :value="opts.maxSpeedMps"
                 @input="setMaxSpeed"
               />
@@ -69,7 +66,7 @@
                 type="number"
                 min="0"
                 step="10"
-                class="w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/10 sm:px-2 sm:py-1.5"
+                class="focus:border-primary focus:ring-primary/10 w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:ring-2 focus:outline-hidden sm:px-2 sm:py-1.5"
                 :value="opts.maxJumpMetersAt1s"
                 @input="setMaxJump"
               />
@@ -97,19 +94,24 @@ const setIncludeElevation = (event: Event) => {
 const setMinMove = (event: Event) => {
   const target = event.target as HTMLInputElement;
   const n = Number.parseFloat(target.value);
-  activityStore.setGpsDistanceOptions({ minMoveMeters: Number.isFinite(n) ? Math.max(0, n) : opts.value.minMoveMeters });
+  activityStore.setGpsDistanceOptions({
+    minMoveMeters: Number.isFinite(n) ? Math.max(0, n) : opts.value.minMoveMeters,
+  });
 };
 
 const setMaxSpeed = (event: Event) => {
   const target = event.target as HTMLInputElement;
   const n = Number.parseFloat(target.value);
-  activityStore.setGpsDistanceOptions({ maxSpeedMps: Number.isFinite(n) ? Math.max(0, n) : opts.value.maxSpeedMps });
+  activityStore.setGpsDistanceOptions({
+    maxSpeedMps: Number.isFinite(n) ? Math.max(0, n) : opts.value.maxSpeedMps,
+  });
 };
 
 const setMaxJump = (event: Event) => {
   const target = event.target as HTMLInputElement;
   const n = Number.parseFloat(target.value);
-  activityStore.setGpsDistanceOptions({ maxJumpMetersAt1s: Number.isFinite(n) ? Math.max(0, n) : opts.value.maxJumpMetersAt1s });
+  activityStore.setGpsDistanceOptions({
+    maxJumpMetersAt1s: Number.isFinite(n) ? Math.max(0, n) : opts.value.maxJumpMetersAt1s,
+  });
 };
 </script>
-

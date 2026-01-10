@@ -27,7 +27,7 @@ import {
   buildGridConfig,
   formatTooltipParams,
 } from "~/utils/chart-options";
-import { generateChartSeries, type SeriesConfig } from "~/utils/chart-series";
+import { generateChartSeries, type SeriesConfig, type EChartsSeries } from "~/utils/chart-series";
 import type { GpsDistanceOptions } from "~/utils/gps-distance";
 import { DEFAULT_GPS_DISTANCE_OPTIONS, filterGpsDistanceDeltaMeters } from "~/utils/gps-distance";
 
@@ -122,7 +122,10 @@ export const useActivityStore = defineStore("activity", () => {
       const available = getAvailableMetrics(activities.value);
       const current = selectedMetrics.value[0];
       if (available.length > 0 && (!current || !available.includes(current))) {
-        selectedMetrics.value = [available[0]];
+        const firstAvailable = available[0];
+        if (firstAvailable) {
+          selectedMetrics.value = [firstAvailable];
+        }
       }
     },
     { deep: false, immediate: true, flush: "sync" },
@@ -170,7 +173,7 @@ export const useActivityStore = defineStore("activity", () => {
           formatTooltipParams(params, xAxisType.value),
         ),
         legend: {
-          data: chartSeries.value.map((s: any) => s.name),
+          data: chartSeries.value.map((s: EChartsSeries) => s.name),
           bottom: 0,
           type: "scroll",
           pageIconColor: "#5470c6",
@@ -193,7 +196,7 @@ export const useActivityStore = defineStore("activity", () => {
           nameGap: 35,
           nameRotate: 90,
           scale: true,
-          axisLabel: { show: true, formatter: (v: any) => `${Number(v).toFixed(0)}%` },
+          axisLabel: { show: true, formatter: (v: number | string) => `${Number(v).toFixed(0)}%` },
         },
         series: chartSeries.value,
       };
@@ -201,8 +204,6 @@ export const useActivityStore = defineStore("activity", () => {
 
     const hasMultipleYAxes =
       metrics.length > 1 || (showDelta.value && activities.value.length >= 2);
-    const yAxisCount =
-      showDelta.value && activities.value.length >= 2 ? metrics.length + 1 : metrics.length;
 
     return {
       tooltip: buildTooltipConfigUtil(xAxisType.value, (params) =>
@@ -216,7 +217,7 @@ export const useActivityStore = defineStore("activity", () => {
         pageIconInactiveColor: "#aaa",
       },
       grid: buildGridConfig(hasMultipleYAxes),
-      dataZoom: buildDataZoomConfigUtil(metrics.length, yAxisCount),
+      dataZoom: buildDataZoomConfigUtil(metrics.length, hasMultipleYAxes ? 2 : 1),
       xAxis: buildXAxisConfigUtil(xAxisType.value),
       yAxis: buildYAxisConfigUtil(
         metrics,
@@ -312,23 +313,29 @@ export const useActivityStore = defineStore("activity", () => {
   function updateOffset(id: string, offset: number) {
     const index = activities.value.findIndex((a) => a.id === id);
     if (index !== -1) {
-      // Create new array to trigger reactivity with shallowRef
-      activities.value = [
-        ...activities.value.slice(0, index),
-        { ...activities.value[index], offset },
-        ...activities.value.slice(index + 1),
-      ];
+      const activity = activities.value[index];
+      if (activity) {
+        // Create new array to trigger reactivity with shallowRef
+        activities.value = [
+          ...activities.value.slice(0, index),
+          { ...activity, offset },
+          ...activities.value.slice(index + 1),
+        ];
+      }
     }
   }
 
   function updateScale(id: string, scale: number) {
     const index = activities.value.findIndex((a) => a.id === id);
     if (index !== -1) {
-      activities.value = [
-        ...activities.value.slice(0, index),
-        { ...activities.value[index], scale },
-        ...activities.value.slice(index + 1),
-      ];
+      const activity = activities.value[index];
+      if (activity) {
+        activities.value = [
+          ...activities.value.slice(0, index),
+          { ...activity, scale },
+          ...activities.value.slice(index + 1),
+        ];
+      }
     }
   }
 
@@ -423,11 +430,13 @@ export const useActivityStore = defineStore("activity", () => {
   function setShowDelta(value: boolean) {
     showDelta.value = value;
     if (value && activities.value.length >= 2) {
-      if (!deltaBaseActivityId.value) {
-        deltaBaseActivityId.value = activities.value[0].id;
+      const first = activities.value[0];
+      const second = activities.value[1];
+      if (!deltaBaseActivityId.value && first) {
+        deltaBaseActivityId.value = first.id;
       }
-      if (!deltaCompareActivityId.value) {
-        deltaCompareActivityId.value = activities.value[1].id;
+      if (!deltaCompareActivityId.value && second) {
+        deltaCompareActivityId.value = second.id;
       }
     }
   }
@@ -458,7 +467,10 @@ export const useActivityStore = defineStore("activity", () => {
     metricSelectionMode.value = mode;
     if (mode === "single" && selectedMetrics.value.length > 1) {
       // When switching to single mode, keep only the first selected metric
-      selectedMetrics.value = [selectedMetrics.value[0]];
+      const firstMetric = selectedMetrics.value[0];
+      if (firstMetric) {
+        selectedMetrics.value = [firstMetric];
+      }
     }
   }
 
