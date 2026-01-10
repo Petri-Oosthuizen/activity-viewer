@@ -66,7 +66,7 @@ function applyOutlierHandling(
   let prev: number | null = null;
   for (let i = 0; i < next.length; i++) {
     const current = next[i];
-    if (current === null) continue;
+    if (current === null || current === undefined) continue;
 
     if (prev === null) {
       prev = current;
@@ -89,8 +89,9 @@ function applyOutlierHandling(
 
     // clamp
     const allowedDelta = (maxPercent / 100) * denom;
-    next[i] = prev + Math.sign(delta) * allowedDelta;
-    prev = next[i]!;
+    const clamped: number = prev + Math.sign(delta) * allowedDelta;
+    next[i] = clamped;
+    prev = clamped;
   }
 
   return next;
@@ -116,7 +117,7 @@ function smoothMovingAverage(values: NullableNumber[], windowPoints: number): Nu
 
     for (let j = start; j <= end; j++) {
       const v = values[j];
-      if (v === null) continue;
+      if (v === null || v === undefined) continue;
       sum += v;
       count++;
     }
@@ -137,7 +138,7 @@ function smoothEma(values: NullableNumber[], windowPoints: number): NullableNumb
   let prevEma: number | null = null;
   for (let i = 0; i < values.length; i++) {
     const v = values[i];
-    if (v === null) {
+    if (v === null || v === undefined) {
       next[i] = prevEma;
       continue;
     }
@@ -176,7 +177,7 @@ function applyCumulative(
 
   for (let i = 0; i < values.length; i++) {
     const v = values[i];
-    if (v === null) {
+    if (v === null || v === undefined) {
       next[i] = total;
       continue;
     }
@@ -188,7 +189,7 @@ function applyCumulative(
     }
 
     // positiveDeltaSum
-    if (prev !== null) {
+    if (prev !== null && prev !== undefined) {
       const delta = v - prev;
       if (delta > 0) total += delta;
     }
@@ -237,9 +238,13 @@ function quantile(sorted: number[], p: number): number {
   const idx = (sorted.length - 1) * p;
   const lo = Math.floor(idx);
   const hi = Math.ceil(idx);
-  if (lo === hi) return sorted[lo];
+  const loVal = sorted[lo];
+  const hiVal = sorted[hi];
+  if (lo === hi || loVal === undefined || hiVal === undefined) {
+    return loVal ?? hiVal ?? 0;
+  }
   const t = idx - lo;
-  return sorted[lo] * (1 - t) + sorted[hi] * t;
+  return loVal * (1 - t) + hiVal * t;
 }
 
 export function buildPivotZones(
@@ -259,8 +264,11 @@ export function buildPivotZones(
   const segments: Array<{ v: number; dt: number }> = [];
   for (let i = 0; i < activity.records.length - 1; i++) {
     const v = values[i];
-    if (v === null) continue;
-    const dt = activity.records[i + 1].t - activity.records[i].t;
+    if (v === null || v === undefined) continue;
+    const nextRecord = activity.records[i + 1];
+    const currentRecord = activity.records[i];
+    if (!nextRecord || !currentRecord) continue;
+    const dt = nextRecord.t - currentRecord.t;
     if (!Number.isFinite(dt) || dt <= 0) continue;
     segments.push({ v, dt });
   }
@@ -270,7 +278,7 @@ export function buildPivotZones(
   const numeric = segments.map((s) => s.v).sort((a, b) => a - b);
   const min = numeric[0];
   const max = numeric[numeric.length - 1];
-  if (!Number.isFinite(min) || !Number.isFinite(max) || min === max) return null;
+  if (min === undefined || max === undefined || !Number.isFinite(min) || !Number.isFinite(max) || min === max) return null;
 
   const edges: number[] = [];
   if (transforms.pivotZones.strategy === "equalRange") {
@@ -281,7 +289,13 @@ export function buildPivotZones(
       edges.push(quantile(numeric, i / zoneCount));
     }
     // Ensure monotonic edges (can happen with repeated values)
-    for (let i = 1; i < edges.length; i++) edges[i] = Math.max(edges[i], edges[i - 1]);
+    for (let i = 1; i < edges.length; i++) {
+      const prevEdge = edges[i - 1];
+      const currEdge = edges[i];
+      if (prevEdge !== undefined && currEdge !== undefined) {
+        edges[i] = Math.max(currEdge, prevEdge);
+      }
+    }
   }
 
   const totalsSeconds = new Array<number>(zoneCount).fill(0);
@@ -290,16 +304,25 @@ export function buildPivotZones(
     for (let i = 0; i < zoneCount; i++) {
       const lo = edges[i];
       const hi = edges[i + 1];
+      if (lo === undefined || hi === undefined) continue;
       const isLast = i === zoneCount - 1;
       if (s.v >= lo && (s.v < hi || (isLast && s.v <= hi))) {
         zone = i;
         break;
       }
     }
-    totalsSeconds[zone] += s.dt;
+    const totalAtZone = totalsSeconds[zone];
+    if (totalAtZone !== undefined) {
+      totalsSeconds[zone] = totalAtZone + s.dt;
+    }
   }
 
-  const binCenters = totalsSeconds.map((_, i) => (edges[i] + edges[i + 1]) / 2);
+  const binCenters = totalsSeconds.map((_, i) => {
+    const loEdge = edges[i];
+    const hiEdge = edges[i + 1];
+    if (loEdge === undefined || hiEdge === undefined) return 0;
+    return (loEdge + hiEdge) / 2;
+  });
 
   return { binCenters, totalsSeconds };
 }
@@ -333,8 +356,11 @@ export function buildPivotZonesForActivities(
     const segments: Array<{ v: number; dt: number }> = [];
     for (let i = 0; i < activity.records.length - 1; i++) {
       const v = values[i];
-      if (v === null) continue;
-      const dt = activity.records[i + 1].t - activity.records[i].t;
+      if (v === null || v === undefined) continue;
+      const nextRecord = activity.records[i + 1];
+      const currentRecord = activity.records[i];
+      if (!nextRecord || !currentRecord) continue;
+      const dt = nextRecord.t - currentRecord.t;
       if (!Number.isFinite(dt) || dt <= 0) continue;
       segments.push({ v, dt });
       allValues.push(v);
@@ -353,7 +379,7 @@ export function buildPivotZonesForActivities(
   const numeric = allValues.sort((a, b) => a - b);
   const min = numeric[0];
   const max = numeric[numeric.length - 1];
-  if (!Number.isFinite(min) || !Number.isFinite(max) || min === max) {
+  if (min === undefined || max === undefined || !Number.isFinite(min) || !Number.isFinite(max) || min === max) {
     pivotZonesCache.set(key, null);
     return null;
   }
@@ -364,10 +390,21 @@ export function buildPivotZonesForActivities(
     for (let i = 0; i <= zoneCount; i++) edges.push(min + step * i);
   } else {
     for (let i = 0; i <= zoneCount; i++) edges.push(quantile(numeric, i / zoneCount));
-    for (let i = 1; i < edges.length; i++) edges[i] = Math.max(edges[i], edges[i - 1]);
+    for (let i = 1; i < edges.length; i++) {
+      const prevEdge = edges[i - 1];
+      const currEdge = edges[i];
+      if (prevEdge !== undefined && currEdge !== undefined) {
+        edges[i] = Math.max(currEdge, prevEdge);
+      }
+    }
   }
 
-  const binCenters = Array.from({ length: zoneCount }, (_, i) => (edges[i] + edges[i + 1]) / 2);
+  const binCenters = Array.from({ length: zoneCount }, (_, i) => {
+    const loEdge = edges[i];
+    const hiEdge = edges[i + 1];
+    if (loEdge === undefined || hiEdge === undefined) return 0;
+    return (loEdge + hiEdge) / 2;
+  });
 
   const totalsSecondsByActivityId: Record<string, number[]> = {};
   for (const [activityId, segments] of activitySegments.entries()) {
@@ -377,13 +414,17 @@ export function buildPivotZonesForActivities(
       for (let i = 0; i < zoneCount; i++) {
         const lo = edges[i];
         const hi = edges[i + 1];
+        if (lo === undefined || hi === undefined) continue;
         const isLast = i === zoneCount - 1;
         if (s.v >= lo && (s.v < hi || (isLast && s.v <= hi))) {
           zone = i;
           break;
         }
       }
-      totals[zone] += s.dt;
+      const totalAtZone = totals[zone];
+      if (totalAtZone !== undefined) {
+        totals[zone] = totalAtZone + s.dt;
+      }
     }
     totalsSecondsByActivityId[activityId] = totals;
   }

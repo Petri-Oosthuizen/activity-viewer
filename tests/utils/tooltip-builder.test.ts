@@ -32,21 +32,21 @@ describe("tooltip builders", () => {
       const result = buildPointTooltip(mockActivity, mockRecord);
 
       expect(result).toContain("Test Activity");
-      expect(result).toContain("150");
+      expect(result).toContain("150 bpm");
       expect(result).toContain("200 m");
       expect(result).toContain("250 W");
       expect(result).toContain("90");
-      expect(result).toContain("HR:");
-      expect(result).toContain("P:");
-      expect(result).toContain("A:");
-      expect(result).toContain("C:");
+      expect(result).toContain("Heart Rate:");
+      expect(result).toContain("Power:");
+      expect(result).toContain("Altitude:");
+      expect(result).toContain("Cadence:");
     });
 
     it("should handle missing metric values", () => {
       const recordWithoutHR = { ...mockRecord, hr: undefined };
       const result = buildPointTooltip(mockActivity, recordWithoutHR);
 
-      expect(result).not.toContain("HR:");
+      expect(result).not.toContain("Heart Rate:");
       expect(result).toContain("200 m");
     });
 
@@ -72,9 +72,9 @@ describe("tooltip builders", () => {
 
       expect(result).toContain("Activity 1");
       expect(result).toContain("Activity 2");
-      expect(result).toContain("150");
-      expect(result).toContain("160");
-      expect(result).toContain("HR:");
+      expect(result).toContain("150 bpm");
+      expect(result).toContain("160 bpm");
+      expect(result).toContain("Heart Rate:");
     });
 
     it("should handle empty points array", () => {

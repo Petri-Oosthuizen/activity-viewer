@@ -154,7 +154,11 @@ export function generateActivityId(): string {
  * Colors repeat after 10+ activities
  */
 export function getActivityColorByIndex(index: number): string {
-  return ACTIVITY_COLORS[index % ACTIVITY_COLORS.length];
+  const color = ACTIVITY_COLORS[index % ACTIVITY_COLORS.length];
+  if (!color) {
+    return ACTIVITY_COLORS[0]!;
+  }
+  return color;
 }
 
 // Chart data point type

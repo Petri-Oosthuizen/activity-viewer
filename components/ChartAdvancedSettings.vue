@@ -342,11 +342,11 @@
             <div>
               <label class="mb-1 block text-xs font-medium text-gray-700">Base Activity</label>
               <select
-                :value="deltaBaseActivityId || activities[0]?.id"
+                :value="effectiveDeltaBaseActivityId"
                 class="w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/10 sm:px-2 sm:py-1.5"
                 @change="setDeltaBaseActivity"
               >
-                <option v-for="activity in activities" :key="activity.id" :value="activity.id">
+                <option v-for="activity in activeActivities" :key="activity.id" :value="activity.id">
                   {{ activity.name }}
                 </option>
               </select>
@@ -356,11 +356,11 @@
                 >Compare Activity</label
               >
               <select
-                :value="deltaCompareActivityId || activities[1]?.id"
+                :value="effectiveDeltaCompareActivityId"
                 class="w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/10 sm:px-2 sm:py-1.5"
                 @change="setDeltaCompareActivity"
               >
-                <option v-for="activity in activities" :key="activity.id" :value="activity.id">
+                <option v-for="activity in activeActivities" :key="activity.id" :value="activity.id">
                   {{ activity.name }}
                 </option>
               </select>
@@ -392,6 +392,9 @@ const activityStore = useActivityStore();
 const showAdvanced = ref(false);
 
 const activities = computed(() => activityStore.activities);
+const activeActivities = computed(() =>
+  activities.value.filter((a) => !activityStore.isActivityDisabled(a.id))
+);
 const xAxisType = computed(() => activityStore.xAxisType);
 const showDelta = computed(() => activityStore.showDelta);
 const deltaMode = computed(() => activityStore.deltaMode);
@@ -399,6 +402,14 @@ const deltaBaseActivityId = computed(() => activityStore.deltaBaseActivityId);
 const deltaCompareActivityId = computed(() => activityStore.deltaCompareActivityId);
 const metricSelectionMode = computed(() => activityStore.metricSelectionMode);
 const chartTransforms = computed(() => activityStore.chartTransforms);
+
+const effectiveDeltaBaseActivityId = computed(() => 
+  deltaBaseActivityId.value || activeActivities.value[0]?.id || ''
+);
+
+const effectiveDeltaCompareActivityId = computed(() => 
+  deltaCompareActivityId.value || activeActivities.value[1]?.id || activeActivities.value[0]?.id || ''
+);
 
 const setXAxisType = (type: "time" | "distance" | "localTime") => {
   activityStore.setXAxisType(type);

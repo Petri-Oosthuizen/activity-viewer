@@ -27,7 +27,9 @@ Everything is processed **locally in your browser**. Files are not uploaded to a
 - Window-aware summary (updates with the visible chart window)
 - Baseline comparison (when 2+ activities are enabled)
 - Duration, distance, elevation gain
-- Avg/max for Altitude, Heart Rate, Power, Cadence
+- Min/avg/max for Altitude, Heart Rate, Power, Cadence
+- Sticky metric column for horizontal scrolling
+- Only displays metrics with available data
 
 ### Chart
 
@@ -58,6 +60,7 @@ Everything is processed **locally in your browser**. Files are not uploaded to a
 - Hide/show activities without removing them
 - Remove individual activities or clear all
 - Consistent activity colors
+- Optional local storage persistence (activities saved in browser, persist across page refreshes)
 
 ### Performance
 

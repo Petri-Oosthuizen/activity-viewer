@@ -11,85 +11,90 @@
       <div
         ref="chartContainer"
         class="h-full min-h-[400px] w-full touch-manipulation sm:min-h-[500px]"
-        style="touch-action: pan-x pan-y pinch-zoom;"
+        style="touch-action: pan-x pan-y pinch-zoom; position: relative"
       ></div>
 
       <!-- Toolbar (below chart) -->
-      <div class="mt-3 flex flex-wrap items-center gap-2 sm:mt-4">
-        <div class="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-gray-50 p-1">
-          <button
-            type="button"
-            class="flex h-11 w-11 touch-manipulation items-center justify-center rounded-md border border-primary bg-white text-primary shadow-xs transition-all active:bg-primary active:text-white sm:h-9 sm:w-9 sm:hover:bg-primary sm:hover:text-white"
-            @click="zoomIn"
-            title="Zoom In"
-            aria-label="Zoom In"
-          >
-            <span class="text-2xl font-light leading-none sm:text-xl">+</span>
-          </button>
-          <button
-            type="button"
-            class="flex h-11 w-11 touch-manipulation items-center justify-center rounded-md border border-primary bg-white text-primary shadow-xs transition-all active:bg-primary active:text-white sm:h-9 sm:w-9 sm:hover:bg-primary sm:hover:text-white"
-            @click="zoomOut"
-            title="Zoom Out"
-            aria-label="Zoom Out"
-          >
-            <span class="text-2xl font-light leading-none sm:text-xl">−</span>
-          </button>
-          <button
-            type="button"
-            class="flex h-11 w-11 touch-manipulation items-center justify-center rounded-md border border-primary bg-white text-primary shadow-xs transition-all active:bg-primary active:text-white sm:h-9 sm:w-9 sm:hover:bg-primary sm:hover:text-white"
-            @click="resetZoom"
-            title="Reset Zoom"
-            aria-label="Reset Zoom"
-          >
-            <span class="text-base sm:text-sm">🔍</span>
-          </button>
-        </div>
-
-        <div class="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-gray-50 p-1">
-          <button
-            type="button"
-            class="flex h-11 w-11 touch-manipulation items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 shadow-xs transition-all active:bg-gray-100 sm:h-9 sm:w-9 sm:hover:bg-gray-50"
-            @click="panLeft"
-            title="Pan Left"
-            aria-label="Pan Left"
-          >
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            class="flex h-11 w-11 touch-manipulation items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 shadow-xs transition-all active:bg-gray-100 sm:h-9 sm:w-9 sm:hover:bg-gray-50"
-            @click="panRight"
-            title="Pan Right"
-            aria-label="Pan Right"
-          >
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </div>
-
+      <div
+        class="mt-3 inline-flex flex-wrap items-center gap-1 rounded-md border border-gray-200 bg-gray-50 p-1 sm:mt-4"
+      >
+        <button
+          type="button"
+          class="border-primary text-primary active:bg-primary sm:hover:bg-primary flex h-11 w-11 touch-manipulation items-center justify-center rounded-md border bg-white shadow-xs transition-all active:text-white sm:h-9 sm:w-9 sm:hover:text-white"
+          @click="zoomIn"
+          title="Zoom In"
+          aria-label="Zoom In"
+        >
+          <span class="text-2xl leading-none font-light sm:text-xl">+</span>
+        </button>
+        <button
+          type="button"
+          class="border-primary text-primary active:bg-primary sm:hover:bg-primary flex h-11 w-11 touch-manipulation items-center justify-center rounded-md border bg-white shadow-xs transition-all active:text-white sm:h-9 sm:w-9 sm:hover:text-white"
+          @click="zoomOut"
+          title="Zoom Out"
+          aria-label="Zoom Out"
+        >
+          <span class="text-2xl leading-none font-light sm:text-xl">−</span>
+        </button>
+        <button
+          type="button"
+          class="border-primary text-primary active:bg-primary sm:hover:bg-primary flex h-11 w-11 touch-manipulation items-center justify-center rounded-md border bg-white shadow-xs transition-all active:text-white sm:h-9 sm:w-9 sm:hover:text-white"
+          @click="resetZoom"
+          title="Reset Zoom"
+          aria-label="Reset Zoom"
+        >
+          <span class="text-base sm:text-sm">🔍</span>
+        </button>
+        <button
+          type="button"
+          class="ml-2 flex h-11 w-11 touch-manipulation items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 shadow-xs transition-all active:bg-gray-100 sm:h-9 sm:w-9 sm:hover:bg-gray-50"
+          @click="panLeft"
+          title="Pan Left"
+          aria-label="Pan Left"
+        >
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+        </button>
+        <button
+          type="button"
+          class="flex h-11 w-11 touch-manipulation items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 shadow-xs transition-all active:bg-gray-100 sm:h-9 sm:w-9 sm:hover:bg-gray-50"
+          @click="panRight"
+          title="Pan Right"
+          aria-label="Pan Right"
+        >
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+        </button>
         <label
-          class="inline-flex h-11 select-none items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-3 text-[10px] text-gray-700 sm:h-9 sm:text-xs"
+          class="ml-2 inline-flex h-11 items-center gap-2 rounded-md border border-gray-200 bg-white px-3 text-[10px] text-gray-700 select-none sm:h-9 sm:text-xs"
           title="When enabled, Y rescales to the visible X window"
         >
           <input
             type="checkbox"
-            class="h-4 w-4 rounded-sm border-gray-300 text-primary focus:ring-primary"
+            class="text-primary focus:ring-primary h-4 w-4 rounded-sm border-gray-300"
             :checked="autoFitYEnabled"
             @change="toggleAutoFitY"
           />
           Auto-fit Y
         </label>
-
-        <div class="min-w-0 flex-1 text-[10px] leading-snug text-gray-500 sm:text-xs">
-          Zoom/pan affects X. Enable auto-fit Y if you want the Y range to follow the visible window.
-        </div>
       </div>
     </div>
-    <div v-else class="mt-4 flex min-h-[400px] items-center justify-center rounded-lg border border-gray-200 bg-gray-50 sm:mt-6">
+    <div
+      v-else
+      class="mt-4 flex min-h-[400px] items-center justify-center rounded-lg border border-gray-200 bg-gray-50 sm:mt-6"
+    >
       <p class="text-center text-sm text-gray-500 sm:text-base">
         No activities selected. Select at least one activity to view the chart.
       </p>
@@ -119,10 +124,15 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, nextTick, computed } from "vue";
+import { useDebounceFn } from "@vueuse/core";
 import { useActivityStore } from "~/stores/activity";
 import type { MetricType } from "~/utils/chart-config";
 import type { EChartsOption } from "echarts";
-import { findNearestIndex, findNearestIndexLinear, getActivityXValues } from "~/utils/activity-xvalues";
+import {
+  findNearestIndex,
+  findNearestIndexLinear,
+  getActivityXValues,
+} from "~/utils/activity-xvalues";
 
 import { useECharts } from "~/composables/useECharts";
 import MetricSelector from "./MetricSelector.vue";
@@ -166,8 +176,7 @@ const toggleMetric = (metric: MetricType) => {
 
 let chartHoverCleanup: (() => void) | null = null;
 let chartZoomCleanup: (() => void) | null = null;
-// Default off: keeps Y stable for easier comparisons.
-const autoFitYEnabled = ref(false);
+const autoFitYEnabled = ref(true);
 
 // Watch activities to reload chart when activities are added/removed
 watch(
@@ -337,7 +346,9 @@ function applyAutoYFit() {
 
   const option = chartInstance.value.getOption() as any;
   const seriesOptions: any[] = option?.series ?? [];
-  const yAxisOptions = Array.isArray(option?.yAxis) ? option.yAxis : [option?.yAxis].filter(Boolean);
+  const yAxisOptions = Array.isArray(option?.yAxis)
+    ? option.yAxis
+    : [option?.yAxis].filter(Boolean);
 
   if (yAxisOptions.length === 0 || seriesOptions.length === 0) return;
 
@@ -360,7 +371,8 @@ function applyAutoYFit() {
     }
   }
 
-  if (!Number.isFinite(globalMinX) || !Number.isFinite(globalMaxX) || globalMinX === globalMaxX) return;
+  if (!Number.isFinite(globalMinX) || !Number.isFinite(globalMaxX) || globalMinX === globalMaxX)
+    return;
 
   const xStart = globalMinX + ((globalMaxX - globalMinX) * xStartPct) / 100;
   const xEnd = globalMinX + ((globalMaxX - globalMinX) * xEndPct) / 100;
@@ -403,17 +415,18 @@ function applyAutoYFit() {
     };
   });
 
-  chartInstance.value.setOption(
-    { yAxis: nextYAxis },
-    { notMerge: false, replaceMerge: ["yAxis"] },
-  );
+  chartInstance.value.setOption({ yAxis: nextYAxis }, { notMerge: false, replaceMerge: ["yAxis"] });
 }
+
+const debouncedApplyAutoYFit = useDebounceFn(applyAutoYFit, 50);
 
 function clearYOverrides() {
   if (!chartInstance.value) return;
 
   const option = chartInstance.value.getOption() as any;
-  const yAxisOptions = Array.isArray(option?.yAxis) ? option.yAxis : [option?.yAxis].filter(Boolean);
+  const yAxisOptions = Array.isArray(option?.yAxis)
+    ? option.yAxis
+    : [option?.yAxis].filter(Boolean);
   if (yAxisOptions.length === 0) return;
 
   // Explicitly clear any previously set min/max so ECharts returns to auto-scaling.
@@ -423,10 +436,7 @@ function clearYOverrides() {
     max: null,
   }));
 
-  chartInstance.value.setOption(
-    { yAxis: nextYAxis },
-    { notMerge: false, replaceMerge: ["yAxis"] },
-  );
+  chartInstance.value.setOption({ yAxis: nextYAxis }, { notMerge: false, replaceMerge: ["yAxis"] });
 }
 
 const toggleAutoFitY = (event: Event) => {
@@ -575,7 +585,9 @@ watch(
       const option = instance.getOption() as any;
       const zooms: any[] = option?.dataZoom ?? [];
 
-      const xZoom = zooms.find((z) => z?.xAxisIndex === 0 && (z?.type === "slider" || z?.type === "inside"));
+      const xZoom = zooms.find(
+        (z) => z?.xAxisIndex === 0 && (z?.type === "slider" || z?.type === "inside"),
+      );
       const yZoom = zooms.find((z) => typeof z?.yAxisIndex === "number" && z?.type === "inside");
 
       const xStart = typeof xZoom?.start === "number" ? xZoom.start : 0;
@@ -591,7 +603,7 @@ watch(
       });
 
       // Keep Y scale fitted to the visible X window.
-      applyAutoYFit();
+      debouncedApplyAutoYFit();
     };
 
     // Initialize window state + keep it updated when zooming/panning changes.
@@ -690,10 +702,12 @@ const handleTouchStart = (e: TouchEvent) => {
     isPinching = true;
     const touch1 = e.touches[0];
     const touch2 = e.touches[1];
-    touchStartDistance = Math.hypot(
-      touch2.clientX - touch1.clientX,
-      touch2.clientY - touch1.clientY
-    );
+    if (touch1 && touch2) {
+      touchStartDistance = Math.hypot(
+        touch2.clientX - touch1.clientX,
+        touch2.clientY - touch1.clientY,
+      );
+    }
   }
 };
 
@@ -702,9 +716,10 @@ const handleTouchMove = (e: TouchEvent) => {
     e.preventDefault();
     const touch1 = e.touches[0];
     const touch2 = e.touches[1];
+    if (!touch1 || !touch2) return;
     const currentDistance = Math.hypot(
       touch2.clientX - touch1.clientX,
-      touch2.clientY - touch1.clientY
+      touch2.clientY - touch1.clientY,
     );
 
     if (touchStartDistance > 0) {

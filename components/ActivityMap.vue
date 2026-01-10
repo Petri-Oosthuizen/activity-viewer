@@ -123,7 +123,10 @@ const currentHeightIndex = ref(1); // Start at 400px
 const increaseHeight = () => {
   if (currentHeightIndex.value < heightSteps.length - 1) {
     currentHeightIndex.value++;
-    mapHeight.value = heightSteps[currentHeightIndex.value];
+    const newHeight = heightSteps[currentHeightIndex.value];
+    if (newHeight) {
+      mapHeight.value = newHeight;
+    }
     nextTick(() => {
       if (map) {
         map.invalidateSize();
@@ -135,7 +138,10 @@ const increaseHeight = () => {
 const decreaseHeight = () => {
   if (currentHeightIndex.value > 0) {
     currentHeightIndex.value--;
-    mapHeight.value = heightSteps[currentHeightIndex.value];
+    const newHeight = heightSteps[currentHeightIndex.value];
+    if (newHeight) {
+      mapHeight.value = newHeight;
+    }
     nextTick(() => {
       if (map) {
         map.invalidateSize();
@@ -217,6 +223,7 @@ function rebuildPointGrid() {
   pointGrid = new Map();
   for (let i = 0; i < projectedPoints.length; i++) {
     const p = projectedPoints[i];
+    if (!p) continue;
     const cx = Math.floor(p.x / GRID_CELL_METERS);
     const cy = Math.floor(p.y / GRID_CELL_METERS);
     const key = gridKey(cx, cy);
@@ -288,7 +295,7 @@ const initMap = async () => {
   }).addTo(map);
 
   // Add map-wide hover handler to snap to nearest point
-  map.on("mousemove", (e) => {
+  map.on("mousemove", (e: any) => {
     handleMapHover(e.latlng);
   });
 
@@ -335,6 +342,7 @@ const handleMapHover = (latlng: any) => {
 
   for (const idx of candidateIndices) {
     const point = projectedPoints[idx];
+    if (!point) continue;
     const distance = map?.distance(latlng, L?.latLng(point.lat, point.lon)) || Infinity;
     if (distance < threshold) nearbyPoints.push({ point, distance });
   }
@@ -345,13 +353,15 @@ const handleMapHover = (latlng: any) => {
 
   nearbyPoints
     .sort((a, b) => a.distance - b.distance)
-    .forEach(({ point }) => {
+    .forEach((item) => {
+      const point = item.point;
+      if (!point) return;
       // Only add each activity once (use closest point per activity)
       if (!seenActivityIds.has(point.activityId)) {
         const activity = activities.value.find((a) => a.id === point.activityId);
-        if (activity && activity.records[point.recordIndex]) {
+        if (activity) {
           const record = activity.records[point.recordIndex];
-          if (record.lat !== undefined && record.lon !== undefined) {
+          if (record && record.lat !== undefined && record.lon !== undefined) {
             nearbyActivities.push({ activity, record });
             seenActivityIds.add(point.activityId);
           }
@@ -361,15 +371,17 @@ const handleMapHover = (latlng: any) => {
 
   // Update store to trigger chart highlight (use nearest for chart sync)
   if (nearbyPoints.length > 0) {
-    const nearestPoint = nearbyPoints[0].point;
-    const activity = activities.value.find((a) => a.id === nearestPoint.activityId);
-    if (activity && activity.records[nearestPoint.recordIndex]) {
-      activityStore.setMapHoverPoint({
-        activityId: activity.id,
-        recordIndex: nearestPoint.recordIndex,
-        lat: nearestPoint.lat,
-        lon: nearestPoint.lon,
-      });
+    const nearestPoint = nearbyPoints[0]?.point;
+    if (nearestPoint) {
+      const activity = activities.value.find((a) => a.id === nearestPoint.activityId);
+      if (activity && activity.records[nearestPoint.recordIndex]) {
+        activityStore.setMapHoverPoint({
+          activityId: activity.id,
+          recordIndex: nearestPoint.recordIndex,
+          lat: nearestPoint.lat,
+          lon: nearestPoint.lon,
+        });
+      }
     }
   } else {
     activityStore.clearMapHoverPoint();
@@ -421,6 +433,7 @@ const updateMap = () => {
       for (let i = 0; i < validPointsRaw.length; i++) {
         const raw = validPointsRaw[i];
         const disp = smoothed[i];
+        if (!raw || !disp) continue;
         recordIndexToDisplay.set(raw.recordIndex, { lat: disp.lat, lon: disp.lon });
         points.push(L!.latLng(disp.lat, disp.lon));
       }
@@ -436,7 +449,7 @@ const updateMap = () => {
       // Don't bind tooltip to polyline - use map-wide hover detection instead
       // This allows showing multiple activities when routes overlap
       // Add mouseover handler to trigger multi-activity detection even when hovering on polyline
-      polyline.on("mouseover", (e) => {
+      polyline.on("mouseover", (e: any) => {
         if (e.latlng) {
           handleMapHover(e.latlng);
         }
@@ -447,6 +460,7 @@ const updateMap = () => {
       for (let i = 0; i < validPointsRaw.length; i++) {
         const raw = validPointsRaw[i];
         const disp = smoothed[i];
+        if (!raw || !disp) continue;
         const proj = projectLatLonMeters(disp.lat, disp.lon);
 
         allTrackPoints.push({
@@ -540,6 +554,7 @@ const updateMap = () => {
         // End marker with stop icon
         if (points.length > 1) {
           const lastRecord = activity.records[activity.records.length - 1];
+          if (!lastRecord) return;
           const endMarker = L!.marker(points[points.length - 1], {
             icon: L!.divIcon({
               className: "custom-marker",
@@ -602,17 +617,23 @@ const updateHoverMarker = () => {
       lat = hoveredPoint.value.lat;
       lon = hoveredPoint.value.lon;
     } else {
-      lat = activitiesToShow[0].record.lat!;
-      lon = activitiesToShow[0].record.lon!;
+      const firstActivity = activitiesToShow[0];
+      if (!firstActivity) return;
+      lat = firstActivity.record.lat!;
+      lon = firstActivity.record.lon!;
     }
   } else if (hoveredPoint.value) {
     // Fall back to hovered point (from chart hover)
     lat = hoveredPoint.value.lat;
     lon = hoveredPoint.value.lon;
     const activity = activities.value.find((a) => a.id === hoveredPoint.value!.activityId);
-    if (activity && activity.records[hoveredPoint.value.recordIndex]) {
+    if (activity) {
       const record = activity.records[hoveredPoint.value.recordIndex];
-      activitiesToShow = [{ activity, record }];
+      if (record) {
+        activitiesToShow = [{ activity, record }];
+      } else {
+        return;
+      }
     } else {
       return; // No valid activity found
     }
@@ -622,26 +643,30 @@ const updateHoverMarker = () => {
 
   // Use the color of the nearest activity for the marker
   const nearestActivity = activitiesToShow[0];
+  if (!nearestActivity) return;
   hoverMarker = L!.marker([lat, lon], {
     icon: L!.divIcon({
       className: "custom-hover-marker",
       html: `<div style="width: 16px; height: 16px; background-color: ${nearestActivity.activity.color}; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 0 2px ${nearestActivity.activity.color};"></div>`,
       iconSize: [16, 16],
       iconAnchor: [8, 8],
+      tooltipAnchor: [8, 0],
     }),
   });
 
   // Build tooltip: show all activities if multiple, single if one
+  const firstActivity = activitiesToShow[0];
+  if (!firstActivity) return;
   const tooltipHtml =
     activitiesToShow.length > 1
       ? buildMultiActivityTooltip(activitiesToShow)
-      : buildPointTooltip(activitiesToShow[0].activity, activitiesToShow[0].record);
+      : buildPointTooltip(firstActivity.activity, firstActivity.record);
 
   hoverMarker
     .bindTooltip(tooltipHtml, {
       permanent: true,
       direction: "top",
-      offset: [0, -12],
+      offset: [0, -18],
       className: "activity-tooltip",
     })
     .openTooltip();
@@ -720,36 +745,37 @@ watch(chartHoveredPoint, (point) => {
 
   if (point) {
     const activity = activities.value.find((a) => a.id === point.activityId);
-    if (activity && activity.records[point.recordIndex]) {
+    if (activity) {
       const record = activity.records[point.recordIndex];
-      const display =
-        displayGpsByActivityId.get(activity.id)?.get(point.recordIndex) ??
-        (record.lat !== undefined && record.lon !== undefined
-          ? { lat: record.lat, lon: record.lon }
-          : null);
+      if (record) {
+        const display =
+          displayGpsByActivityId.get(activity.id)?.get(point.recordIndex) ??
+          (record.lat !== undefined && record.lon !== undefined
+            ? { lat: record.lat, lon: record.lon }
+            : null);
 
-      if (display) {
-        // Remove existing hover marker
-        if (hoverMarker) {
-          map.removeLayer(hoverMarker);
-        }
+        if (display) {
+          // Remove existing hover marker
+          if (hoverMarker) {
+            map.removeLayer(hoverMarker);
+          }
 
-        // Create hover marker with tooltip
-        hoverMarker = L!.marker([display.lat, display.lon], {
-          icon: L!.divIcon({
-            className: "custom-hover-marker",
-            html: `<div style="width: 16px; height: 16px; background-color: ${activity.color}; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 0 2px ${activity.color};"></div>`,
-            iconSize: [16, 16],
-            iconAnchor: [8, 8],
-          }),
-        });
+          // Create hover marker with tooltip
+          hoverMarker = L!.marker([display.lat, display.lon], {
+            icon: L!.divIcon({
+              className: "custom-hover-marker",
+              html: `<div style="width: 16px; height: 16px; background-color: ${activity.color}; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 0 2px ${activity.color};"></div>`,
+              iconSize: [16, 16],
+              iconAnchor: [8, 8],
+            }),
+          });
 
         // Add detailed tooltip showing all metrics
         hoverMarker
           .bindTooltip(buildPointTooltip(activity, record), {
             permanent: true,
             direction: "top",
-            offset: [0, -12],
+            offset: [0, -18],
             className: "activity-tooltip",
           })
           .openTooltip();
@@ -763,6 +789,7 @@ watch(chartHoveredPoint, (point) => {
           map.setView([display.lat, display.lon], map.getZoom(), { animate: true, duration: 0.3 });
         }
       }
+    }
     }
   } else {
     if (hoverMarker) {
@@ -871,7 +898,7 @@ onUnmounted(() => {
 }
 
 /* Custom tooltip styling */
-.activity-tooltip {
+.leaflet-tooltip.activity-tooltip {
   background: white !important;
   border: 1px solid #e0e0e0 !important;
   border-radius: 6px !important;
@@ -879,7 +906,7 @@ onUnmounted(() => {
   padding: 4px 6px !important;
 }
 
-.activity-tooltip::before {
+.leaflet-tooltip.activity-tooltip::before {
   border-top-color: white !important;
 }
 

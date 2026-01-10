@@ -11,6 +11,9 @@ export default defineNuxtConfig({
       buildNumber:
         process.env.GITHUB_RUN_NUMBER ||
         (process.env.GITHUB_SHA ? process.env.GITHUB_SHA.substring(0, 7) : "dev"),
+      githubUrl: process.env.GITHUB_REPOSITORY
+        ? `https://github.com/${process.env.GITHUB_REPOSITORY}`
+        : "",
     },
   },
   routeRules: {
