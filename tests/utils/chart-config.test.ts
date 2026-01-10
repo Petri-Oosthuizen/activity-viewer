@@ -28,6 +28,7 @@ describe("chart-config utilities", () => {
     records: mockRecords,
     color: "#5470c6",
     offset: 0,
+    scale: 1,
     startTime: new Date("2024-01-01T00:00:00Z"),
   };
 
@@ -159,21 +160,22 @@ describe("chart-config utilities", () => {
       expect(data[1]).toEqual([10, 130]);
     });
 
-    it("should filter out null values", () => {
+    it("should preserve missing values as null (index-safe)", () => {
       const activityWithNulls: Activity = {
         ...mockActivity,
         records: [
           { t: 0, d: 0, hr: 120 },
-          { t: 10, d: 100, hr: null },
+          { t: 10, d: 100, hr: undefined },
         ],
       };
 
       const data = transformToChartData(activityWithNulls, "hr", "time");
-      expect(data).toHaveLength(1);
+      expect(data).toHaveLength(2);
       expect(data[0]).toEqual([0, 120]);
+      expect(data[1]).toEqual([10, null]);
     });
 
-    it("should sort by x value", () => {
+    it("should preserve record order (no implicit sorting)", () => {
       const unsortedActivity: Activity = {
         ...mockActivity,
         records: [
@@ -183,8 +185,8 @@ describe("chart-config utilities", () => {
       };
 
       const data = transformToChartData(unsortedActivity, "hr", "time");
-      expect(data[0][0]).toBe(0);
-      expect(data[1][0]).toBe(10);
+      expect(data[0][0]).toBe(10);
+      expect(data[1][0]).toBe(0);
     });
   });
 

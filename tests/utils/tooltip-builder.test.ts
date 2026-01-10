@@ -24,30 +24,35 @@ describe("tooltip builders", () => {
     records: [mockRecord],
     color: "#5470c6",
     offset: 0,
+    scale: 1,
   };
 
   describe("buildPointTooltip", () => {
     it("should build tooltip for single activity point", () => {
       const result = buildPointTooltip(mockActivity, mockRecord);
-      
+
       expect(result).toContain("Test Activity");
-      expect(result).toContain("150 bpm");
+      expect(result).toContain("150");
       expect(result).toContain("200 m");
       expect(result).toContain("250 W");
-      expect(result).toContain("90 rpm");
+      expect(result).toContain("90");
+      expect(result).toContain("HR:");
+      expect(result).toContain("P:");
+      expect(result).toContain("A:");
+      expect(result).toContain("C:");
     });
 
     it("should handle missing metric values", () => {
       const recordWithoutHR = { ...mockRecord, hr: undefined };
       const result = buildPointTooltip(mockActivity, recordWithoutHR);
-      
-      expect(result).not.toContain("bpm");
+
+      expect(result).not.toContain("HR:");
       expect(result).toContain("200 m");
     });
 
     it("should format time and distance", () => {
       const result = buildPointTooltip(mockActivity, mockRecord);
-      
+
       expect(result).toContain("1:40"); // 100 seconds
       expect(result).toContain("1.00 km"); // 1000 meters
     });
@@ -64,11 +69,12 @@ describe("tooltip builders", () => {
       ];
 
       const result = buildMultiActivityTooltip(points);
-      
+
       expect(result).toContain("Activity 1");
       expect(result).toContain("Activity 2");
-      expect(result).toContain("150 bpm");
-      expect(result).toContain("160 bpm");
+      expect(result).toContain("150");
+      expect(result).toContain("160");
+      expect(result).toContain("HR:");
     });
 
     it("should handle empty points array", () => {
@@ -85,7 +91,7 @@ describe("tooltip builders", () => {
       ];
 
       const result = buildChartTooltip("100.0s", items);
-      
+
       expect(result).toContain("Activity 1");
       expect(result).toContain("Activity 2");
       expect(result).toContain("150.0");
@@ -99,4 +105,3 @@ describe("tooltip builders", () => {
     });
   });
 });
-

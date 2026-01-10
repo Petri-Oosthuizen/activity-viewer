@@ -6,6 +6,16 @@
         type="button"
         :class="[
           'flex-1 min-w-[44px] px-3 py-2.5 border-0 bg-transparent rounded-sm cursor-pointer text-xs font-medium text-gray-600 touch-manipulation transition-all active:bg-gray-200 sm:px-4 sm:py-2 sm:text-sm sm:hover:bg-gray-200',
+          value === 'distance' ? 'bg-white text-primary shadow-xs' : ''
+        ]"
+        @click="$emit('update:value', 'distance')"
+      >
+        Distance
+      </button>
+      <button
+        type="button"
+        :class="[
+          'flex-1 min-w-[44px] px-3 py-2.5 border-0 bg-transparent rounded-sm cursor-pointer text-xs font-medium text-gray-600 touch-manipulation transition-all active:bg-gray-200 sm:px-4 sm:py-2 sm:text-sm sm:hover:bg-gray-200',
           value === 'time' ? 'bg-white text-primary shadow-xs' : ''
         ]"
         @click="$emit('update:value', 'time')"
@@ -22,22 +32,12 @@
       >
         Local Time
       </button>
-      <button
-        type="button"
-        :class="[
-          'flex-1 min-w-[44px] px-3 py-2.5 border-0 bg-transparent rounded-sm cursor-pointer text-xs font-medium text-gray-600 touch-manipulation transition-all active:bg-gray-200 sm:px-4 sm:py-2 sm:text-sm sm:hover:bg-gray-200',
-          value === 'distance' ? 'bg-white text-primary shadow-xs' : ''
-        ]"
-        @click="$emit('update:value', 'distance')"
-      >
-        Distance
-      </button>
     </div>
     <p class="mt-2 text-xs text-gray-500 sm:text-sm">
       {{ 
+        value === 'distance' ? 'Compare activities by distance covered' :
         value === 'time' ? 'Compare activities from start time' : 
-        value === 'localTime' ? 'Compare activities by clock time' : 
-        'Compare activities by distance covered'
+        'Compare activities by clock time'
       }}
     </p>
   </div>

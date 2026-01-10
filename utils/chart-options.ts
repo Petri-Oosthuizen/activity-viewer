@@ -3,10 +3,16 @@
  * Extracted from store to maintain separation of concerns
  */
 
-import type { Activity } from "~/types/activity";
 import type { MetricType, XAxisType, DeltaMode } from "./chart-config";
 import { METRIC_LABELS, formatXAxisValue } from "./chart-config";
 import { buildChartTooltip, type ChartTooltipItem } from "./tooltip-builder";
+
+function formatAxisNumber(value: unknown): string {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return String(value);
+  const rounded = n.toFixed(2);
+  return rounded.replace(/\.00$/, "").replace(/(\.\d)0$/, "$1");
+}
 
 /**
  * Build tooltip configuration for ECharts
@@ -60,6 +66,8 @@ export function buildTooltipConfig(
  * Build dataZoom configuration for ECharts
  */
 export function buildDataZoomConfig(metricCount: number, yAxisCount: number) {
+  void metricCount;
+  void yAxisCount;
   return [
     {
       type: "slider",
@@ -83,25 +91,15 @@ export function buildDataZoomConfig(metricCount: number, yAxisCount: number) {
       type: "inside",
       xAxisIndex: 0,
       filterMode: "none",
-      moveOnMouseMove: true,
+      // Disable drag-to-pan; use toolbar pan controls instead.
+      moveOnMouseMove: false,
+      moveOnTouchMove: false,
       preventDefaultMouseMove: false,
       zoomOnMouseWheel: true,
       moveOnMouseWheel: false,
       throttle: 0,
       throttleDelay: 0,
     },
-    // Enable vertical panning/zooming for all Y-axes
-    ...Array.from({ length: yAxisCount }, (_, i) => ({
-      type: "inside" as const,
-      yAxisIndex: i,
-      filterMode: "none" as const,
-      moveOnMouseMove: true,
-      preventDefaultMouseMove: false,
-      zoomOnMouseWheel: true,
-      moveOnMouseWheel: false,
-      throttle: 0,
-      throttleDelay: 0,
-    })),
   ];
 }
 
@@ -156,7 +154,7 @@ export function buildYAxisConfig(
         nameGap: 35,
         nameRotate: 90,
         scale: true,
-        axisLabel: { show: true },
+        axisLabel: { show: true, formatter: formatAxisNumber },
         position: "left",
       },
     ];
@@ -172,7 +170,7 @@ export function buildYAxisConfig(
       nameGap: 35,
       nameRotate: 90,
       scale: true,
-      axisLabel: { show: true },
+      axisLabel: { show: true, formatter: formatAxisNumber },
     };
   }
 
@@ -185,7 +183,7 @@ export function buildYAxisConfig(
     nameGap: 35,
     nameRotate: 90,
     scale: true,
-    axisLabel: { show: true },
+    axisLabel: { show: true, formatter: formatAxisNumber },
     position: (i % 2 === 0 ? "left" : "right") as "left" | "right",
   }));
 
@@ -203,7 +201,7 @@ export function buildYAxisConfig(
       nameGap: 35,
       nameRotate: 90,
       scale: true,
-      axisLabel: { show: true },
+      axisLabel: { show: true, formatter: formatAxisNumber },
       position: "right" as "left" | "right",
     });
   }
@@ -253,7 +251,10 @@ export function formatTooltipParams(
 
   if (hoveredX === undefined || hoveredX === null) return "";
 
-  const axisValue = formatXAxisValue(hoveredX, xAxisType);
+  const axisValue =
+    typeof hoveredX === "number"
+      ? formatXAxisValue(hoveredX, xAxisType)
+      : String(hoveredX);
 
   // Display values from all series that ECharts passed to us
   const tooltipItems: ChartTooltipItem[] = [];

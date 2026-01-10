@@ -67,6 +67,7 @@ describe("delta-calculator", () => {
       records: [],
       color: "#5470c6",
       offset: 0,
+      scale: 1,
     };
 
     const compareActivity: Activity = {
@@ -75,6 +76,7 @@ describe("delta-calculator", () => {
       records: [],
       color: "#91cc75",
       offset: 0,
+      scale: 1,
     };
 
     it("should build delta series in overlay mode", () => {
@@ -90,7 +92,7 @@ describe("delta-calculator", () => {
 
       const result = buildDeltaSeries(config);
 
-      expect(result.name).toBe("Δ Compare Activity - Base Activity");
+      expect(result.name).toBe("Δ Heart Rate (bpm): Compare Activity - Base Activity");
       expect(result.type).toBe("line");
       expect(result.data).toHaveLength(3);
       expect(result.yAxisIndex).toBe(1); // metricCount

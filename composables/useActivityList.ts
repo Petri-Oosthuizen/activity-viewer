@@ -5,7 +5,6 @@
 
 import { computed } from "vue";
 import { useActivityStore } from "~/stores/activity";
-import type { Activity } from "~/types/activity";
 
 export function useActivityList() {
   const activityStore = useActivityStore();

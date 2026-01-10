@@ -22,6 +22,8 @@ export const METRIC_LABELS: Readonly<Record<MetricType, string>> = {
   cad: "Cadence (rpm)",
 };
 
+const METRIC_ORDER: readonly MetricType[] = ["alt", "hr", "pwr", "cad"] as const;
+
 // Default color palette for activities
 export const ACTIVITY_COLORS = [
   "#5470c6", // 0: Blue
@@ -72,7 +74,8 @@ export function getAvailableMetrics(activities: Activity[]): MetricType[] {
       if (record.cad !== undefined && record.cad !== null) metrics.add("cad");
     }
   }
-  return Array.from(metrics);
+  // Stable ordering, with altitude first when present.
+  return METRIC_ORDER.filter((m) => metrics.has(m));
 }
 
 /**
@@ -165,14 +168,13 @@ export function transformToChartData(
   metric: MetricType,
   xAxisType: XAxisType
 ): ChartDataPoint[] {
-  return activity.records
-    .map((record): ChartDataPoint => {
-      const x = calculateXValue(record, activity, xAxisType);
-      const y = record[metric] ?? null;
-      return [x, y];
-    })
-    .filter((point): point is [number, number] => point[1] !== null)
-    .sort((a, b) => a[0] - b[0]);
+  // Preserve record order and indices to keep chart ↔ map synchronization exact.
+  // Missing values are represented as `null` so ECharts can naturally gap the line.
+  return activity.records.map((record): ChartDataPoint => {
+    const x = calculateXValue(record, activity, xAxisType);
+    const y = record[metric] ?? null;
+    return [x, y];
+  });
 }
 
 /**

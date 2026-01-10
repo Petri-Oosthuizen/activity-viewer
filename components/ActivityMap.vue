@@ -31,11 +31,77 @@
         </button>
       </div>
     </div>
+
     <div
       ref="mapContainer"
       class="w-full rounded-sm border border-gray-200 transition-all"
       :style="{ height: mapHeight }"
     ></div>
+
+    <!-- Advanced Settings (below map, consistent with chart) -->
+    <div class="mt-4 rounded-lg border-2 border-gray-200 bg-gray-50 p-3 sm:mt-6 sm:p-4">
+      <button
+        type="button"
+        class="flex w-full touch-manipulation items-center justify-between"
+        @click="showGpsSettings = !showGpsSettings"
+        :aria-expanded="showGpsSettings"
+      >
+        <span class="text-sm font-semibold text-gray-800 sm:text-base">Advanced Settings</span>
+        <svg
+          :class="[
+            'h-5 w-5 text-gray-600 transition-transform',
+            showGpsSettings ? 'rotate-180' : '',
+          ]"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M19 9l-7 7-7-7"
+          />
+        </svg>
+      </button>
+
+      <div v-show="showGpsSettings" class="mt-4 space-y-4 sm:mt-6 sm:space-y-6">
+        <div class="space-y-3 sm:space-y-4">
+          <h4 class="m-0 text-sm font-semibold text-gray-800 sm:text-base">GPS Smoothing</h4>
+          <p class="text-xs text-gray-500 sm:text-sm">
+            Smooth the GPS track to reduce jitter (affects map rendering and hover snapping).
+          </p>
+
+          <div
+            class="rounded-md border border-gray-200 bg-white p-3 sm:p-4"
+            :class="chartTransforms.gpsSmoothing.enabled ? '' : 'opacity-50'"
+          >
+            <label class="flex cursor-pointer touch-manipulation items-center gap-2">
+              <input
+                type="checkbox"
+                :checked="chartTransforms.gpsSmoothing.enabled"
+                class="h-5 w-5 cursor-pointer touch-manipulation rounded-sm border-gray-300 text-primary focus:ring-primary sm:h-4 sm:w-4"
+                @change="toggleGpsSmoothing"
+              />
+              <span class="text-xs text-gray-700 sm:text-sm">Enable</span>
+            </label>
+
+            <div class="mt-3">
+              <label class="mb-1 block text-xs font-medium text-gray-700">Window (points)</label>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                class="w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/10 sm:w-auto sm:px-2 sm:py-1.5"
+                :value="chartTransforms.gpsSmoothing.windowPoints"
+                :disabled="!chartTransforms.gpsSmoothing.enabled"
+                @input="setGpsSmoothingWindowPoints"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -45,6 +111,7 @@ import { useActivityStore } from "~/stores/activity";
 import type { Activity, ActivityRecord } from "~/types/activity";
 import { buildPointTooltip, buildMultiActivityTooltip } from "~/utils/tooltip-builder";
 import { formatTime, formatDistance } from "~/utils/format";
+import { smoothGpsPoints } from "~/utils/series-transforms";
 
 let L: typeof import("leaflet") | null = null;
 
@@ -88,6 +155,29 @@ const activityStore = useActivityStore();
 
 const activities = computed(() => activityStore.activities);
 const hoveredPoint = computed(() => activityStore.mapHoveredPoint);
+const chartTransforms = computed(() => activityStore.chartTransforms);
+
+const showGpsSettings = ref(false);
+
+const toggleGpsSmoothing = (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  activityStore.setChartTransforms({
+    ...chartTransforms.value,
+    gpsSmoothing: { ...chartTransforms.value.gpsSmoothing, enabled: target.checked },
+  });
+};
+
+const setGpsSmoothingWindowPoints = (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const next = Number.parseInt(target.value, 10);
+  activityStore.setChartTransforms({
+    ...chartTransforms.value,
+    gpsSmoothing: {
+      ...chartTransforms.value.gpsSmoothing,
+      windowPoints: Number.isFinite(next) ? Math.max(1, next) : chartTransforms.value.gpsSmoothing.windowPoints,
+    },
+  });
+};
 
 // Flat list of all GPS points from all activities for efficient hover detection
 let allTrackPoints: Array<{
@@ -96,6 +186,45 @@ let allTrackPoints: Array<{
   recordIndex: number;
   activityId: string;
 }> = [];
+
+// Projected points + spatial bins for fast nearest-point lookup (prevents O(n) scans on hover)
+type ProjectedPoint = (typeof allTrackPoints)[number] & { x: number; y: number };
+let projectedPoints: ProjectedPoint[] = [];
+let pointGrid = new Map<string, number[]>(); // cellKey -> projectedPoints indices
+const GRID_CELL_METERS = 200; // tuned for hover thresholds (50m..1000m)
+
+// GPS display positions (supports optional smoothing) used for markers + hover syncing
+let displayGpsByActivityId = new Map<string, Map<number, { lat: number; lon: number }>>();
+
+function projectLatLonMeters(lat: number, lon: number): { x: number; y: number } {
+  // Web Mercator projection (meters), good enough for local hover queries.
+  const R = 6378137;
+  const x = (lon * Math.PI * R) / 180;
+  const clampedLat = Math.max(-85, Math.min(85, lat));
+  const y =
+    R *
+    Math.log(
+      Math.tan(Math.PI / 4 + ((clampedLat * Math.PI) / 180) / 2),
+    );
+  return { x, y };
+}
+
+function gridKey(cx: number, cy: number): string {
+  return `${cx},${cy}`;
+}
+
+function rebuildPointGrid() {
+  pointGrid = new Map();
+  for (let i = 0; i < projectedPoints.length; i++) {
+    const p = projectedPoints[i];
+    const cx = Math.floor(p.x / GRID_CELL_METERS);
+    const cy = Math.floor(p.y / GRID_CELL_METERS);
+    const key = gridKey(cx, cy);
+    const bucket = pointGrid.get(key);
+    if (bucket) bucket.push(i);
+    else pointGrid.set(key, [i]);
+  }
+}
 
 // Check if any active (non-disabled) activity has GPS data
 const hasGpsData = computed(() => {
@@ -174,7 +303,7 @@ const initMap = async () => {
 
 const handleMapHover = (latlng: any) => {
   // Find all nearby GPS points within threshold for overlapping routes
-  if (!map || allTrackPoints.length === 0) {
+  if (!map || projectedPoints.length === 0) {
     nearbyActivities = [];
     updateHoverMarker();
     return;
@@ -186,16 +315,29 @@ const handleMapHover = (latlng: any) => {
 
   // Find all points within threshold (for overlapping routes)
   const nearbyPoints: Array<{
-    point: typeof allTrackPoints[0];
+    point: typeof projectedPoints[0];
     distance: number;
   }> = [];
 
-  allTrackPoints.forEach((point) => {
-    const distance = map?.distance(latlng, L?.latLng(point.lat, point.lon)) || Infinity;
-    if (distance < threshold) {
-      nearbyPoints.push({ point, distance });
+  const center = projectLatLonMeters(latlng.lat, latlng.lng);
+  const radiusCells = Math.ceil(threshold / GRID_CELL_METERS);
+  const cX = Math.floor(center.x / GRID_CELL_METERS);
+  const cY = Math.floor(center.y / GRID_CELL_METERS);
+
+  const candidateIndices: number[] = [];
+  for (let dx = -radiusCells; dx <= radiusCells; dx++) {
+    for (let dy = -radiusCells; dy <= radiusCells; dy++) {
+      const bucket = pointGrid.get(gridKey(cX + dx, cY + dy));
+      if (!bucket) continue;
+      candidateIndices.push(...bucket);
     }
-  });
+  }
+
+  for (const idx of candidateIndices) {
+    const point = projectedPoints[idx];
+    const distance = map?.distance(latlng, L?.latLng(point.lat, point.lon)) || Infinity;
+    if (distance < threshold) nearbyPoints.push({ point, distance });
+  }
 
   // Collect all nearby activities with their records
   nearbyActivities = [];
@@ -222,12 +364,11 @@ const handleMapHover = (latlng: any) => {
     const nearestPoint = nearbyPoints[0].point;
     const activity = activities.value.find((a) => a.id === nearestPoint.activityId);
     if (activity && activity.records[nearestPoint.recordIndex]) {
-      const record = activity.records[nearestPoint.recordIndex];
       activityStore.setMapHoverPoint({
         activityId: activity.id,
         recordIndex: nearestPoint.recordIndex,
-        lat: record.lat!,
-        lon: record.lon!,
+        lat: nearestPoint.lat,
+        lon: nearestPoint.lon,
       });
     }
   } else {
@@ -246,25 +387,46 @@ const updateMap = () => {
   layers = [];
   markers = [];
   allTrackPoints = [];
+  projectedPoints = [];
+  displayGpsByActivityId = new Map();
 
   const allBounds: any[] = [];
+  const useGpsSmoothing = chartTransforms.value.gpsSmoothing.enabled;
+  const gpsWindow = chartTransforms.value.gpsSmoothing.windowPoints;
 
   activities.value.forEach((activity) => {
     // Skip disabled activities
     if (activityStore.isActivityDisabled(activity.id)) return;
 
     const points: any[] = [];
-    const validPoints: Array<{ lat: number; lon: number; recordIndex: number }> = [];
+    const validPointsRaw: Array<{ lat: number; lon: number; recordIndex: number }> = [];
 
     activity.records.forEach((record, index) => {
       if (record.lat !== undefined && record.lon !== undefined) {
-        const latlng = L!.latLng(record.lat, record.lon);
-        points.push(latlng);
-        validPoints.push({ lat: record.lat, lon: record.lon, recordIndex: index });
+        validPointsRaw.push({ lat: record.lat, lon: record.lon, recordIndex: index });
       }
     });
 
-    if (points.length > 0) {
+    if (validPointsRaw.length > 0) {
+      const smoothed =
+        useGpsSmoothing && gpsWindow > 1
+          ? smoothGpsPoints(
+              validPointsRaw.map((p) => ({ lat: p.lat, lon: p.lon })),
+              gpsWindow,
+            )
+          : validPointsRaw.map((p) => ({ lat: p.lat, lon: p.lon }));
+
+      const recordIndexToDisplay = new Map<number, { lat: number; lon: number }>();
+
+      for (let i = 0; i < validPointsRaw.length; i++) {
+        const raw = validPointsRaw[i];
+        const disp = smoothed[i];
+        recordIndexToDisplay.set(raw.recordIndex, { lat: disp.lat, lon: disp.lon });
+        points.push(L!.latLng(disp.lat, disp.lon));
+      }
+
+      displayGpsByActivityId.set(activity.id, recordIndexToDisplay);
+
       const polyline = L!.polyline(points, {
         color: activity.color,
         weight: 3,
@@ -282,14 +444,26 @@ const updateMap = () => {
 
       // Build flat list of all GPS points for efficient hover detection
       // This enables map-wide hover (not just on polylines) to sync with chart
-      validPoints.forEach((point) => {
+      for (let i = 0; i < validPointsRaw.length; i++) {
+        const raw = validPointsRaw[i];
+        const disp = smoothed[i];
+        const proj = projectLatLonMeters(disp.lat, disp.lon);
+
         allTrackPoints.push({
-          lat: point.lat,
-          lon: point.lon,
-          recordIndex: point.recordIndex,
+          lat: disp.lat,
+          lon: disp.lon,
+          recordIndex: raw.recordIndex,
           activityId: activity.id,
         });
-      });
+        projectedPoints.push({
+          lat: disp.lat,
+          lon: disp.lon,
+          recordIndex: raw.recordIndex,
+          activityId: activity.id,
+          x: proj.x,
+          y: proj.y,
+        });
+      }
 
       polyline.addTo(map!);
       layers.push(polyline);
@@ -400,6 +574,8 @@ const updateMap = () => {
     }
   });
 
+  rebuildPointGrid();
+
   // Fit map to show all activities
   if (allBounds.length > 0) {
     const combinedBounds = allBounds.reduce((acc, bounds) => acc.extend(bounds));
@@ -421,9 +597,14 @@ const updateHoverMarker = () => {
   let lon: number;
 
   if (activitiesToShow.length > 0) {
-    // Use the location from the nearest activity
-    lat = activitiesToShow[0].record.lat!;
-    lon = activitiesToShow[0].record.lon!;
+    // Use the snapped hover location (already smoothed if enabled)
+    if (hoveredPoint.value) {
+      lat = hoveredPoint.value.lat;
+      lon = hoveredPoint.value.lon;
+    } else {
+      lat = activitiesToShow[0].record.lat!;
+      lon = activitiesToShow[0].record.lon!;
+    }
   } else if (hoveredPoint.value) {
     // Fall back to hovered point (from chart hover)
     lat = hoveredPoint.value.lat;
@@ -468,7 +649,7 @@ const updateHoverMarker = () => {
   hoverMarker.addTo(map);
 };
 
-watch(activities, async () => {
+watch([activities, () => activityStore.disabledActivities, chartTransforms], async () => {
   await nextTick();
   if (hasGpsData.value) {
     // Ensure map is initialized if it hasn't been yet
@@ -541,14 +722,20 @@ watch(chartHoveredPoint, (point) => {
     const activity = activities.value.find((a) => a.id === point.activityId);
     if (activity && activity.records[point.recordIndex]) {
       const record = activity.records[point.recordIndex];
-      if (record.lat !== undefined && record.lon !== undefined) {
+      const display =
+        displayGpsByActivityId.get(activity.id)?.get(point.recordIndex) ??
+        (record.lat !== undefined && record.lon !== undefined
+          ? { lat: record.lat, lon: record.lon }
+          : null);
+
+      if (display) {
         // Remove existing hover marker
         if (hoverMarker) {
           map.removeLayer(hoverMarker);
         }
 
         // Create hover marker with tooltip
-        hoverMarker = L!.marker([record.lat, record.lon], {
+        hoverMarker = L!.marker([display.lat, display.lon], {
           icon: L!.divIcon({
             className: "custom-hover-marker",
             html: `<div style="width: 16px; height: 16px; background-color: ${activity.color}; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 0 2px ${activity.color};"></div>`,
@@ -571,9 +758,9 @@ watch(chartHoveredPoint, (point) => {
 
         // Pan map to show the point (only if point is outside current view)
         const currentBounds = map.getBounds();
-        const pointLatLng = L!.latLng(record.lat, record.lon);
+        const pointLatLng = L!.latLng(display.lat, display.lon);
         if (!currentBounds.contains(pointLatLng)) {
-          map.setView([record.lat, record.lon], map.getZoom(), { animate: true, duration: 0.3 });
+          map.setView([display.lat, display.lon], map.getZoom(), { animate: true, duration: 0.3 });
         }
       }
     }
@@ -687,9 +874,9 @@ onUnmounted(() => {
 .activity-tooltip {
   background: white !important;
   border: 1px solid #e0e0e0 !important;
-  border-radius: 8px !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-  padding: 8px 10px !important;
+  border-radius: 6px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+  padding: 4px 6px !important;
 }
 
 .activity-tooltip::before {

@@ -22,6 +22,7 @@ describe('useActivityStore', () => {
       expect(store.activities[0].name).toBe('Test Activity')
       expect(store.activities[0].records).toEqual(records)
       expect(store.activities[0].offset).toBe(0)
+      expect(store.activities[0].scale).toBe(1)
       expect(store.activities[0].color).toBeDefined()
     })
 
@@ -78,7 +79,31 @@ describe('useActivityStore', () => {
       store.clearAll()
 
       expect(store.activities).toHaveLength(0)
-      expect(store.selectedMetric).toBe('hr')
+      expect(store.selectedMetric).toBe('alt')
+    })
+  })
+
+  describe('chartWindow', () => {
+    it('should default to full window', () => {
+      const store = useActivityStore()
+      expect(store.chartWindow).toEqual({
+        xStartPercent: 0,
+        xEndPercent: 100,
+        yStartPercent: 0,
+        yEndPercent: 100,
+      })
+    })
+
+    it('should reset chartWindow on clearAll', () => {
+      const store = useActivityStore()
+      store.setChartWindow({ xStartPercent: 10, xEndPercent: 90, yStartPercent: 20, yEndPercent: 80 })
+      store.clearAll()
+      expect(store.chartWindow).toEqual({
+        xStartPercent: 0,
+        xEndPercent: 100,
+        yStartPercent: 0,
+        yEndPercent: 100,
+      })
     })
   })
 
@@ -172,9 +197,9 @@ describe('useActivityStore', () => {
   })
 
   describe('metricSelectionMode', () => {
-    it('should default to multi mode', () => {
+    it('should default to single mode', () => {
       const store = useActivityStore()
-      expect(store.metricSelectionMode).toBe('multi')
+      expect(store.metricSelectionMode).toBe('single')
     })
 
     it('should switch to single mode', () => {
@@ -191,8 +216,8 @@ describe('useActivityStore', () => {
 
       store.addActivity(records, 'Test Activity')
       store.setMetricSelectionMode('multi')
+      // Ensure we have >1 selected metric in multi mode (default is alt)
       store.toggleMetric('hr')
-      store.toggleMetric('alt')
 
       expect(store.selectedMetrics.length).toBe(2)
 

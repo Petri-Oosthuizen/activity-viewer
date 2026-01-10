@@ -1,5 +1,4 @@
 export default defineEventHandler((event) => {
-  const config = useRuntimeConfig();
   const baseURL =
     process.env.GITHUB_REPOSITORY
       ? `https://petri.github.io/${process.env.GITHUB_REPOSITORY.split("/")[1]}`

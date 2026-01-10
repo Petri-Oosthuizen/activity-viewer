@@ -69,7 +69,7 @@ export function buildDeltaSeries(config: DeltaSeriesConfig): any {
   const deltaData = calculateDeltaData(baseSeriesData, compareSeriesData, deltaMode);
 
   return {
-    name: `Δ ${compareActivity.name} - ${baseActivity.name}`,
+    name: `Δ ${METRIC_LABELS[metric]}: ${compareActivity.name} - ${baseActivity.name}`,
     type: "line",
     data: deltaData,
     smooth: false,

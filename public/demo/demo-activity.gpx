@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>Demo Activity</name>
+    <trkseg>
+      <trkpt lat="37.7749" lon="-122.4194">
+        <ele>10</ele>
+        <time>2024-01-01T08:00:00Z</time>
+        <extensions>
+          <TrackPointExtension>
+            <hr>120</hr>
+            <cad>85</cad>
+          </TrackPointExtension>
+          <power>200</power>
+        </extensions>
+      </trkpt>
+      <trkpt lat="37.7750" lon="-122.4195">
+        <ele>12</ele>
+        <time>2024-01-01T08:00:05Z</time>
+        <extensions>
+          <TrackPointExtension>
+            <hr>125</hr>
+            <cad>88</cad>
+          </TrackPointExtension>
+          <power>210</power>
+        </extensions>
+      </trkpt>
+      <trkpt lat="37.7752" lon="-122.4197">
+        <ele>15</ele>
+        <time>2024-01-01T08:00:10Z</time>
+        <extensions>
+          <TrackPointExtension>
+            <hr>130</hr>
+            <cad>90</cad>
+          </TrackPointExtension>
+          <power>220</power>
+        </extensions>
+      </trkpt>
+      <trkpt lat="37.7754" lon="-122.4199">
+        <ele>18</ele>
+        <time>2024-01-01T08:00:15Z</time>
+        <extensions>
+          <TrackPointExtension>
+            <hr>135</hr>
+            <cad>92</cad>
+          </TrackPointExtension>
+          <power>230</power>
+        </extensions>
+      </trkpt>
+      <trkpt lat="37.7756" lon="-122.4201">
+        <ele>20</ele>
+        <time>2024-01-01T08:00:20Z</time>
+        <extensions>
+          <TrackPointExtension>
+            <hr>140</hr>
+            <cad>95</cad>
+          </TrackPointExtension>
+          <power>240</power>
+        </extensions>
+      </trkpt>
+      <trkpt lat="37.7758" lon="-122.4203">
+        <ele>22</ele>
+        <time>2024-01-01T08:00:25Z</time>
+        <extensions>
+          <TrackPointExtension>
+            <hr>145</hr>
+            <cad>98</cad>
+          </TrackPointExtension>
+          <power>250</power>
+        </extensions>
+      </trkpt>
+      <trkpt lat="37.7760" lon="-122.4205">
+        <ele>25</ele>
+        <time>2024-01-01T08:00:30Z</time>
+        <extensions>
+          <TrackPointExtension>
+            <hr>150</hr>
+            <cad>100</cad>
+          </TrackPointExtension>
+          <power>260</power>
+        </extensions>
+      </trkpt>
+      <trkpt lat="37.7762" lon="-122.4207">
+        <ele>28</ele>
+        <time>2024-01-01T08:00:35Z</time>
+        <extensions>
+          <TrackPointExtension>
+            <hr>155</hr>
+            <cad>102</cad>
+          </TrackPointExtension>
+          <power>270</power>
+        </extensions>
+      </trkpt>
+      <trkpt lat="37.7764" lon="-122.4209">
+        <ele>30</ele>
+        <time>2024-01-01T08:00:40Z</time>
+        <extensions>
+          <TrackPointExtension>
+            <hr>160</hr>
+            <cad>105</cad>
+          </TrackPointExtension>
+          <power>280</power>
+        </extensions>
+      </trkpt>
+      <trkpt lat="37.7766" lon="-122.4211">
+        <ele>32</ele>
+        <time>2024-01-01T08:00:45Z</time>
+        <extensions>
+          <TrackPointExtension>
+            <hr>165</hr>
+            <cad>108</cad>
+          </TrackPointExtension>
+          <power>290</power>
+        </extensions>
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>

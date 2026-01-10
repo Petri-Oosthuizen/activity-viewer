@@ -23,7 +23,7 @@
             v-else
             type="radio"
             :checked="selectedMetrics.includes(metric.value)"
-            :name="'metric-select'"
+            name="metric-select"
             class="h-4 w-4 cursor-pointer touch-manipulation border-gray-300 text-primary focus:ring-2 focus:ring-primary focus:ring-offset-0"
             @change="$emit('toggle', metric.value)"
           />
@@ -110,11 +110,13 @@ const allMetrics: Metric[] = [
 
 const availableMetrics = computed(() => {
   const filtered = allMetrics.filter((metric) => props.availableMetrics.includes(metric.value));
-  // Sort by number of activities that have this metric (most data first)
+  // Keep altitude first; otherwise sort by how many activities include the metric.
   return filtered.sort((a, b) => {
+    if (a.value === "alt" && b.value !== "alt") return -1;
+    if (b.value === "alt" && a.value !== "alt") return 1;
     const countA = getActivityIdsForMetric(a.value).length;
     const countB = getActivityIdsForMetric(b.value).length;
-    return countB - countA; // Descending order
+    return countB - countA;
   });
 });
 
@@ -127,7 +129,7 @@ const getActivityColor = (activityId: string): string => {
   return activity?.color || "#999";
 };
 
-const getActivityTooltip = (activityId: string, metric: MetricType): string => {
+const getActivityTooltip = (activityId: string, _metric: MetricType): string => {
   const activityData = props.activities.find((a) => a.id === activityId);
   if (!activityData || !activityData.activity) return "";
 

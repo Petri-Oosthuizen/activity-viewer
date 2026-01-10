@@ -5,8 +5,10 @@
 
 import type { Activity } from "~/types/activity";
 import type { MetricType, XAxisType, DeltaMode, ChartDataPoint } from "./chart-config";
-import { METRIC_LABELS, activityHasMetric, transformToChartData } from "./chart-config";
+import { METRIC_LABELS, activityHasMetric } from "./chart-config";
 import { buildDeltaSeries, type DeltaSeriesConfig } from "./delta-calculator";
+import type { ChartTransformSettings } from "~/utils/chart-settings";
+import { buildPivotZonesForActivities, buildTransformedChartData } from "~/utils/series-transforms";
 
 export interface SeriesConfig {
   activities: Activity[];
@@ -17,12 +19,17 @@ export interface SeriesConfig {
   deltaMode: DeltaMode;
   deltaBaseActivityId: string | null;
   deltaCompareActivityId: string | null;
+  transforms: ChartTransformSettings;
 }
 
 export interface EChartsSeries {
+  // ECharts allows multiple data shapes (e.g. category labels for bar charts).
+  data: Array<ChartDataPoint | [string, number | null] | number | null>;
+  id?: string;
+  activityId?: string;
+  metric?: MetricType;
   name: string;
   type: string;
-  data: ChartDataPoint[];
   smooth: boolean;
   large: boolean;
   largeThreshold: number;
@@ -49,7 +56,8 @@ export function generateBaseSeries(
   activities: Activity[],
   disabledActivityIds: Set<string>,
   metrics: MetricType[],
-  xAxisType: XAxisType
+  xAxisType: XAxisType,
+  transforms: ChartTransformSettings,
 ): EChartsSeries[] {
   const series: EChartsSeries[] = [];
   const activeActivities = activities.filter((a) => !disabledActivityIds.has(a.id));
@@ -58,13 +66,16 @@ export function generateBaseSeries(
     activeActivities.forEach((activity) => {
       if (!activityHasMetric(activity, metric)) return;
 
-      const data = transformToChartData(activity, metric, xAxisType);
+      const data = buildTransformedChartData(activity, metric, xAxisType, transforms);
 
       series.push({
+        id: `${activity.id}:${metric}:${xAxisType}`,
+        activityId: activity.id,
+        metric,
         name: `${activity.name} - ${METRIC_LABELS[metric]}`,
         type: "line",
         data,
-        smooth: false,
+        smooth: transforms.smoothing.mode !== "off",
         large: true,
         largeThreshold: 2000,
         itemStyle: { color: activity.color },
@@ -101,6 +112,7 @@ export function generateChartSeries(config: SeriesConfig): EChartsSeries[] {
     deltaMode,
     deltaBaseActivityId,
     deltaCompareActivityId,
+    transforms,
   } = config;
 
   // Return empty array if no active activities
@@ -109,8 +121,51 @@ export function generateChartSeries(config: SeriesConfig): EChartsSeries[] {
     return [];
   }
 
+  // Pivot mode: zone distribution (time spent in each zone)
+  if (transforms.viewMode === "pivotZones") {
+    const metric = metrics[0] ?? "hr";
+    const pivot = buildPivotZonesForActivities(activeActivities, metric, transforms);
+    if (!pivot) return [];
+
+    return activeActivities.map((activity) => {
+      const totals = pivot.totalsSecondsByActivityId[activity.id] ?? [];
+      const totalSeconds = totals.reduce((acc, v) => acc + v, 0);
+      const data = totals.map((seconds, idx) => {
+        const x = pivot.binCenters[idx] ?? idx;
+        const pct = totalSeconds > 0 ? (seconds / totalSeconds) * 100 : 0;
+        return [x, pct] as const;
+      });
+
+      return {
+        id: `${activity.id}:${metric}:pivotZones`,
+        activityId: activity.id,
+        metric,
+        name: `${activity.name} - ${METRIC_LABELS[metric]}`,
+        type: "line",
+        data,
+        smooth: false,
+        large: true,
+        largeThreshold: 2000,
+        itemStyle: { color: activity.color },
+        lineStyle: { color: activity.color, width: 1 },
+        symbol: "circle",
+        symbolSize: 0,
+        showSymbol: false,
+        yAxisIndex: 0,
+        emphasis: {
+          focus: "none",
+          lineStyle: { width: 1.5 },
+          itemStyle: { color: activity.color },
+          symbol: "circle",
+          symbolSize: 6,
+        },
+        animation: false,
+      };
+    });
+  }
+
   // Generate base series
-  const series = generateBaseSeries(activities, disabledActivityIds, metrics, xAxisType);
+  const series = generateBaseSeries(activities, disabledActivityIds, metrics, xAxisType, transforms);
 
   // Add delta series if enabled
   if (showDelta && series.length >= 2) {
