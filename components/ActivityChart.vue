@@ -7,40 +7,86 @@
     </div>
 
     <!-- Chart Container -->
-    <div v-if="hasChartData" class="relative mt-4 w-full flex-1 overflow-visible sm:mt-6">
+    <div v-if="hasChartData" class="mt-4 w-full flex-1 overflow-visible sm:mt-6">
       <div
         ref="chartContainer"
         class="h-full min-h-[400px] w-full touch-manipulation sm:min-h-[500px]"
         style="touch-action: pan-x pan-y pinch-zoom;"
       ></div>
-      <div class="absolute right-2 top-2 z-10 flex flex-col gap-1.5 sm:right-4 sm:top-4 sm:gap-2">
-        <button
-          type="button"
-          class="flex h-12 w-12 touch-manipulation items-center justify-center rounded-md border-2 border-primary bg-white text-primary shadow-md transition-all active:bg-primary active:text-white active:shadow-lg sm:h-10 sm:w-10 sm:hover:bg-primary sm:hover:text-white sm:hover:shadow-lg"
-          @click="zoomIn"
-          title="Zoom In"
-          aria-label="Zoom In"
+
+      <!-- Toolbar (below chart) -->
+      <div class="mt-3 flex flex-wrap items-center gap-2 sm:mt-4">
+        <div class="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-gray-50 p-1">
+          <button
+            type="button"
+            class="flex h-11 w-11 touch-manipulation items-center justify-center rounded-md border border-primary bg-white text-primary shadow-xs transition-all active:bg-primary active:text-white sm:h-9 sm:w-9 sm:hover:bg-primary sm:hover:text-white"
+            @click="zoomIn"
+            title="Zoom In"
+            aria-label="Zoom In"
+          >
+            <span class="text-2xl font-light leading-none sm:text-xl">+</span>
+          </button>
+          <button
+            type="button"
+            class="flex h-11 w-11 touch-manipulation items-center justify-center rounded-md border border-primary bg-white text-primary shadow-xs transition-all active:bg-primary active:text-white sm:h-9 sm:w-9 sm:hover:bg-primary sm:hover:text-white"
+            @click="zoomOut"
+            title="Zoom Out"
+            aria-label="Zoom Out"
+          >
+            <span class="text-2xl font-light leading-none sm:text-xl">−</span>
+          </button>
+          <button
+            type="button"
+            class="flex h-11 w-11 touch-manipulation items-center justify-center rounded-md border border-primary bg-white text-primary shadow-xs transition-all active:bg-primary active:text-white sm:h-9 sm:w-9 sm:hover:bg-primary sm:hover:text-white"
+            @click="resetZoom"
+            title="Reset Zoom"
+            aria-label="Reset Zoom"
+          >
+            <span class="text-base sm:text-sm">🔍</span>
+          </button>
+        </div>
+
+        <div class="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-gray-50 p-1">
+          <button
+            type="button"
+            class="flex h-11 w-11 touch-manipulation items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 shadow-xs transition-all active:bg-gray-100 sm:h-9 sm:w-9 sm:hover:bg-gray-50"
+            @click="panLeft"
+            title="Pan Left"
+            aria-label="Pan Left"
+          >
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            class="flex h-11 w-11 touch-manipulation items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 shadow-xs transition-all active:bg-gray-100 sm:h-9 sm:w-9 sm:hover:bg-gray-50"
+            @click="panRight"
+            title="Pan Right"
+            aria-label="Pan Right"
+          >
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+
+        <label
+          class="inline-flex h-11 select-none items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-3 text-[10px] text-gray-700 sm:h-9 sm:text-xs"
+          title="When enabled, Y rescales to the visible X window"
         >
-          <span class="text-2xl font-light leading-none sm:text-xl">+</span>
-        </button>
-        <button
-          type="button"
-          class="flex h-12 w-12 touch-manipulation items-center justify-center rounded-md border-2 border-primary bg-white text-primary shadow-md transition-all active:bg-primary active:text-white active:shadow-lg sm:h-10 sm:w-10 sm:hover:bg-primary sm:hover:text-white sm:hover:shadow-lg"
-          @click="zoomOut"
-          title="Zoom Out"
-          aria-label="Zoom Out"
-        >
-          <span class="text-2xl font-light leading-none sm:text-xl">−</span>
-        </button>
-        <button
-          type="button"
-          class="flex h-12 w-12 touch-manipulation items-center justify-center rounded-md border-2 border-primary bg-white text-primary shadow-md transition-all active:bg-primary active:text-white active:shadow-lg sm:h-10 sm:w-10 sm:hover:bg-primary sm:hover:text-white sm:hover:shadow-lg"
-          @click="resetZoom"
-          title="Reset Zoom"
-          aria-label="Reset Zoom"
-        >
-          <span class="text-base sm:text-sm">🔍</span>
-        </button>
+          <input
+            type="checkbox"
+            class="h-4 w-4 rounded-sm border-gray-300 text-primary focus:ring-primary"
+            :checked="autoFitYEnabled"
+            @change="toggleAutoFitY"
+          />
+          Auto-fit Y
+        </label>
+
+        <div class="min-w-0 flex-1 text-[10px] leading-snug text-gray-500 sm:text-xs">
+          Zoom/pan affects X. Enable auto-fit Y if you want the Y range to follow the visible window.
+        </div>
       </div>
     </div>
     <div v-else class="mt-4 flex min-h-[400px] items-center justify-center rounded-lg border border-gray-200 bg-gray-50 sm:mt-6">
@@ -75,8 +121,8 @@
 import { ref, onMounted, onUnmounted, watch, nextTick, computed } from "vue";
 import { useActivityStore } from "~/stores/activity";
 import type { MetricType } from "~/utils/chart-config";
-import { calculateXValue } from "~/utils/chart-config";
 import type { EChartsOption } from "echarts";
+import { findNearestIndex, findNearestIndexLinear, getActivityXValues } from "~/utils/activity-xvalues";
 
 import { useECharts } from "~/composables/useECharts";
 import MetricSelector from "./MetricSelector.vue";
@@ -119,6 +165,9 @@ const toggleMetric = (metric: MetricType) => {
 };
 
 let chartHoverCleanup: (() => void) | null = null;
+let chartZoomCleanup: (() => void) | null = null;
+// Default off: keeps Y stable for easier comparisons.
+const autoFitYEnabled = ref(false);
 
 // Watch activities to reload chart when activities are added/removed
 watch(
@@ -133,7 +182,6 @@ watch(
       });
     }
   },
-  { deep: true },
 );
 
 watch(
@@ -261,6 +309,136 @@ const performZoom = (zoomFactor: number) => {
   }
 };
 
+const panXAxisWindow = (direction: -1 | 1) => {
+  if (!chartInstance.value) return;
+
+  const option = chartInstance.value.getOption() as any;
+  const dataZooms: any[] = option?.dataZoom ?? [];
+  const slider = dataZooms.find((dz) => dz?.xAxisIndex === 0 && dz?.type === "slider");
+  const currentStart = slider?.start ?? 0;
+  const currentEnd = slider?.end ?? 100;
+  const range = Math.max(1, currentEnd - currentStart);
+
+  const step = Math.min(20, Math.max(1, range * 0.15));
+  const newStart = Math.max(0, Math.min(100 - range, currentStart + direction * step));
+  const newEnd = Math.min(100, newStart + range);
+
+  chartInstance.value.dispatchAction({
+    type: "dataZoom",
+    start: newStart,
+    end: newEnd,
+    xAxisIndex: 0,
+  });
+};
+
+function applyAutoYFit() {
+  if (!chartInstance.value) return;
+  if (!autoFitYEnabled.value) return;
+
+  const option = chartInstance.value.getOption() as any;
+  const seriesOptions: any[] = option?.series ?? [];
+  const yAxisOptions = Array.isArray(option?.yAxis) ? option.yAxis : [option?.yAxis].filter(Boolean);
+
+  if (yAxisOptions.length === 0 || seriesOptions.length === 0) return;
+
+  const dataZooms: any[] = option?.dataZoom ?? [];
+  const xZoom =
+    dataZooms.find((z) => z?.xAxisIndex === 0 && z?.type === "slider") ??
+    dataZooms.find((z) => z?.xAxisIndex === 0 && z?.type === "inside");
+  const xStartPct = typeof xZoom?.start === "number" ? xZoom.start : 0;
+  const xEndPct = typeof xZoom?.end === "number" ? xZoom.end : 100;
+
+  let globalMinX = Infinity;
+  let globalMaxX = -Infinity;
+  for (const s of seriesOptions) {
+    const data: any[] = s?.data ?? [];
+    for (const p of data) {
+      if (!Array.isArray(p) || typeof p[0] !== "number") continue;
+      const x = p[0];
+      if (x < globalMinX) globalMinX = x;
+      if (x > globalMaxX) globalMaxX = x;
+    }
+  }
+
+  if (!Number.isFinite(globalMinX) || !Number.isFinite(globalMaxX) || globalMinX === globalMaxX) return;
+
+  const xStart = globalMinX + ((globalMaxX - globalMinX) * xStartPct) / 100;
+  const xEnd = globalMinX + ((globalMaxX - globalMinX) * xEndPct) / 100;
+  const lo = Math.min(xStart, xEnd);
+  const hi = Math.max(xStart, xEnd);
+
+  const minByAxis = new Map<number, number>();
+  const maxByAxis = new Map<number, number>();
+
+  for (const s of seriesOptions) {
+    const axisIndex = typeof s?.yAxisIndex === "number" ? s.yAxisIndex : 0;
+    const data: any[] = s?.data ?? [];
+    for (const p of data) {
+      if (!Array.isArray(p) || typeof p[0] !== "number") continue;
+      const x = p[0] as number;
+      if (x < lo || x > hi) continue;
+      const y = p[1];
+      if (typeof y !== "number" || !Number.isFinite(y)) continue;
+      const prevMin = minByAxis.get(axisIndex);
+      const prevMax = maxByAxis.get(axisIndex);
+      minByAxis.set(axisIndex, prevMin === undefined ? y : Math.min(prevMin, y));
+      maxByAxis.set(axisIndex, prevMax === undefined ? y : Math.max(prevMax, y));
+    }
+  }
+
+  const nextYAxis = yAxisOptions.map((axis: any, i: number) => {
+    const min = minByAxis.get(i);
+    const max = maxByAxis.get(i);
+    if (min === undefined || max === undefined) {
+      return { ...axis, min: undefined, max: undefined };
+    }
+
+    let span = max - min;
+    if (!Number.isFinite(span) || span === 0) span = Math.max(1, Math.abs(max) * 0.05);
+    const pad = span * 0.05;
+    return {
+      ...axis,
+      min: min - pad,
+      max: max + pad,
+    };
+  });
+
+  chartInstance.value.setOption(
+    { yAxis: nextYAxis },
+    { notMerge: false, replaceMerge: ["yAxis"] },
+  );
+}
+
+function clearYOverrides() {
+  if (!chartInstance.value) return;
+
+  const option = chartInstance.value.getOption() as any;
+  const yAxisOptions = Array.isArray(option?.yAxis) ? option.yAxis : [option?.yAxis].filter(Boolean);
+  if (yAxisOptions.length === 0) return;
+
+  // Explicitly clear any previously set min/max so ECharts returns to auto-scaling.
+  const nextYAxis = yAxisOptions.map((axis: any) => ({
+    ...axis,
+    min: null,
+    max: null,
+  }));
+
+  chartInstance.value.setOption(
+    { yAxis: nextYAxis },
+    { notMerge: false, replaceMerge: ["yAxis"] },
+  );
+}
+
+const toggleAutoFitY = (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  autoFitYEnabled.value = target.checked;
+  if (autoFitYEnabled.value) {
+    applyAutoYFit();
+  } else {
+    clearYOverrides();
+  }
+};
+
 watch(
   () => activityStore.resetZoomTrigger,
   () => {
@@ -307,6 +485,9 @@ const zoomOut = () => {
   activityStore.zoomOut();
 };
 
+const panLeft = () => panXAxisWindow(-1);
+const panRight = () => panXAxisWindow(1);
+
 // Add chart hover handlers for map interaction
 watch(
   () => chartInstance.value,
@@ -315,49 +496,65 @@ watch(
       chartHoverCleanup();
       chartHoverCleanup = null;
     }
+    if (chartZoomCleanup) {
+      chartZoomCleanup();
+      chartZoomCleanup = null;
+    }
 
     if (!instance) return;
 
     // Use updateAxisPointer event - fires reliably when axis pointer moves with trigger: "axis"
     const handleAxisPointerUpdate = (params: any) => {
-      // Extract hovered data from axis pointer event
-      if (!params || !params.axesInfo || params.axesInfo.length === 0) return;
+      const axesInfo = params?.axesInfo;
+      if (!Array.isArray(axesInfo) || axesInfo.length === 0) return;
 
-      const axisInfo = params.axesInfo[0];
-      const hoveredX = axisInfo?.value;
-      if (hoveredX === undefined) return;
+      const seriesDataIndices = axesInfo[0]?.seriesDataIndices;
+      const axisValue = axesInfo[0]?.value;
 
-      // Find first non-disabled activity with GPS data at this X position
+      const option = instance.getOption() as any;
+      const seriesOptions: any[] = option?.series ?? [];
+
+      // Fast path: use ECharts' own hit test indices when available
+      if (Array.isArray(seriesDataIndices) && seriesDataIndices.length > 0) {
+        for (const hit of seriesDataIndices) {
+          const seriesIndex = hit?.seriesIndex;
+          const dataIndex = hit?.dataIndex;
+          if (typeof seriesIndex !== "number" || typeof dataIndex !== "number") continue;
+
+          const seriesOpt = seriesOptions[seriesIndex];
+          const activityId: string | undefined = seriesOpt?.activityId;
+          if (!activityId) continue;
+          if (activityStore.isActivityDisabled(activityId)) continue;
+
+          const activity = activityStore.activities.find((a) => a.id === activityId);
+          const record = activity?.records[dataIndex];
+          if (!record) continue;
+          if (record.lat === undefined || record.lon === undefined) continue;
+
+          activityStore.setChartHoverPoint({ activityId, recordIndex: dataIndex });
+          return;
+        }
+      }
+
+      // Fallback: if ECharts doesn't provide usable indices, resolve by nearest X.
+      if (typeof axisValue !== "number") return;
       const xAxisType = activityStore.xAxisType;
 
       for (const activity of activityStore.activities) {
         if (activityStore.isActivityDisabled(activity.id)) continue;
 
-        // Find record closest to hovered X value
-        let recordIndex = -1;
-        let minDiff = Infinity;
+        const cached = getActivityXValues(activity as any, xAxisType as any);
+        const idx = cached.isMonotonic
+          ? findNearestIndex(cached.values, axisValue)
+          : findNearestIndexLinear(cached.values, axisValue);
+        if (idx < 0) continue;
 
-        for (let i = 0; i < activity.records.length; i++) {
-          const record = activity.records[i];
-          const x = calculateXValue(record, activity, xAxisType);
-          const diff = Math.abs(x - hoveredX);
-          if (diff < minDiff) {
-            minDiff = diff;
-            recordIndex = i;
-          }
-        }
+        const record = activity.records[idx];
+        if (!record) continue;
+        if (record.lat === undefined || record.lon === undefined) continue;
 
-        // Use this activity if we found a matching record with GPS data
-        if (recordIndex >= 0 && activity.records[recordIndex]) {
-          const record = activity.records[recordIndex];
-          if (record.lat !== undefined && record.lon !== undefined) {
-            activityStore.setChartHoverPoint({
-              activityId: activity.id,
-              recordIndex: recordIndex,
-            });
-            return; // Found a match, exit
-          }
-        }
+        activityStore.setChartHoverPoint({ activityId: activity.id, recordIndex: idx });
+        return;
       }
     };
 
@@ -372,6 +569,37 @@ watch(
     chartHoverCleanup = () => {
       instance.off("updateAxisPointer", handleAxisPointerUpdate);
       instance.off("globalout", handleChartLeave);
+    };
+
+    const updateChartWindowFromOption = () => {
+      const option = instance.getOption() as any;
+      const zooms: any[] = option?.dataZoom ?? [];
+
+      const xZoom = zooms.find((z) => z?.xAxisIndex === 0 && (z?.type === "slider" || z?.type === "inside"));
+      const yZoom = zooms.find((z) => typeof z?.yAxisIndex === "number" && z?.type === "inside");
+
+      const xStart = typeof xZoom?.start === "number" ? xZoom.start : 0;
+      const xEnd = typeof xZoom?.end === "number" ? xZoom.end : 100;
+      const yStart = typeof yZoom?.start === "number" ? yZoom.start : 0;
+      const yEnd = typeof yZoom?.end === "number" ? yZoom.end : 100;
+
+      activityStore.setChartWindow({
+        xStartPercent: xStart,
+        xEndPercent: xEnd,
+        yStartPercent: yStart,
+        yEndPercent: yEnd,
+      });
+
+      // Keep Y scale fitted to the visible X window.
+      applyAutoYFit();
+    };
+
+    // Initialize window state + keep it updated when zooming/panning changes.
+    updateChartWindowFromOption();
+    instance.on("dataZoom", updateChartWindowFromOption);
+
+    chartZoomCleanup = () => {
+      instance.off("dataZoom", updateChartWindowFromOption);
     };
   },
   { immediate: true },
@@ -390,27 +618,32 @@ watch(mapHoveredPoint, (point) => {
     return;
   }
 
-  const activity = activityStore.activities.find((a) => a.id === point.activityId);
-  if (!activity) return;
+  const option = chartInstance.value.getOption() as any;
+  const seriesOptions: any[] = option?.series ?? [];
 
-  // Find the series index for this activity
-  const activityIndex = activityStore.activities.findIndex((a) => a.id === point.activityId);
-  if (activityIndex === -1) return;
+  // Highlight all series belonging to this activity (multi-metric safe)
+  const matchingSeriesIndices: number[] = [];
+  for (let i = 0; i < seriesOptions.length; i++) {
+    if (seriesOptions[i]?.activityId === point.activityId) {
+      matchingSeriesIndices.push(i);
+    }
+  }
 
-  // Highlight the point on the chart
-  const record = activity.records[point.recordIndex];
-  if (!record) return;
+  if (matchingSeriesIndices.length === 0) return;
 
-  // Highlight the series and point
-  chartInstance.value.dispatchAction({
-    type: "highlight",
-    seriesIndex: activityIndex,
-  });
+  for (const seriesIndex of matchingSeriesIndices) {
+    chartInstance.value.dispatchAction({ type: "highlight", seriesIndex });
+  }
 
-  // Show tooltip at the point
+  // Prefer showing tooltip on the currently selected primary metric series (if present)
+  const preferredMetric = activityStore.selectedMetric;
+  const preferredSeriesIndex =
+    matchingSeriesIndices.find((i) => seriesOptions[i]?.metric === preferredMetric) ??
+    matchingSeriesIndices[0];
+
   chartInstance.value.dispatchAction({
     type: "showTip",
-    seriesIndex: activityIndex,
+    seriesIndex: preferredSeriesIndex,
     dataIndex: point.recordIndex,
   });
 });
@@ -450,7 +683,6 @@ let resizeObserver: ResizeObserver | null = null;
 
 // Enhanced touch handling for mobile devices
 let touchStartDistance = 0;
-let touchStartCenter: { x: number; y: number } | null = null;
 let isPinching = false;
 
 const handleTouchStart = (e: TouchEvent) => {
@@ -462,10 +694,6 @@ const handleTouchStart = (e: TouchEvent) => {
       touch2.clientX - touch1.clientX,
       touch2.clientY - touch1.clientY
     );
-    touchStartCenter = {
-      x: (touch1.clientX + touch2.clientX) / 2,
-      y: (touch1.clientY + touch2.clientY) / 2,
-    };
   }
 };
 
@@ -510,7 +738,6 @@ const handleTouchMove = (e: TouchEvent) => {
 const handleTouchEnd = () => {
   isPinching = false;
   touchStartDistance = 0;
-  touchStartCenter = null;
 };
 
 onMounted(async () => {
@@ -556,6 +783,9 @@ onUnmounted(() => {
   }
   if (chartHoverCleanup) {
     chartHoverCleanup();
+  }
+  if (chartZoomCleanup) {
+    chartZoomCleanup();
   }
 });
 </script>

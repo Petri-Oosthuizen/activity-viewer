@@ -8,10 +8,22 @@
     </header>
     <main class="mx-auto w-full max-w-[1400px] flex-1 p-4 sm:p-6 md:p-8">
       <div class="flex flex-col gap-4 sm:gap-6 md:gap-8">
+        <section v-if="!hasActivities" class="w-full">
+          <div class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800 sm:px-5 sm:py-4">
+            <div class="font-semibold">Info</div>
+            <div class="mt-1 text-xs text-gray-600 sm:text-sm">
+              Upload GPX, FIT, or TCX files to visualize and compare activities with interactive charts and a GPS map.
+              <span class="mt-1 block">Privacy: processing is local in your browser—nothing is uploaded to a server.</span>
+            </div>
+          </div>
+        </section>
         <section class="w-full">
           <ActivityList />
         </section>
         <section v-if="hasActivities" class="w-full">
+          <div class="mb-4 sm:mb-6 md:mb-8">
+            <OverviewPanel />
+          </div>
           <div
             v-if="shouldShowLayoutToggle"
             class="mb-3 hidden items-center justify-end sm:mb-4 lg:flex"
@@ -92,6 +104,7 @@
 import { computed } from "vue";
 import { useActivityStore } from "~/stores/activity";
 import ActivityMap from "~/components/ActivityMap.vue";
+import OverviewPanel from "~/components/OverviewPanel.vue";
 
 const config = useRuntimeConfig();
 const buildNumber = computed(() => config.public.buildNumber);

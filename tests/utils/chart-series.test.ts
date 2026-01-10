@@ -5,6 +5,7 @@ import {
   type SeriesConfig,
 } from "~/utils/chart-series";
 import type { Activity } from "~/types/activity";
+import { DEFAULT_CHART_TRANSFORM_SETTINGS } from "~/utils/chart-settings";
 
 describe("chart-series", () => {
   const mockActivity1: Activity = {
@@ -16,6 +17,7 @@ describe("chart-series", () => {
     ],
     color: "#5470c6",
     offset: 0,
+    scale: 1,
   };
 
   const mockActivity2: Activity = {
@@ -27,6 +29,7 @@ describe("chart-series", () => {
     ],
     color: "#91cc75",
     offset: 0,
+    scale: 1,
   };
 
   describe("generateBaseSeries", () => {
@@ -36,7 +39,8 @@ describe("chart-series", () => {
         [mockActivity1, mockActivity2],
         disabledIds,
         ["hr"],
-        "time"
+        "time",
+        DEFAULT_CHART_TRANSFORM_SETTINGS
       );
 
       expect(series).toHaveLength(2);
@@ -50,7 +54,8 @@ describe("chart-series", () => {
         [mockActivity1, mockActivity2],
         disabledIds,
         ["hr"],
-        "time"
+        "time",
+        DEFAULT_CHART_TRANSFORM_SETTINGS
       );
 
       expect(series).toHaveLength(1);
@@ -70,7 +75,8 @@ describe("chart-series", () => {
         [activityWithAlt],
         new Set(),
         ["hr", "alt"],
-        "time"
+        "time",
+        DEFAULT_CHART_TRANSFORM_SETTINGS
       );
 
       expect(series).toHaveLength(2);
@@ -88,7 +94,8 @@ describe("chart-series", () => {
         [activityNoHR],
         new Set(),
         ["hr"],
-        "time"
+        "time",
+        DEFAULT_CHART_TRANSFORM_SETTINGS
       );
 
       expect(series).toHaveLength(0);
@@ -99,7 +106,8 @@ describe("chart-series", () => {
         [mockActivity1],
         new Set(),
         ["hr"],
-        "time"
+        "time",
+        DEFAULT_CHART_TRANSFORM_SETTINGS
       );
 
       expect(series[0].type).toBe("line");
@@ -121,6 +129,7 @@ describe("chart-series", () => {
         deltaMode: "overlay",
         deltaBaseActivityId: null,
         deltaCompareActivityId: null,
+        transforms: DEFAULT_CHART_TRANSFORM_SETTINGS,
       };
 
       const series = generateChartSeries(config);
@@ -137,6 +146,7 @@ describe("chart-series", () => {
         deltaMode: "overlay",
         deltaBaseActivityId: null,
         deltaCompareActivityId: null,
+        transforms: DEFAULT_CHART_TRANSFORM_SETTINGS,
       };
 
       const series = generateChartSeries(config);
@@ -154,6 +164,7 @@ describe("chart-series", () => {
         deltaMode: "overlay",
         deltaBaseActivityId: "act-1",
         deltaCompareActivityId: "act-2",
+        transforms: DEFAULT_CHART_TRANSFORM_SETTINGS,
       };
 
       const series = generateChartSeries(config);
@@ -171,6 +182,7 @@ describe("chart-series", () => {
         deltaMode: "delta-only",
         deltaBaseActivityId: "act-1",
         deltaCompareActivityId: "act-2",
+        transforms: DEFAULT_CHART_TRANSFORM_SETTINGS,
       };
 
       const series = generateChartSeries(config);
@@ -188,6 +200,7 @@ describe("chart-series", () => {
         deltaMode: "overlay",
         deltaBaseActivityId: "non-existent",
         deltaCompareActivityId: "act-2",
+        transforms: DEFAULT_CHART_TRANSFORM_SETTINGS,
       };
 
       const series = generateChartSeries(config);
@@ -204,6 +217,7 @@ describe("chart-series", () => {
         deltaMode: "overlay",
         deltaBaseActivityId: "act-1",
         deltaCompareActivityId: "act-2",
+        transforms: DEFAULT_CHART_TRANSFORM_SETTINGS,
       };
 
       const series = generateChartSeries(config);

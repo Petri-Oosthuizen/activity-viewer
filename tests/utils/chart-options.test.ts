@@ -61,7 +61,7 @@ describe("chart-options", () => {
       const inside = config[1];
 
       expect(inside.zoomOnMouseWheel).toBe(true);
-      expect(inside.moveOnMouseMove).toBe(true);
+      expect(inside.moveOnMouseMove).toBe(false);
     });
   });
 

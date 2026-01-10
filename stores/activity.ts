@@ -3,7 +3,7 @@
  * Central state management for activity data and chart configuration
  */
 import { defineStore } from "pinia";
-import { shallowRef, computed } from "vue";
+import { shallowRef, computed, watch } from "vue";
 import type { Activity, ActivityRecord } from "~/types/activity";
 import {
   type MetricType,
@@ -12,10 +12,13 @@ import {
   METRIC_LABELS,
   getAvailableMetrics,
   getMetricAvailability,
-  formatXAxisValue,
   generateActivityId,
   getActivityColorByIndex,
 } from "~/utils/chart-config";
+import {
+  DEFAULT_CHART_TRANSFORM_SETTINGS,
+  type ChartTransformSettings,
+} from "~/utils/chart-settings";
 import {
   buildTooltipConfig as buildTooltipConfigUtil,
   buildDataZoomConfig as buildDataZoomConfigUtil,
@@ -25,6 +28,8 @@ import {
   formatTooltipParams,
 } from "~/utils/chart-options";
 import { generateChartSeries, type SeriesConfig } from "~/utils/chart-series";
+import type { GpsDistanceOptions } from "~/utils/gps-distance";
+import { DEFAULT_GPS_DISTANCE_OPTIONS, filterGpsDistanceDeltaMeters } from "~/utils/gps-distance";
 
 /** Point being hovered on the map */
 export interface MapHoverPoint {
@@ -40,6 +45,13 @@ export interface ChartHoverPoint {
   recordIndex: number;
 }
 
+export interface ChartWindow {
+  xStartPercent: number;
+  xEndPercent: number;
+  yStartPercent: number;
+  yEndPercent: number;
+}
+
 export const useActivityStore = defineStore("activity", () => {
   // ============================================
   // STATE
@@ -47,10 +59,25 @@ export const useActivityStore = defineStore("activity", () => {
   // ============================================
 
   const activities = shallowRef<Activity[]>([]);
-  const xAxisType = shallowRef<XAxisType>("time");
-  const selectedMetrics = shallowRef<MetricType[]>(["hr"]);
+  // Improved default: distance-based comparison is usually the most intuitive.
+  const xAxisType = shallowRef<XAxisType>("distance");
+  // Default metric: altitude (when available)
+  const selectedMetrics = shallowRef<MetricType[]>(["alt"]);
   const disabledActivities = shallowRef<Set<string>>(new Set());
-  const metricSelectionMode = shallowRef<"multi" | "single">("multi");
+  const metricSelectionMode = shallowRef<"multi" | "single">("single");
+
+  // GPX/TCX GPS-derived distance processing options (applies to GPX, and TCX when no device distance).
+  const gpsDistanceOptions = shallowRef<GpsDistanceOptions>({ ...DEFAULT_GPS_DISTANCE_OPTIONS });
+
+  // Data transforms / rendering mode
+  const chartTransforms = shallowRef<ChartTransformSettings>({
+    ...DEFAULT_CHART_TRANSFORM_SETTINGS,
+    outliers: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.outliers },
+    smoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.smoothing },
+    gpsSmoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.gpsSmoothing },
+    cumulative: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.cumulative },
+    pivotZones: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.pivotZones },
+  });
 
   // Zoom triggers (incremented to signal zoom actions)
   const resetZoomTrigger = shallowRef(0);
@@ -60,6 +87,14 @@ export const useActivityStore = defineStore("activity", () => {
   // Hover state for chart-map synchronization
   const mapHoveredPoint = shallowRef<MapHoverPoint | null>(null);
   const chartHoveredPoint = shallowRef<ChartHoverPoint | null>(null);
+
+  // Current zoom/pan window (percentages of full extent)
+  const chartWindow = shallowRef<ChartWindow>({
+    xStartPercent: 0,
+    xEndPercent: 100,
+    yStartPercent: 0,
+    yEndPercent: 100,
+  });
 
   // Delta comparison settings
   const showDelta = shallowRef(false);
@@ -78,22 +113,23 @@ export const useActivityStore = defineStore("activity", () => {
   const selectedMetric = computed(() => selectedMetrics.value[0] ?? "hr");
 
   /** Metrics available across all loaded activities */
-  const availableMetrics = computed(() => {
-    const available = getAvailableMetrics(activities.value);
-    // Auto-select first available if current selection is invalid
-    if (available.length > 0 && !available.includes(selectedMetric.value)) {
-      selectedMetrics.value = [available[0]];
-    }
-    return available;
-  });
+  const availableMetrics = computed(() => getAvailableMetrics(activities.value));
+
+  // Keep selection valid without side-effects in computed().
+  watch(
+    [activities, selectedMetrics],
+    () => {
+      const available = getAvailableMetrics(activities.value);
+      const current = selectedMetrics.value[0];
+      if (available.length > 0 && (!current || !available.includes(current))) {
+        selectedMetrics.value = [available[0]];
+      }
+    },
+    { deep: false, immediate: true, flush: "sync" },
+  );
 
   /** Map of which activities have which metrics */
   const metricAvailability = computed(() => getMetricAvailability(activities.value));
-
-  /** Active (non-disabled) activities */
-  const activeActivities = computed(() =>
-    activities.value.filter((a) => !disabledActivities.value.has(a.id)),
-  );
 
   // ============================================
   // CHART SERIES GENERATION
@@ -111,6 +147,7 @@ export const useActivityStore = defineStore("activity", () => {
       deltaMode: deltaMode.value,
       deltaBaseActivityId: deltaBaseActivityId.value,
       deltaCompareActivityId: deltaCompareActivityId.value,
+      transforms: chartTransforms.value,
     };
 
     return generateChartSeries(config);
@@ -123,6 +160,45 @@ export const useActivityStore = defineStore("activity", () => {
   const chartOption = computed(() => {
     const metrics =
       selectedMetrics.value.length > 0 ? selectedMetrics.value : ["hr" as MetricType];
+    const transforms = chartTransforms.value;
+
+    if (transforms.viewMode === "pivotZones") {
+      const metric = (chartSeries.value[0]?.metric as MetricType | undefined) ?? selectedMetric.value;
+
+      return {
+        tooltip: buildTooltipConfigUtil(xAxisType.value, (params) =>
+          formatTooltipParams(params, xAxisType.value),
+        ),
+        legend: {
+          data: chartSeries.value.map((s: any) => s.name),
+          bottom: 0,
+          type: "scroll",
+          pageIconColor: "#5470c6",
+          pageIconInactiveColor: "#aaa",
+        },
+        grid: buildGridConfig(false),
+        dataZoom: [],
+        xAxis: {
+          type: "value",
+          name: METRIC_LABELS[metric],
+          nameLocation: "middle",
+          nameGap: 35,
+          axisLabel: { show: true },
+        },
+        yAxis: {
+          type: "value",
+          show: true,
+          name: "Time (%)",
+          nameLocation: "middle",
+          nameGap: 35,
+          nameRotate: 90,
+          scale: true,
+          axisLabel: { show: true, formatter: (v: any) => `${Number(v).toFixed(0)}%` },
+        },
+        series: chartSeries.value,
+      };
+    }
+
     const hasMultipleYAxes =
       metrics.length > 1 || (showDelta.value && activities.value.length >= 2);
     const yAxisCount =
@@ -158,13 +234,64 @@ export const useActivityStore = defineStore("activity", () => {
   // ACTIONS
   // ============================================
 
-  function addActivity(records: ActivityRecord[], name: string, startTime?: Date) {
+  function addActivity(
+    records: ActivityRecord[],
+    name: string,
+    startTime?: Date,
+    sourceType?: Activity["sourceType"],
+  ) {
     const id = generateActivityId();
     // Assign color based on index (position in list)
     // Index 0 = blue, index 1 = green, etc. Colors repeat after 10+
     const color = getActivityColorByIndex(activities.value.length);
 
-    activities.value = [...activities.value, { id, name, records, offset: 0, color, startTime }];
+    activities.value = [
+      ...activities.value,
+      { id, name, records, sourceType, offset: 0, scale: 1, color, startTime },
+    ];
+  }
+
+  function setGpsDistanceOptions(next: Partial<GpsDistanceOptions>) {
+    gpsDistanceOptions.value = { ...gpsDistanceOptions.value, ...next };
+    recomputeGpsDerivedDistances();
+  }
+
+  function recomputeGpsDerivedDistances() {
+    const opts = gpsDistanceOptions.value;
+    const nextActivities: Activity[] = [];
+
+    for (const activity of activities.value) {
+      if (activity.sourceType !== "gpx") {
+        nextActivities.push(activity);
+        continue;
+      }
+
+      let cumulative = 0;
+      const nextRecords: ActivityRecord[] = [];
+      for (let i = 0; i < activity.records.length; i++) {
+        const r = activity.records[i]!;
+        if (i > 0) {
+          const prev = activity.records[i - 1]!;
+          if (
+            prev.lat !== undefined &&
+            prev.lon !== undefined &&
+            r.lat !== undefined &&
+            r.lon !== undefined
+          ) {
+            cumulative += filterGpsDistanceDeltaMeters(
+              { lat: prev.lat, lon: prev.lon, t: prev.t, alt: prev.alt },
+              { lat: r.lat, lon: r.lon, t: r.t, alt: r.alt },
+              opts,
+            );
+          }
+        }
+        nextRecords.push({ ...r, d: Math.max(0, cumulative) });
+      }
+
+      nextActivities.push({ ...activity, records: nextRecords });
+    }
+
+    activities.value = nextActivities;
   }
 
   function removeActivity(id: string) {
@@ -194,13 +321,46 @@ export const useActivityStore = defineStore("activity", () => {
     }
   }
 
+  function updateScale(id: string, scale: number) {
+    const index = activities.value.findIndex((a) => a.id === id);
+    if (index !== -1) {
+      activities.value = [
+        ...activities.value.slice(0, index),
+        { ...activities.value[index], scale },
+        ...activities.value.slice(index + 1),
+      ];
+    }
+  }
+
+  function setChartTransforms(next: ChartTransformSettings) {
+    chartTransforms.value = {
+      ...next,
+      outliers: { ...next.outliers },
+      smoothing: { ...next.smoothing },
+      gpsSmoothing: { ...next.gpsSmoothing },
+      cumulative: { ...next.cumulative },
+      pivotZones: { ...next.pivotZones },
+    };
+  }
+
   function clearAll() {
     activities.value = [];
     disabledActivities.value = new Set();
-    selectedMetrics.value = ["hr"];
+    selectedMetrics.value = ["alt"];
+    xAxisType.value = "distance";
+    gpsDistanceOptions.value = { ...DEFAULT_GPS_DISTANCE_OPTIONS };
+    chartTransforms.value = {
+      ...DEFAULT_CHART_TRANSFORM_SETTINGS,
+      outliers: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.outliers },
+      smoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.smoothing },
+      gpsSmoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.gpsSmoothing },
+      cumulative: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.cumulative },
+      pivotZones: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.pivotZones },
+    };
     showDelta.value = false;
     deltaBaseActivityId.value = null;
     deltaCompareActivityId.value = null;
+    chartWindow.value = { xStartPercent: 0, xEndPercent: 100, yStartPercent: 0, yEndPercent: 100 };
   }
 
   function setXAxisType(type: XAxisType) {
@@ -254,6 +414,10 @@ export const useActivityStore = defineStore("activity", () => {
 
   function clearChartHoverPoint() {
     chartHoveredPoint.value = null;
+  }
+
+  function setChartWindow(next: ChartWindow) {
+    chartWindow.value = next;
   }
 
   function setShowDelta(value: boolean) {
@@ -320,12 +484,15 @@ export const useActivityStore = defineStore("activity", () => {
     zoomOutTrigger,
     mapHoveredPoint,
     chartHoveredPoint,
+    chartWindow,
     showDelta,
     deltaMode,
     deltaBaseActivityId,
     deltaCompareActivityId,
     chartMapSideBySide,
     metricSelectionMode,
+    chartTransforms,
+    gpsDistanceOptions,
 
     // Actions
     setChartMapSideBySide: (value: boolean) => {
@@ -343,6 +510,8 @@ export const useActivityStore = defineStore("activity", () => {
     addActivity,
     removeActivity,
     updateOffset,
+    updateScale,
+    setChartTransforms,
     clearAll,
     setXAxisType,
     setMetric,
@@ -354,6 +523,7 @@ export const useActivityStore = defineStore("activity", () => {
     clearMapHoverPoint,
     setChartHoverPoint,
     clearChartHoverPoint,
+    setChartWindow,
     setShowDelta,
     setDeltaMode,
     setDeltaBaseActivity,
@@ -361,5 +531,6 @@ export const useActivityStore = defineStore("activity", () => {
     toggleActivity,
     isActivityDisabled,
     setMetricSelectionMode,
+    setGpsDistanceOptions,
   };
 });
