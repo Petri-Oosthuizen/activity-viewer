@@ -39,29 +39,43 @@
           {{
             chartTransforms.viewMode === 'timeseries'
               ? 'Plot metric values along the activity (time, distance, or local time).'
-              : 'Show a distribution curve of time spent across value bins (for the selected metric).'
+              : 'Shows percentage of time spent in each value range (bin) of the selected metric. Value ranges are divided into bins using quantiles or equal spacing.'
           }}
         </p>
+
+        <!-- Distribution settings -->
+        <div v-if="chartTransforms.viewMode === 'pivotZones'" class="mt-3 space-y-3 sm:space-y-4">
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+            <div>
+              <label class="mb-1 block text-xs font-medium text-gray-700">Bin count</label>
+              <input
+                type="number"
+                min="5"
+                step="1"
+                class="w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/10 sm:px-2 sm:py-1.5"
+                :value="chartTransforms.pivotZones.zoneCount"
+                @input="setPivotZoneCount"
+              />
+            </div>
+            <div>
+              <label class="mb-1 block text-xs font-medium text-gray-700">Binning</label>
+              <select
+                :value="chartTransforms.pivotZones.strategy"
+                class="w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/10 sm:px-2 sm:py-1.5"
+                @change="setPivotZoneStrategy"
+              >
+                <option value="quantiles">Quantiles</option>
+                <option value="equalRange">Equal range</option>
+              </select>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Metric Selection Mode -->
       <div>
         <h4 class="m-0 mb-2 text-sm font-semibold text-gray-800 sm:text-base">Metric Selection</h4>
         <div class="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white p-0.5">
-          <button
-            type="button"
-            class="rounded-sm px-2.5 py-1 text-xs font-medium transition-all sm:px-3 sm:py-1.5 sm:text-sm"
-            :class="
-              metricSelectionMode === 'multi'
-                ? 'bg-primary text-white'
-                : 'text-gray-600 active:bg-gray-50 sm:hover:bg-gray-50'
-            "
-            @click="setMetricSelectionMode('multi')"
-            aria-label="Multi-select metrics"
-            :aria-pressed="metricSelectionMode === 'multi'"
-          >
-            Multi
-          </button>
           <button
             type="button"
             class="rounded-sm px-2.5 py-1 text-xs font-medium transition-all sm:px-3 sm:py-1.5 sm:text-sm"
@@ -76,112 +90,40 @@
           >
             Single
           </button>
+          <button
+            type="button"
+            class="rounded-sm px-2.5 py-1 text-xs font-medium transition-all sm:px-3 sm:py-1.5 sm:text-sm"
+            :class="
+              metricSelectionMode === 'multi'
+                ? 'bg-primary text-white'
+                : 'text-gray-600 active:bg-gray-50 sm:hover:bg-gray-50'
+            "
+            @click="setMetricSelectionMode('multi')"
+            aria-label="Multi-select metrics"
+            :aria-pressed="metricSelectionMode === 'multi'"
+          >
+            Multi
+          </button>
         </div>
         <p class="mt-2 text-xs text-gray-500 sm:text-sm">
           {{ metricSelectionMode === 'multi' ? 'Select multiple metrics to overlay on the chart' : 'Select one metric at a time' }}
         </p>
       </div>
 
-      <!-- Data Cleanup -->
+      <!-- Cumulative -->
       <div class="space-y-3 sm:space-y-4">
-        <h4 class="m-0 text-sm font-semibold text-gray-800 sm:text-base">Data Cleanup</h4>
-
-        <!-- Outliers -->
-        <div
-          class="rounded-md border border-gray-200 bg-white p-3 sm:p-4"
-          :class="chartTransforms.outliers.mode === 'off' ? 'opacity-50' : ''"
-        >
+        <h4 class="m-0 text-sm font-semibold text-gray-800 sm:text-base">Cumulative</h4>
+        <div class="rounded-md border border-gray-200 bg-white p-3 sm:p-4">
           <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <div class="text-xs font-medium text-gray-800 sm:text-sm">Outlier handling</div>
-              <div class="mt-1 text-[10px] text-gray-500 sm:text-xs">
-                Flags sudden spikes based on percent change vs previous valid point.
-              </div>
-            </div>
-            <select
-              :value="chartTransforms.outliers.mode"
-              class="w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/10 sm:w-auto sm:px-2 sm:py-1.5"
-              @change="setOutlierMode"
-            >
-              <option value="off">Off</option>
-              <option value="drop">Drop</option>
-              <option value="clamp">Clamp</option>
-            </select>
-          </div>
-
-          <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-            <div>
-              <label class="mb-1 block text-xs font-medium text-gray-700">Max percent change</label>
-              <input
-                type="number"
-                min="0"
-                step="10"
-                class="w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/10 sm:px-2 sm:py-1.5"
-                :value="chartTransforms.outliers.maxPercentChange"
-                :disabled="chartTransforms.outliers.mode === 'off'"
-                @input="setOutlierMaxPercentChange"
-              />
-              <div class="mt-1 text-[10px] text-gray-500 sm:text-xs">
-                Example: 200 = allow up to ±200% jumps.
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Smoothing -->
-        <div
-          class="rounded-md border border-gray-200 bg-white p-3 sm:p-4"
-          :class="chartTransforms.smoothing.mode === 'off' ? 'opacity-50' : ''"
-        >
-          <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <div class="text-xs font-medium text-gray-800 sm:text-sm">Smoothing</div>
-              <div class="mt-1 text-[10px] text-gray-500 sm:text-xs">
-                Smooths raw sensor values before plotting.
-              </div>
-            </div>
-            <select
-              :value="chartTransforms.smoothing.mode"
-              class="w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/10 sm:w-auto sm:px-2 sm:py-1.5"
-              @change="setSmoothingMode"
-            >
-              <option value="off">Off</option>
-              <option value="movingAverage">Moving average</option>
-              <option value="ema">EMA</option>
-            </select>
-          </div>
-
-          <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-            <div>
-              <label class="mb-1 block text-xs font-medium text-gray-700">Window (points)</label>
-              <input
-                type="number"
-                min="1"
-                step="1"
-                class="w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/10 sm:px-2 sm:py-1.5"
-                :value="chartTransforms.smoothing.windowPoints"
-                :disabled="chartTransforms.smoothing.mode === 'off'"
-                @input="setSmoothingWindowPoints"
-              />
-            </div>
-          </div>
-        </div>
-
-        <!-- Cumulative -->
-        <div
-          class="rounded-md border border-gray-200 bg-white p-3 sm:p-4"
-          :class="chartTransforms.cumulative.mode === 'off' ? 'opacity-50' : ''"
-        >
-          <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <div class="text-xs font-medium text-gray-800 sm:text-sm">Cumulative</div>
+              <div class="text-xs font-medium text-gray-800 sm:text-sm">Mode</div>
               <div class="mt-1 text-[10px] text-gray-500 sm:text-xs">
                 Useful for things like elevation gain (positive delta sum of altitude).
               </div>
             </div>
             <select
               :value="chartTransforms.cumulative.mode"
-              class="w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/10 sm:w-auto sm:px-2 sm:py-1.5"
+              class="w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/10 sm:w-36 sm:px-2 sm:py-1.5"
               @change="setCumulativeMode"
             >
               <option value="off">Off</option>
@@ -242,35 +184,6 @@
                 Example: 1.05 = +5% (useful to align sensors).
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Distribution settings -->
-      <div v-if="chartTransforms.viewMode === 'pivotZones'" class="space-y-3 sm:space-y-4">
-        <h4 class="m-0 text-sm font-semibold text-gray-800 sm:text-base">Distribution</h4>
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-          <div>
-            <label class="mb-1 block text-xs font-medium text-gray-700">Bin count</label>
-            <input
-              type="number"
-              min="5"
-              step="1"
-              class="w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/10 sm:px-2 sm:py-1.5"
-              :value="chartTransforms.pivotZones.zoneCount"
-              @input="setPivotZoneCount"
-            />
-          </div>
-          <div>
-            <label class="mb-1 block text-xs font-medium text-gray-700">Binning</label>
-            <select
-              :value="chartTransforms.pivotZones.strategy"
-              class="w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/10 sm:px-2 sm:py-1.5"
-              @change="setPivotZoneStrategy"
-            >
-              <option value="quantiles">Quantiles</option>
-              <option value="equalRange">Equal range</option>
-            </select>
           </div>
         </div>
       </div>
@@ -346,6 +259,123 @@
           <p class="text-xs text-gray-500">
             Delta = Compare - Base{{ deltaMode === "overlay" ? " (×0.1 scale)" : "" }}
           </p>
+        </div>
+      </div>
+
+      <!-- Data Cleanup -->
+      <div class="space-y-3 sm:space-y-4">
+        <h4 class="m-0 text-sm font-semibold text-gray-800 sm:text-base">Data Cleanup</h4>
+
+        <!-- Outliers -->
+        <div class="rounded-md border border-gray-200 bg-white p-3 sm:p-4">
+          <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div class="text-xs font-medium text-gray-800 sm:text-sm">Outlier handling</div>
+              <div class="mt-1 text-[10px] text-gray-500 sm:text-xs">
+                Flags sudden spikes based on percent change vs previous valid point.
+              </div>
+            </div>
+            <select
+              :value="chartTransforms.outliers.mode"
+              class="w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/10 sm:w-36 sm:px-2 sm:py-1.5"
+              @change="setOutlierMode"
+            >
+              <option value="off">Off</option>
+              <option value="drop">Drop</option>
+              <option value="clamp">Clamp</option>
+            </select>
+          </div>
+
+          <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+            <div>
+              <label class="mb-1 block text-xs font-medium text-gray-700">Max percent change</label>
+              <input
+                type="number"
+                min="0"
+                step="10"
+                class="w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/10 sm:px-2 sm:py-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                :value="chartTransforms.outliers.maxPercentChange"
+                :disabled="chartTransforms.outliers.mode === 'off'"
+                @input="setOutlierMaxPercentChange"
+              />
+              <div class="mt-1 text-[10px] text-gray-500 sm:text-xs">
+                Example: 200 = allow up to ±200% jumps.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Smoothing -->
+        <div class="rounded-md border border-gray-200 bg-white p-3 sm:p-4">
+          <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div class="text-xs font-medium text-gray-800 sm:text-sm">Smoothing</div>
+              <div class="mt-1 text-[10px] text-gray-500 sm:text-xs">
+                Smooths raw sensor values using moving average or EMA before plotting.
+              </div>
+            </div>
+            <select
+              :value="chartTransforms.smoothing.mode"
+              class="w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/10 sm:w-36 sm:px-2 sm:py-1.5"
+              @change="setSmoothingMode"
+            >
+              <option value="off">Off</option>
+              <option value="movingAverage">Moving average</option>
+              <option value="ema">EMA</option>
+            </select>
+          </div>
+
+          <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+            <div>
+              <label class="mb-1 block text-xs font-medium text-gray-700">Window (points)</label>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                class="w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/10 sm:px-2 sm:py-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                :value="chartTransforms.smoothing.windowPoints"
+                :disabled="chartTransforms.smoothing.mode === 'off'"
+                @input="setSmoothingWindowPoints"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Pace Smoothing -->
+        <div
+          class="rounded-md border border-gray-200 bg-white p-3 sm:p-4"
+          :class="chartTransforms.paceSmoothing.enabled ? '' : 'opacity-50'"
+        >
+          <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div class="text-xs font-medium text-gray-800 sm:text-sm">Pace Smoothing</div>
+              <div class="mt-1 text-[10px] text-gray-500 sm:text-xs">
+                Smooths pace values using a moving average to reduce noise.
+              </div>
+            </div>
+            <label class="flex cursor-pointer touch-manipulation items-center gap-2">
+              <input
+                type="checkbox"
+                :checked="chartTransforms.paceSmoothing.enabled"
+                class="h-5 w-5 cursor-pointer touch-manipulation rounded-sm border-gray-300 text-primary focus:ring-primary sm:h-4 sm:w-4"
+                @change="togglePaceSmoothing"
+              />
+              <span class="text-xs text-gray-700 sm:text-sm">Enable</span>
+            </label>
+          </div>
+
+          <div class="mt-3">
+            <label class="mb-1 block text-xs font-medium text-gray-700">Window (seconds)</label>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              class="w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/10 sm:w-auto sm:px-2 sm:py-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              :value="chartTransforms.paceSmoothing.windowSeconds"
+              :disabled="!chartTransforms.paceSmoothing.enabled"
+              @input="setPaceSmoothingWindowSeconds"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -465,6 +495,26 @@ const setSmoothingWindowPoints = (event: Event) => {
     smoothing: {
       ...chartTransforms.value.smoothing,
       windowPoints: Number.isFinite(next) ? Math.max(1, next) : chartTransforms.value.smoothing.windowPoints,
+    },
+  });
+};
+
+const togglePaceSmoothing = (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  activityStore.setChartTransforms({
+    ...chartTransforms.value,
+    paceSmoothing: { ...chartTransforms.value.paceSmoothing, enabled: target.checked },
+  });
+};
+
+const setPaceSmoothingWindowSeconds = (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const next = Number.parseInt(target.value, 10);
+  activityStore.setChartTransforms({
+    ...chartTransforms.value,
+    paceSmoothing: {
+      ...chartTransforms.value.paceSmoothing,
+      windowSeconds: Number.isFinite(next) ? Math.max(1, next) : chartTransforms.value.paceSmoothing.windowSeconds,
     },
   });
 };

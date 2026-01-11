@@ -56,6 +56,18 @@ export function formatCadence(rpm: number): string {
 }
 
 /**
+ * Format pace (min/km)
+ */
+export function formatPace(minPerKm: number): string {
+  const minutes = Math.floor(minPerKm);
+  const seconds = Math.round((minPerKm - minutes) * 60);
+  if (minutes > 0) {
+    return `${minutes}:${seconds.toString().padStart(2, "0")} min/km`;
+  }
+  return `${seconds} min/km`;
+}
+
+/**
  * Format metric value based on type
  */
 export function formatMetricValue(value: number, metricType: string): string {
@@ -68,6 +80,8 @@ export function formatMetricValue(value: number, metricType: string): string {
       return formatAltitude(value);
     case "cad":
       return formatCadence(value);
+    case "pace":
+      return formatPace(value);
     default:
       return value.toFixed(1);
   }

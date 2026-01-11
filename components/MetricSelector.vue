@@ -9,14 +9,25 @@
         <label
           v-for="metric in availableMetrics"
           :key="metric.value"
-          class="metric-label flex cursor-pointer touch-manipulation items-center gap-2 rounded-md border-2 border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-800 transition-all hover:border-primary hover:bg-blue-50 hover:text-primary"
-          :class="selectedMetrics.includes(metric.value) ? 'border-primary bg-blue-50' : ''"
+          class="metric-label flex items-center gap-2 rounded-md border-2 border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-800 transition-all"
+          :class="[
+            selectedMetrics.includes(metric.value) ? 'border-primary bg-blue-50' : '',
+            isMultiSelect && selectedMetrics.includes(metric.value) && selectedMetrics.length === 1
+              ? ''
+              : 'cursor-pointer touch-manipulation hover:border-primary hover:bg-blue-50 hover:text-primary',
+          ]"
         >
           <input
             v-if="isMultiSelect"
             type="checkbox"
             :checked="selectedMetrics.includes(metric.value)"
-            class="h-4 w-4 cursor-pointer touch-manipulation rounded-sm border-gray-300 text-primary focus:ring-2 focus:ring-primary focus:ring-offset-0"
+            :disabled="selectedMetrics.includes(metric.value) && selectedMetrics.length === 1"
+            class="h-4 w-4 rounded-sm border-gray-300 text-primary focus:ring-2 focus:ring-primary focus:ring-offset-0"
+            :class="
+              selectedMetrics.includes(metric.value) && selectedMetrics.length === 1
+                ? 'cursor-not-allowed opacity-60'
+                : 'cursor-pointer touch-manipulation'
+            "
             @change="$emit('toggle', metric.value)"
           />
           <input
@@ -131,6 +142,12 @@ const allMetrics: Metric[] = [
     label: METRIC_CONFIG.cad.label,
     icon: METRIC_CONFIG.cad.icon,
     iconYOffset: METRIC_CONFIG.cad.iconYOffset,
+  },
+  {
+    value: "pace",
+    label: METRIC_CONFIG.pace.label,
+    icon: METRIC_CONFIG.pace.icon,
+    iconYOffset: METRIC_CONFIG.pace.iconYOffset,
   },
 ];
 

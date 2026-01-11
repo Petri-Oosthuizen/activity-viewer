@@ -34,7 +34,7 @@ export interface EChartsSeries {
   large: boolean;
   largeThreshold: number;
   itemStyle: { color: string };
-  lineStyle: { color: string; width: number };
+  lineStyle: { color: string; width: number; type?: "solid" | "dashed" | "dotted" | "dashDot" };
   symbol: string;
   symbolSize: number;
   showSymbol: boolean;
@@ -52,6 +52,14 @@ export interface EChartsSeries {
 /**
  * Generate base series for all activities and metrics
  */
+const METRIC_LINE_STYLES: Readonly<Record<MetricType, "solid" | "dashed" | "dotted" | "dashDot">> = {
+  alt: "solid",
+  hr: "dashed",
+  pwr: "dotted",
+  cad: "dashDot",
+  pace: "solid",
+} as const;
+
 export function generateBaseSeries(
   activities: Activity[],
   disabledActivityIds: Set<string>,
@@ -61,12 +69,14 @@ export function generateBaseSeries(
 ): EChartsSeries[] {
   const series: EChartsSeries[] = [];
   const activeActivities = activities.filter((a) => !disabledActivityIds.has(a.id));
+  const useMetricLineStyles = metrics.length > 1;
 
   metrics.forEach((metric, metricIndex) => {
     activeActivities.forEach((activity) => {
       if (!activityHasMetric(activity, metric)) return;
 
       const data = buildTransformedChartData(activity, metric, xAxisType, transforms);
+      const lineStyleType = useMetricLineStyles ? METRIC_LINE_STYLES[metric] : "solid";
 
       series.push({
         id: `${activity.id}:${metric}:${xAxisType}`,
@@ -79,14 +89,14 @@ export function generateBaseSeries(
         large: true,
         largeThreshold: 2000,
         itemStyle: { color: activity.color },
-        lineStyle: { color: activity.color, width: 1 },
+        lineStyle: { color: activity.color, width: 1, type: lineStyleType },
         symbol: "circle",
         symbolSize: 0,
         showSymbol: false,
         yAxisIndex: metricIndex,
         emphasis: {
           focus: "none",
-          lineStyle: { width: 1.5 },
+          lineStyle: { width: 1.5, type: lineStyleType },
           itemStyle: { color: activity.color },
           symbol: "circle",
           symbolSize: 6,
@@ -147,14 +157,14 @@ export function generateChartSeries(config: SeriesConfig): EChartsSeries[] {
         large: true,
         largeThreshold: 2000,
         itemStyle: { color: activity.color },
-        lineStyle: { color: activity.color, width: 1 },
+        lineStyle: { color: activity.color, width: 1, type: "solid" },
         symbol: "circle",
         symbolSize: 0,
         showSymbol: false,
         yAxisIndex: 0,
         emphasis: {
           focus: "none",
-          lineStyle: { width: 1.5 },
+          lineStyle: { width: 1.5, type: "solid" },
           itemStyle: { color: activity.color },
           symbol: "circle",
           symbolSize: 6,

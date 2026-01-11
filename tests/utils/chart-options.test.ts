@@ -78,7 +78,7 @@ describe("chart-options", () => {
       const config = buildXAxisConfig("distance");
 
       expect(config.type).toBe("value");
-      expect(config.name).toBe("Distance (m/km)");
+      expect(config.name).toBe("Distance");
     });
 
     it("should build localTime axis config", () => {

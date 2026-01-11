@@ -92,5 +92,6 @@ export const METRIC_CONFIG = {
   alt: { icon: "⛰️", label: "Altitude", iconYOffset: -2 },
   pwr: { icon: "⚡", label: "Power", iconYOffset: 0 },
   cad: { icon: "🔄", label: "Cadence", iconYOffset: 0 },
+  pace: { icon: "🏃", label: "Pace", iconYOffset: 0 },
 } as const;
 

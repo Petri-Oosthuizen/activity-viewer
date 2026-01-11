@@ -51,13 +51,13 @@
         <p class="text-xs text-gray-500">
           Privacy: processing is local in your browser—nothing is uploaded to a server.
         </p>
-        <div class="flex items-center justify-start gap-2" @click.stop>
+        <div class="flex items-center justify-center gap-2 py-2" @click.stop>
           <input
             id="localStorageEnabled"
             type="checkbox"
             :checked="localStorageEnabled"
             @change="handleLocalStorageToggle"
-            class="pointer-events-auto h-4 w-4 cursor-pointer rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+            class="pointer-events-auto h-5 w-5 cursor-pointer rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
           />
           <label
             for="localStorageEnabled"
@@ -144,7 +144,7 @@ const processFile = async (file: File) => {
         try {
           const text = e.target?.result as string;
           const result = parseGPX(text, activityStore.gpsDistanceOptions);
-          activityStore.addActivity(result.records, file.name, result.startTime, "gpx");
+          activityStore.addActivity(result.records, file.name, result.startTime, "gpx", result.calories);
           resolve();
         } catch (err) {
           reject(err);
@@ -160,7 +160,7 @@ const processFile = async (file: File) => {
         try {
           const arrayBuffer = e.target?.result as ArrayBuffer;
           const result = await parseFIT(arrayBuffer);
-          activityStore.addActivity(result.records, file.name, result.startTime, "fit");
+          activityStore.addActivity(result.records, file.name, result.startTime, "fit", result.calories);
           resolve();
         } catch (err) {
           reject(err);
@@ -176,7 +176,7 @@ const processFile = async (file: File) => {
         try {
           const text = e.target?.result as string;
           const result = parseTCX(text, activityStore.gpsDistanceOptions);
-          activityStore.addActivity(result.records, file.name, result.startTime, "tcx");
+          activityStore.addActivity(result.records, file.name, result.startTime, "tcx", result.calories);
           resolve();
         } catch (err) {
           reject(err);

@@ -23,7 +23,7 @@
     <div :class="['mt-0', activities.length > 0 ? 'mt-3 border-t border-gray-200 pt-3 sm:mt-4 sm:pt-4' : '']">
       <Uploader :compact="activities.length > 0" />
     </div>
-    <div class="mt-3 border-t border-gray-200 pt-3 sm:mt-4 sm:pt-4">
+    <div v-if="activities.length > 0" class="mt-3 border-t border-gray-200 pt-3 sm:mt-4 sm:pt-4">
       <GpxProcessingSettings />
     </div>
   </div>

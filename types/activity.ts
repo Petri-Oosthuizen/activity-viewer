@@ -20,10 +20,12 @@ export interface Activity {
   scale: number;
   color: string;
   startTime?: Date; // Start time of the activity for local time display
+  calories?: number; // Total calories burned during the activity
 }
 
 export interface ParseResult {
   records: ActivityRecord[];
   startTime?: Date;
+  calories?: number; // Total calories from the file
 }
 

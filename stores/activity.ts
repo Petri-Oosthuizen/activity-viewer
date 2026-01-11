@@ -26,6 +26,7 @@ import {
   buildYAxisConfig as buildYAxisConfigUtil,
   buildGridConfig,
   formatTooltipParams,
+  formatAxisNumber,
 } from "~/utils/chart-options";
 import { generateChartSeries, type SeriesConfig, type EChartsSeries } from "~/utils/chart-series";
 import type { GpsDistanceOptions } from "~/utils/gps-distance";
@@ -75,6 +76,7 @@ export const useActivityStore = defineStore("activity", () => {
     outliers: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.outliers },
     smoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.smoothing },
     gpsSmoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.gpsSmoothing },
+    paceSmoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.paceSmoothing },
     cumulative: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.cumulative },
     pivotZones: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.pivotZones },
   });
@@ -156,6 +158,30 @@ export const useActivityStore = defineStore("activity", () => {
     return generateChartSeries(config);
   });
 
+  function calculateXExtentFromSeries(series: EChartsSeries[]): { min: number; max: number } | undefined {
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let hasData = false;
+
+    for (const s of series) {
+      const data = s.data;
+      if (!Array.isArray(data)) continue;
+
+      for (const point of data) {
+        if (!Array.isArray(point) || point.length < 1) continue;
+        const x = point[0];
+        if (typeof x === "number" && Number.isFinite(x)) {
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          hasData = true;
+        }
+      }
+    }
+
+    if (!hasData || !Number.isFinite(minX) || !Number.isFinite(maxX) || minX === maxX) return undefined;
+    return { min: minX, max: maxX };
+  }
+
   // ============================================
   // CHART OPTIONS
   // ============================================
@@ -167,6 +193,7 @@ export const useActivityStore = defineStore("activity", () => {
 
     if (transforms.viewMode === "pivotZones") {
       const metric = (chartSeries.value[0]?.metric as MetricType | undefined) ?? selectedMetric.value;
+      const xExtent = calculateXExtentFromSeries(chartSeries.value);
 
       return {
         tooltip: buildTooltipConfigUtil(xAxisType.value, (params) =>
@@ -186,7 +213,9 @@ export const useActivityStore = defineStore("activity", () => {
           name: METRIC_LABELS[metric],
           nameLocation: "middle",
           nameGap: 35,
-          axisLabel: { show: true },
+          scale: true,
+          axisLabel: { show: true, formatter: formatAxisNumber },
+          ...(xExtent !== undefined ? { min: xExtent.min, max: xExtent.max } : {}),
         },
         yAxis: {
           type: "value",
@@ -205,6 +234,13 @@ export const useActivityStore = defineStore("activity", () => {
     const hasMultipleYAxes =
       metrics.length > 1 || (showDelta.value && activities.value.length >= 2);
 
+    const baseXAxisConfig = buildXAxisConfigUtil(xAxisType.value);
+    const xExtent = calculateXExtentFromSeries(chartSeries.value);
+
+    const xAxisConfig = xExtent !== undefined
+      ? { ...baseXAxisConfig, min: xExtent.min, max: xExtent.max }
+      : baseXAxisConfig;
+
     return {
       tooltip: buildTooltipConfigUtil(xAxisType.value, (params) =>
         formatTooltipParams(params, xAxisType.value)
@@ -218,7 +254,7 @@ export const useActivityStore = defineStore("activity", () => {
       },
       grid: buildGridConfig(hasMultipleYAxes),
       dataZoom: buildDataZoomConfigUtil(metrics.length, hasMultipleYAxes ? 2 : 1),
-      xAxis: buildXAxisConfigUtil(xAxisType.value),
+      xAxis: xAxisConfig,
       yAxis: buildYAxisConfigUtil(
         metrics,
         showDelta.value,
@@ -240,6 +276,7 @@ export const useActivityStore = defineStore("activity", () => {
     name: string,
     startTime?: Date,
     sourceType?: Activity["sourceType"],
+    calories?: number,
   ) {
     const id = generateActivityId();
     // Assign color based on index (position in list)
@@ -248,7 +285,7 @@ export const useActivityStore = defineStore("activity", () => {
 
     activities.value = [
       ...activities.value,
-      { id, name, records, sourceType, offset: 0, scale: 1, color, startTime },
+      { id, name, records, sourceType, offset: 0, scale: 1, color, startTime, calories },
     ];
   }
 
@@ -345,6 +382,7 @@ export const useActivityStore = defineStore("activity", () => {
       outliers: { ...next.outliers },
       smoothing: { ...next.smoothing },
       gpsSmoothing: { ...next.gpsSmoothing },
+      paceSmoothing: { ...next.paceSmoothing },
       cumulative: { ...next.cumulative },
       pivotZones: { ...next.pivotZones },
     };
@@ -361,6 +399,7 @@ export const useActivityStore = defineStore("activity", () => {
       outliers: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.outliers },
       smoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.smoothing },
       gpsSmoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.gpsSmoothing },
+      paceSmoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.paceSmoothing },
       cumulative: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.cumulative },
       pivotZones: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.pivotZones },
     };

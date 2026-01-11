@@ -19,7 +19,7 @@ function toTimestampMs(value: number | string | Date): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-export async function extractFITPoints(arrayBuffer: ArrayBuffer): Promise<RawPoint[]> {
+export async function extractFITPoints(arrayBuffer: ArrayBuffer): Promise<{ points: RawPoint[]; calories?: number }> {
   try {
     const fitModule = await import("fit-file-parser");
     const FitParser = (fitModule.default || fitModule) as any;
@@ -105,7 +105,31 @@ export async function extractFITPoints(arrayBuffer: ArrayBuffer): Promise<RawPoi
           return;
         }
 
-        resolve(points);
+        let calories: number | undefined;
+        const dataAny = data as any;
+        
+        if (dataAny.activity && Array.isArray(dataAny.activity) && dataAny.activity.length > 0) {
+          const activity = dataAny.activity[0];
+          const totalCalories = activity.total_calories ?? activity.calories ?? activity.Calories;
+          if (typeof totalCalories === "number" && totalCalories > 0) {
+            calories = totalCalories;
+          }
+        } else if (dataAny.laps && Array.isArray(dataAny.laps) && dataAny.laps.length > 0) {
+          let totalCalories = 0;
+          let foundCalories = false;
+          for (const lap of dataAny.laps) {
+            const lapCalories = lap.total_calories ?? lap.calories ?? lap.Calories;
+            if (typeof lapCalories === "number" && lapCalories > 0) {
+              totalCalories += lapCalories;
+              foundCalories = true;
+            }
+          }
+          if (foundCalories) {
+            calories = totalCalories;
+          }
+        }
+
+        resolve({ points, calories });
       });
     });
   } catch (error) {

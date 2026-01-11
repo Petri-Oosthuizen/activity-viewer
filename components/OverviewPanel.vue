@@ -14,6 +14,23 @@
           <span class="text-amber-800">
             X: {{ chartWindow.xStartPercent.toFixed(0) }}–{{ chartWindow.xEndPercent.toFixed(0) }}%
           </span>
+          <button
+            type="button"
+            class="ml-1 flex items-center justify-center rounded p-1 hover:bg-amber-100 focus:outline-none focus:ring-1 focus:ring-amber-300"
+            title="Clear chart window"
+            aria-label="Clear chart window"
+            @click="clearChartWindow"
+          >
+            <svg
+              class="h-3 w-3 text-amber-900"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
       </div>
 
@@ -101,6 +118,135 @@
               </div>
             </td>
           </tr>
+
+          <tr class="bg-white" v-if="hasAnyCalories">
+            <td
+              class="sticky left-0 z-10 w-20 border-b border-gray-100 bg-white px-2 py-2.5 font-medium sm:w-24 sm:px-3"
+            >
+              Calories
+            </td>
+            <td
+              v-for="a in activeActivities"
+              :key="a.id"
+              class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
+            >
+              <div>
+                {{
+                  statsById[a.id]?.calories !== null &&
+                  statsById[a.id]?.calories !== undefined
+                    ? `${Math.round(statsById[a.id]!.calories!)} kcal`
+                    : "—"
+                }}
+              </div>
+              <div
+                v-if="showBaseline"
+                class="mt-0.5 text-[10px] text-gray-400 sm:text-xs"
+                :title="formatCaloriesDelta(a.id) === '—' ? 'Same as baseline' : ''"
+              >
+                {{ formatCaloriesDelta(a.id) }}
+              </div>
+            </td>
+          </tr>
+
+          <template v-if="hasAnyPace">
+            <tr class="bg-gray-50">
+              <td
+                colspan="2"
+                class="sticky left-0 z-10 w-20 border-b border-gray-200 bg-gray-50 px-2 py-2 font-semibold sm:w-24 sm:px-3"
+              >
+                Pace
+              </td>
+              <td
+                v-for="a in activeActivities.slice(1)"
+                :key="a.id"
+                class="border-b border-gray-200 bg-gray-50"
+              ></td>
+            </tr>
+            <tr class="bg-white">
+              <td
+                class="sticky left-0 z-10 w-20 border-b border-gray-100 bg-white px-2 py-2.5 font-medium sm:w-24 sm:px-3"
+              >
+                <span class="text-[10px] text-gray-500 sm:text-xs">min</span>
+              </td>
+              <td
+                v-for="a in activeActivities"
+                :key="a.id"
+                class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
+              >
+                <div>
+                  {{
+                    statsById[a.id]?.metrics.pace?.min !== null &&
+                    statsById[a.id]?.metrics.pace?.min !== undefined
+                      ? formatMetricValue(statsById[a.id]!.metrics.pace.min!, "pace")
+                      : "—"
+                  }}
+                </div>
+                <div
+                  v-if="showBaseline"
+                  class="mt-0.5 text-[10px] text-gray-400 sm:text-xs"
+                  :title="formatMetricMinDelta('pace', a.id) === '—' ? 'Same as baseline' : ''"
+                >
+                  {{ formatMetricMinDelta("pace", a.id) }}
+                </div>
+              </td>
+            </tr>
+            <tr class="bg-white">
+              <td
+                class="sticky left-0 z-10 w-20 border-b border-gray-100 bg-white px-2 py-2.5 font-medium sm:w-24 sm:px-3"
+              >
+                <span class="text-[10px] text-gray-500 sm:text-xs">average</span>
+              </td>
+              <td
+                v-for="a in activeActivities"
+                :key="a.id"
+                class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
+              >
+                <div>
+                  {{
+                    statsById[a.id]?.metrics.pace?.avg !== null &&
+                    statsById[a.id]?.metrics.pace?.avg !== undefined
+                      ? formatMetricValue(statsById[a.id]!.metrics.pace.avg!, "pace")
+                      : "—"
+                  }}
+                </div>
+                <div
+                  v-if="showBaseline"
+                  class="mt-0.5 text-[10px] text-gray-400 sm:text-xs"
+                  :title="formatMetricAvgDelta('pace', a.id) === '—' ? 'Same as baseline' : ''"
+                >
+                  {{ formatMetricAvgDelta("pace", a.id) }}
+                </div>
+              </td>
+            </tr>
+            <tr class="bg-white">
+              <td
+                class="sticky left-0 z-10 w-20 border-b border-gray-100 bg-white px-2 py-2.5 font-medium sm:w-24 sm:px-3"
+              >
+                <span class="text-[10px] text-gray-500 sm:text-xs">max</span>
+              </td>
+              <td
+                v-for="a in activeActivities"
+                :key="a.id"
+                class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
+              >
+                <div>
+                  {{
+                    statsById[a.id]?.metrics.pace?.max !== null &&
+                    statsById[a.id]?.metrics.pace?.max !== undefined
+                      ? formatMetricValue(statsById[a.id]!.metrics.pace.max!, "pace")
+                      : "—"
+                  }}
+                </div>
+                <div
+                  v-if="showBaseline"
+                  class="mt-0.5 text-[10px] text-gray-400 sm:text-xs"
+                  :title="formatMetricMaxDelta('pace', a.id) === '—' ? 'Same as baseline' : ''"
+                >
+                  {{ formatMetricMaxDelta("pace", a.id) }}
+                </div>
+              </td>
+            </tr>
+          </template>
 
           <template v-if="hasAnyElevation">
             <tr class="bg-gray-50">
@@ -282,7 +428,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { useActivityStore } from "~/stores/activity";
-import { computeActivityStatsFromRecords } from "~/utils/activity-stats";
+import { computeActivityStatsFromRecords, computeActivityStats } from "~/utils/activity-stats";
 import { formatDistance, formatMetricValue, formatTime } from "~/utils/format";
 import type { MetricType } from "~/utils/chart-config";
 import {
@@ -331,6 +477,10 @@ const setBaselineActivityId = (event: Event) => {
   baselineActivityId.value = target.value;
 };
 
+const clearChartWindow = () => {
+  activityStore.resetZoom();
+};
+
 const allMetrics = ["hr", "pwr", "cad", "alt"] as const satisfies readonly MetricType[];
 const metricLabels = computed(() => activityStore.metricLabels);
 
@@ -361,14 +511,14 @@ const xAxisType = computed(() => activityStore.xAxisType);
 const chartTransforms = computed(() => activityStore.chartTransforms);
 
 const statsById = computed(() => {
-  const map: Record<string, ReturnType<typeof computeActivityStatsFromRecords>> = {};
+  const map: Record<string, ReturnType<typeof computeActivityStats>> = {};
   const acts = activeActivities.value;
   const viewMode = chartTransforms.value.viewMode;
 
   // For pivot view we don't have an X window; keep full-activity stats.
   if (viewMode !== "timeseries") {
     for (const a of acts) {
-      map[a.id] = computeActivityStatsFromRecords(a.records);
+      map[a.id] = computeActivityStats(a);
     }
     return map;
   }
@@ -381,7 +531,7 @@ const statsById = computed(() => {
   });
   if (!isWindowActive) {
     for (const a of acts) {
-      map[a.id] = computeActivityStatsFromRecords(a.records);
+      map[a.id] = computeActivityStats(a);
     }
     return map;
   }
@@ -390,7 +540,7 @@ const statsById = computed(() => {
   const extent = computeGlobalXExtent(acts, xAxisType.value);
   if (!extent) {
     for (const a of acts) {
-      map[a.id] = computeActivityStatsFromRecords(a.records);
+      map[a.id] = computeActivityStats(a);
     }
     return map;
   }
@@ -402,7 +552,12 @@ const statsById = computed(() => {
 
   for (const a of acts) {
     const subset = filterRecordsByXRange(a, xAxisType.value, range);
-    map[a.id] = computeActivityStatsFromRecords(subset.length > 0 ? subset : a.records.slice(0, 1));
+    const subsetStats = computeActivityStatsFromRecords(subset.length > 0 ? subset : a.records.slice(0, 1));
+    const fullStats = computeActivityStats(a);
+    map[a.id] = {
+      ...subsetStats,
+      calories: fullStats.calories,
+    };
   }
   return map;
 });
@@ -419,6 +574,23 @@ const baselineStats = computed(() => {
   if (!id) return null;
   return statsById.value[id] ?? null;
 });
+
+const hasAnyPace = computed(() =>
+  activeActivities.value.some(
+    (a) =>
+      statsById.value[a.id]?.metrics.pace?.avg !== null ||
+      statsById.value[a.id]?.metrics.pace?.min !== null ||
+      statsById.value[a.id]?.metrics.pace?.max !== null,
+  ),
+);
+
+const hasAnyCalories = computed(() =>
+  activeActivities.value.some(
+    (a) =>
+      statsById.value[a.id]?.calories !== null &&
+      statsById.value[a.id]?.calories !== undefined,
+  ),
+);
 
 const hasAnyElevation = computed(() =>
   activeActivities.value.some(
@@ -449,6 +621,30 @@ function formatDelta(field: "durationSeconds" | "distanceMeters", activityId: st
     field === "durationSeconds"
       ? `${diff >= 0 ? "+" : ""}${Math.round(diff)}s`
       : `${diff >= 0 ? "+" : ""}${Math.round(diff)}m`;
+  const formattedPct = pct !== null ? pct.toFixed(1).replace(/\.0$/, "") : "";
+  const pctLabel = pct !== null ? ` (${diff >= 0 ? "+" : ""}${formattedPct}%)` : "";
+  return `${diffLabel}${pctLabel}`;
+}
+
+function formatCaloriesDelta(activityId: string): string {
+  if (!showBaseline.value) return "";
+  const base = baselineStats.value;
+  if (!base) return "—";
+  const current = statsById.value[activityId];
+  if (!current) return "—";
+
+  const a = current.calories;
+  const b = base.calories;
+  if (a === null || b === null) return "—";
+  const diff = a - b;
+  const pct = b === 0 ? null : (diff / b) * 100;
+  const absDiff = Math.abs(diff);
+  const absPct = pct !== null ? Math.abs(pct) : 0;
+
+  if (activityId === baselineActivityId.value) return "baseline";
+  if (absDiff < 1 && absPct < 0.05) return "—";
+
+  const diffLabel = `${diff >= 0 ? "+" : ""}${Math.round(diff)} kcal`;
   const formattedPct = pct !== null ? pct.toFixed(1).replace(/\.0$/, "") : "";
   const pctLabel = pct !== null ? ` (${diff >= 0 ? "+" : ""}${formattedPct}%)` : "";
   return `${diffLabel}${pctLabel}`;

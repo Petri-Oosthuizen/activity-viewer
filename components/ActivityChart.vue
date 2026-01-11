@@ -293,6 +293,22 @@ watch(
   },
 );
 
+watch(
+  () => activityStore.chartTransforms,
+  () => {
+    // Replace series completely when chart transforms change (outliers, smoothing, cumulative, etc.)
+    // Use notMerge: false with replaceMerge to preserve tooltip and other config
+    if (chartInstance.value) {
+      const option = activityStore.chartOption as EChartsOption;
+      chartInstance.value.setOption(option, {
+        notMerge: false,
+        replaceMerge: ["series", "yAxis", "legend"],
+      });
+    }
+  },
+  { deep: true },
+);
+
 const performZoom = (zoomFactor: number) => {
   // Zoom by adjusting the visible range while maintaining center point
   // zoomFactor < 1 zooms in, > 1 zooms out

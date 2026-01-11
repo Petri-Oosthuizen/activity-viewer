@@ -13,10 +13,11 @@ export interface ActivityStats {
   distanceMeters: number;
   elevationGainMeters: number | null;
   elevationLossMeters: number | null;
+  calories: number | null;
   metrics: Record<MetricType, MetricStats>;
 }
 
-function safeMetricStats(records: ActivityRecord[], metric: MetricType): MetricStats {
+function safeMetricStats(records: ActivityRecord[], metric: "hr" | "alt" | "pwr" | "cad"): MetricStats {
   let count = 0;
   let sum = 0;
   let min: number | null = null;
@@ -91,22 +92,57 @@ function safeElevationLossMeters(records: ActivityRecord[]): number | null {
   return sawAlt ? total : null;
 }
 
+function safePaceStats(records: ActivityRecord[]): MetricStats {
+  let count = 0;
+  let sum = 0;
+  let min: number | null = null;
+  let max: number | null = null;
+
+  for (let i = 1; i < records.length; i++) {
+    const r = records[i];
+    const prev = records[i - 1];
+    if (!r || !prev) continue;
+    const dt = r.t - prev.t;
+    const dd = r.d - prev.d;
+    if (dt <= 0 || dd <= 0) continue;
+    const paceMinPerKm = (dt / 60) / (dd / 1000);
+    if (!Number.isFinite(paceMinPerKm) || paceMinPerKm <= 0) continue;
+    count++;
+    sum += paceMinPerKm;
+    min = min === null ? paceMinPerKm : Math.min(min, paceMinPerKm);
+    max = max === null ? paceMinPerKm : Math.max(max, paceMinPerKm);
+  }
+
+  return {
+    count,
+    min,
+    max,
+    avg: count > 0 ? sum / count : null,
+  };
+}
+
 export function computeActivityStatsFromRecords(records: ActivityRecord[]): ActivityStats {
   return {
     durationSeconds: safeDurationSeconds(records),
     distanceMeters: safeDistanceMeters(records),
     elevationGainMeters: safeElevationGainMeters(records),
     elevationLossMeters: safeElevationLossMeters(records),
+    calories: null,
     metrics: {
       hr: safeMetricStats(records, "hr"),
       alt: safeMetricStats(records, "alt"),
       pwr: safeMetricStats(records, "pwr"),
       cad: safeMetricStats(records, "cad"),
+      pace: safePaceStats(records),
     },
   };
 }
 
 export function computeActivityStats(activity: Activity): ActivityStats {
-  return computeActivityStatsFromRecords(activity.records);
+  const stats = computeActivityStatsFromRecords(activity.records);
+  return {
+    ...stats,
+    calories: activity.calories ?? null,
+  };
 }
 

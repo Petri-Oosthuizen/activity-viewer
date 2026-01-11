@@ -6,7 +6,7 @@
 import type { Activity, ActivityRecord } from "~/types/activity";
 
 // Metric type definition
-export type MetricType = "hr" | "alt" | "pwr" | "cad";
+export type MetricType = "hr" | "alt" | "pwr" | "cad" | "pace";
 
 // X-axis type definition
 export type XAxisType = "time" | "distance" | "localTime";
@@ -20,9 +20,10 @@ export const METRIC_LABELS: Readonly<Record<MetricType, string>> = {
   alt: "Altitude (m)",
   pwr: "Power (W)",
   cad: "Cadence (rpm)",
+  pace: "Pace (min/km)",
 };
 
-const METRIC_ORDER: readonly MetricType[] = ["alt", "hr", "pwr", "cad"] as const;
+const METRIC_ORDER: readonly MetricType[] = ["alt", "hr", "pwr", "cad", "pace"] as const;
 
 // Default color palette for activities
 export const ACTIVITY_COLORS = [
@@ -45,6 +46,17 @@ export const DELTA_COLOR = "#ff6b6b";
  * Check if an activity has data for a specific metric
  */
 export function activityHasMetric(activity: Activity, metric: MetricType): boolean {
+  if (metric === "pace") {
+    if (activity.records.length <= 1) return false;
+    return activity.records.some((r, i) => {
+      if (i === 0) return false;
+      const prev = activity.records[i - 1];
+      if (!prev) return false;
+      const dt = r.t - prev.t;
+      const dd = r.d - prev.d;
+      return dt > 0 && dd > 0;
+    });
+  }
   return activity.records.some(
     (record) => record[metric] !== null && record[metric] !== undefined
   );
@@ -54,6 +66,18 @@ export function activityHasMetric(activity: Activity, metric: MetricType): boole
  * Count how many records in an activity have data for a specific metric
  */
 export function countRecordsWithMetric(activity: Activity, metric: MetricType): number {
+  if (metric === "pace") {
+    let count = 0;
+    for (let i = 1; i < activity.records.length; i++) {
+      const r = activity.records[i];
+      const prev = activity.records[i - 1];
+      if (!r || !prev) continue;
+      const dt = r.t - prev.t;
+      const dd = r.d - prev.d;
+      if (dt > 0 && dd > 0) count++;
+    }
+    return count;
+  }
   return activity.records.filter(
     (record) => record[metric] !== null && record[metric] !== undefined
   ).length;
@@ -73,6 +97,17 @@ export function getAvailableMetrics(activities: Activity[]): MetricType[] {
       if (record.pwr !== undefined && record.pwr !== null) metrics.add("pwr");
       if (record.cad !== undefined && record.cad !== null) metrics.add("cad");
     }
+    if (activity.records.length > 1) {
+      const hasValidPace = activity.records.some((r, i) => {
+        if (i === 0) return false;
+        const prev = activity.records[i - 1];
+        if (!prev) return false;
+        const dt = r.t - prev.t;
+        const dd = r.d - prev.d;
+        return dt > 0 && dd > 0;
+      });
+      if (hasValidPace) metrics.add("pace");
+    }
   }
   // Stable ordering, with altitude first when present.
   return METRIC_ORDER.filter((m) => metrics.has(m));
@@ -89,6 +124,7 @@ export function getMetricAvailability(
     alt: [],
     pwr: [],
     cad: [],
+    pace: [],
   };
 
   activities.forEach((activity) => {
@@ -97,6 +133,9 @@ export function getMetricAvailability(
         availability[metric].push(activity.id);
       }
     });
+    if (activityHasMetric(activity, "pace")) {
+      availability.pace.push(activity.id);
+    }
   });
 
   return availability;
@@ -166,6 +205,8 @@ export type ChartDataPoint = [number, number | null];
 
 /**
  * Transform activity records to chart data points
+ * Note: This is a simple transform that doesn't handle computed metrics like pace.
+ * For production use, use buildTransformedChartData from series-transforms.ts instead.
  */
 export function transformToChartData(
   activity: Activity,
@@ -174,9 +215,24 @@ export function transformToChartData(
 ): ChartDataPoint[] {
   // Preserve record order and indices to keep chart ↔ map synchronization exact.
   // Missing values are represented as `null` so ECharts can naturally gap the line.
-  return activity.records.map((record): ChartDataPoint => {
+  return activity.records.map((record, i): ChartDataPoint => {
     const x = calculateXValue(record, activity, xAxisType);
-    const y = record[metric] ?? null;
+    let y: number | null = null;
+    if (metric === "pace") {
+      if (i > 0) {
+        const prev = activity.records[i - 1];
+        if (prev) {
+          const dt = record.t - prev.t;
+          const dd = record.d - prev.d;
+          if (dt > 0 && dd > 0) {
+            const paceMinPerKm = (dt / 60) / (dd / 1000);
+            y = Number.isFinite(paceMinPerKm) && paceMinPerKm > 0 ? paceMinPerKm : null;
+          }
+        }
+      }
+    } else {
+      y = record[metric] ?? null;
+    }
     return [x, y];
   });
 }

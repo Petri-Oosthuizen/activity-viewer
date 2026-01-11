@@ -8,6 +8,23 @@ type NullableNumber = number | null;
 const chartDataCache = new Map<string, ChartDataPoint[]>();
 const pivotZonesCache = new Map<string, PivotZonesMultiResult | null>();
 
+function calculateAverageTimeInterval(records: ActivityRecord[]): number {
+  if (records.length < 2) return 1;
+  let totalInterval = 0;
+  let count = 0;
+  for (let i = 1; i < records.length; i++) {
+    const prev = records[i - 1];
+    const curr = records[i];
+    if (!prev || !curr) continue;
+    const dt = curr.t - prev.t;
+    if (dt > 0 && Number.isFinite(dt)) {
+      totalInterval += dt;
+      count++;
+    }
+  }
+  return count > 0 ? totalInterval / count : 1;
+}
+
 function chartCacheKey(
   activity: Activity,
   metric: MetricType,
@@ -16,6 +33,10 @@ function chartCacheKey(
 ): string {
   const start = activity.startTime ? activity.startTime.getTime() : 0;
   const t = transforms;
+  const smoothingKey =
+    metric === "pace" && t.paceSmoothing.enabled
+      ? `paceSm:${t.paceSmoothing.windowSeconds}`
+      : `sm:${t.smoothing.mode}:${t.smoothing.windowPoints}`;
   return [
     activity.id,
     metric,
@@ -24,7 +45,7 @@ function chartCacheKey(
     `scale:${activity.scale}`,
     `start:${start}`,
     `out:${t.outliers.mode}:${t.outliers.maxPercentChange}`,
-    `sm:${t.smoothing.mode}:${t.smoothing.windowPoints}`,
+    smoothingKey,
     `cum:${t.cumulative.mode}`,
   ].join("|");
 }
@@ -40,16 +61,35 @@ function pivotCacheKey(
     .sort()
     .join(",");
   const t = transforms;
+  const smoothingKey =
+    metric === "pace" && t.paceSmoothing.enabled
+      ? `paceSm:${t.paceSmoothing.windowSeconds}`
+      : `sm:${t.smoothing.mode}:${t.smoothing.windowPoints}`;
   return [
     ids,
     metric,
     `out:${t.outliers.mode}:${t.outliers.maxPercentChange}`,
-    `sm:${t.smoothing.mode}:${t.smoothing.windowPoints}`,
+    smoothingKey,
     `zones:${t.pivotZones.strategy}:${t.pivotZones.zoneCount}`,
   ].join("|");
 }
 
-function getMetricValue(record: ActivityRecord, metric: MetricType): NullableNumber {
+function getMetricValue(
+  record: ActivityRecord,
+  metric: MetricType,
+  activity?: Activity,
+  index?: number,
+): NullableNumber {
+  if (metric === "pace") {
+    if (!activity || index === undefined || index === 0) return null;
+    const prev = activity.records[index - 1];
+    if (!prev) return null;
+    const dt = record.t - prev.t;
+    const dd = record.d - prev.d;
+    if (dt <= 0 || dd <= 0) return null;
+    const paceMinPerKm = (dt / 60) / (dd / 1000);
+    return Number.isFinite(paceMinPerKm) && paceMinPerKm > 0 ? paceMinPerKm : null;
+  }
   const value = record[metric];
   return value === undefined || value === null ? null : value;
 }
@@ -211,10 +251,23 @@ export function buildTransformedChartData(
   if (cached) return cached;
 
   const x = activity.records.map((r) => calculateXValue(r, activity, xAxisType));
-  const yRaw = activity.records.map((r) => getMetricValue(r, metric));
+  const yRaw = activity.records.map((r, i) => getMetricValue(r, metric, activity, i));
 
   const yNoOutliers = applyOutlierHandling(yRaw, transforms.outliers);
-  const ySmoothed = applySmoothing(yNoOutliers, transforms.smoothing);
+  
+  let smoothingSettings: ChartTransformSettings["smoothing"];
+  if (metric === "pace" && transforms.paceSmoothing.enabled) {
+    const avgInterval = calculateAverageTimeInterval(activity.records);
+    const windowPoints = Math.max(1, Math.round(transforms.paceSmoothing.windowSeconds / avgInterval));
+    smoothingSettings = {
+      mode: "movingAverage",
+      windowPoints,
+    };
+  } else {
+    smoothingSettings = transforms.smoothing;
+  }
+  
+  const ySmoothed = applySmoothing(yNoOutliers, smoothingSettings);
   const yCumulative = applyCumulative(ySmoothed, transforms.cumulative.mode);
 
   const scale = Number.isFinite(activity.scale) ? activity.scale : 1;
@@ -254,10 +307,22 @@ export function buildPivotZones(
 ): PivotZoneResult | null {
   const zoneCount = Math.max(5, Math.floor(transforms.pivotZones.zoneCount));
 
+  let smoothingSettings: ChartTransformSettings["smoothing"];
+  if (metric === "pace" && transforms.paceSmoothing.enabled) {
+    const avgInterval = calculateAverageTimeInterval(activity.records);
+    const windowPoints = Math.max(1, Math.round(transforms.paceSmoothing.windowSeconds / avgInterval));
+    smoothingSettings = {
+      mode: "movingAverage",
+      windowPoints,
+    };
+  } else {
+    smoothingSettings = transforms.smoothing;
+  }
+
   // We pivot by elapsed time between points.
   const values = applySmoothing(
-    applyOutlierHandling(activity.records.map((r) => getMetricValue(r, metric)), transforms.outliers),
-    transforms.smoothing,
+    applyOutlierHandling(activity.records.map((r, i) => getMetricValue(r, metric, activity, i)), transforms.outliers),
+    smoothingSettings,
   );
 
   // Build segment durations (seconds) and associate with "current" value.
@@ -348,9 +413,21 @@ export function buildPivotZonesForActivities(
   const allValues: number[] = [];
 
   for (const activity of activities) {
+    let smoothingSettings: ChartTransformSettings["smoothing"];
+    if (metric === "pace" && transforms.paceSmoothing.enabled) {
+      const avgInterval = calculateAverageTimeInterval(activity.records);
+      const windowPoints = Math.max(1, Math.round(transforms.paceSmoothing.windowSeconds / avgInterval));
+      smoothingSettings = {
+        mode: "movingAverage",
+        windowPoints,
+      };
+    } else {
+      smoothingSettings = transforms.smoothing;
+    }
+
     const values = applySmoothing(
-      applyOutlierHandling(activity.records.map((r) => getMetricValue(r, metric)), transforms.outliers),
-      transforms.smoothing,
+      applyOutlierHandling(activity.records.map((r, i) => getMetricValue(r, metric, activity, i)), transforms.outliers),
+      smoothingSettings,
     );
 
     const segments: Array<{ v: number; dt: number }> = [];

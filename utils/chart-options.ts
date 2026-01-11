@@ -7,7 +7,7 @@ import type { MetricType, XAxisType, DeltaMode } from "./chart-config";
 import { METRIC_LABELS, formatXAxisValue } from "./chart-config";
 import { buildChartTooltip, type ChartTooltipItem } from "./tooltip-builder";
 
-function formatAxisNumber(value: unknown): string {
+export function formatAxisNumber(value: unknown): string {
   const n = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(n)) return String(value);
   const rounded = n.toFixed(2);
@@ -124,7 +124,7 @@ export function buildXAxisConfig(xAxisType: XAxisType) {
         ? "Local Time"
         : xAxisType === "time"
           ? "Time (seconds)"
-          : "Distance (m/km)",
+          : "Distance",
     nameLocation: "middle",
     nameGap: 35,
     nameTextStyle: { padding: [10, 0, 0, 0] },

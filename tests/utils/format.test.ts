@@ -6,6 +6,7 @@ import {
   formatHeartRate,
   formatPower,
   formatCadence,
+  formatPace,
   formatMetricValue,
 } from "~/utils/format";
 
@@ -70,6 +71,26 @@ describe("format utilities", () => {
     });
   });
 
+  describe("formatPace", () => {
+    it("should format pace with minutes and seconds when minutes > 0", () => {
+      expect(formatPace(5.0)).toBe("5:00 min/km");
+      expect(formatPace(5.5)).toBe("5:30 min/km");
+      expect(formatPace(6.25)).toBe("6:15 min/km");
+      expect(formatPace(10.0)).toBe("10:00 min/km");
+    });
+
+    it("should format pace with seconds only when minutes = 0", () => {
+      expect(formatPace(0.5)).toBe("30 min/km");
+      expect(formatPace(0.25)).toBe("15 min/km");
+      expect(formatPace(0.0167)).toBe("1 min/km");
+    });
+
+    it("should handle edge cases", () => {
+      expect(formatPace(1.0)).toBe("1:00 min/km");
+      expect(formatPace(59.999)).toBe("59:60 min/km");
+    });
+  });
+
   describe("formatMetricValue", () => {
     it("should format hr metric", () => {
       expect(formatMetricValue(120, "hr")).toBe("120 bpm");
@@ -85,6 +106,11 @@ describe("format utilities", () => {
 
     it("should format cad metric", () => {
       expect(formatMetricValue(90, "cad")).toBe("90 rpm");
+    });
+
+    it("should format pace metric", () => {
+      expect(formatMetricValue(5.5, "pace")).toBe("5:30 min/km");
+      expect(formatMetricValue(6.0, "pace")).toBe("6:00 min/km");
     });
 
     it("should handle unknown metric types", () => {

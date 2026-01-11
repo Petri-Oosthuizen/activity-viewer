@@ -32,6 +32,22 @@ describe("series-transforms", () => {
     expect(data[2]).toEqual([20, null]);
   });
 
+  it("applies cumulative sum", () => {
+    const transforms = {
+      ...DEFAULT_CHART_TRANSFORM_SETTINGS,
+      outliers: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.outliers },
+      smoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.smoothing, mode: "off" },
+      cumulative: { mode: "sum" },
+    } as const;
+
+    const data = buildTransformedChartData(baseActivity, "alt", "time", transforms);
+    // alt: 10 + 11 + 30 + 12 = 63
+    expect(data[0][1]).toBeCloseTo(10, 6);
+    expect(data[1][1]).toBeCloseTo(21, 6); // 10 + 11
+    expect(data[2][1]).toBeCloseTo(51, 6); // 10 + 11 + 30
+    expect(data[3][1]).toBeCloseTo(63, 6); // 10 + 11 + 30 + 12
+  });
+
   it("applies cumulative positive delta sum", () => {
     const transforms = {
       ...DEFAULT_CHART_TRANSFORM_SETTINGS,
@@ -41,8 +57,41 @@ describe("series-transforms", () => {
     } as const;
 
     const data = buildTransformedChartData(baseActivity, "alt", "time", transforms);
-    // alt: 10 -> 11 (+1) -> 30 (+19) -> 12 (-18) => total = 20
-    expect(data[3][1]).toBeCloseTo(20, 6);
+    // alt: 10 -> 11 (+1) -> 30 (+19) -> 12 (-18, ignored) => total = 20
+    expect(data[0][1]).toBeCloseTo(0, 6); // First value, no previous
+    expect(data[1][1]).toBeCloseTo(1, 6); // +1 from 10 to 11
+    expect(data[2][1]).toBeCloseTo(20, 6); // +1 + 19 = 20
+    expect(data[3][1]).toBeCloseTo(20, 6); // No change (negative delta ignored)
+  });
+
+  it("applies cumulative positive delta sum with decreasing values", () => {
+    const activity: Activity = {
+      id: "a2",
+      name: "A2",
+      offset: 0,
+      scale: 1,
+      color: "#000",
+      records: [
+        { t: 0, d: 0, alt: 100 },
+        { t: 10, d: 100, alt: 90 },
+        { t: 20, d: 200, alt: 95 },
+        { t: 30, d: 300, alt: 80 },
+      ],
+    };
+
+    const transforms = {
+      ...DEFAULT_CHART_TRANSFORM_SETTINGS,
+      outliers: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.outliers },
+      smoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.smoothing, mode: "off" },
+      cumulative: { mode: "positiveDeltaSum" },
+    } as const;
+
+    const data = buildTransformedChartData(activity, "alt", "time", transforms);
+    // alt: 100 -> 90 (-10, ignored) -> 95 (+5) -> 80 (-15, ignored) => total = 5
+    expect(data[0][1]).toBeCloseTo(0, 6);
+    expect(data[1][1]).toBeCloseTo(0, 6); // -10 ignored
+    expect(data[2][1]).toBeCloseTo(5, 6); // +5 from 90 to 95
+    expect(data[3][1]).toBeCloseTo(5, 6); // -15 ignored
   });
 
   it("builds pivot zones across activities", () => {
