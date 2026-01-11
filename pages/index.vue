@@ -128,6 +128,7 @@ import { useActivityStore } from "~/stores/activity";
 import { useLocalStoragePersistence } from "~/composables/useLocalStoragePersistence";
 import ActivityMap from "~/components/ActivityMap.vue";
 import OverviewPanel from "~/components/OverviewPanel.vue";
+import ChartLegend from "~/components/ChartLegend.vue";
 
 const config = useRuntimeConfig();
 const buildNumber = computed(() => config.public.buildNumber);

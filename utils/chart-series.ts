@@ -101,7 +101,7 @@ export function generateBaseSeries(
           symbol: "circle",
           symbolSize: 6,
         },
-        animation: false,
+        animation: true,
       });
     });
   });
@@ -141,9 +141,8 @@ export function generateChartSeries(config: SeriesConfig): EChartsSeries[] {
       const totals = pivot.totalsSecondsByActivityId[activity.id] ?? [];
       const totalSeconds = totals.reduce((acc, v) => acc + v, 0);
       const data: Array<[number, number]> = totals.map((seconds, idx) => {
-        const x = pivot.binCenters[idx] ?? idx;
         const pct = totalSeconds > 0 ? (seconds / totalSeconds) * 100 : 0;
-        return [x, pct];
+        return [idx, pct];
       });
 
       return {
@@ -151,25 +150,17 @@ export function generateChartSeries(config: SeriesConfig): EChartsSeries[] {
         activityId: activity.id,
         metric,
         name: `${activity.name} - ${METRIC_LABELS[metric]}`,
-        type: "line",
+        type: "bar",
         data,
-        smooth: false,
         large: true,
         largeThreshold: 2000,
         itemStyle: { color: activity.color },
-        lineStyle: { color: activity.color, width: 1, type: "solid" },
-        symbol: "circle",
-        symbolSize: 0,
-        showSymbol: false,
         yAxisIndex: 0,
         emphasis: {
           focus: "none",
-          lineStyle: { width: 1.5, type: "solid" },
           itemStyle: { color: activity.color },
-          symbol: "circle",
-          symbolSize: 6,
         },
-        animation: false,
+        animation: true,
       };
     });
   }

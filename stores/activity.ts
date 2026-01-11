@@ -29,6 +29,7 @@ import {
   formatAxisNumber,
 } from "~/utils/chart-options";
 import { generateChartSeries, type SeriesConfig, type EChartsSeries } from "~/utils/chart-series";
+import { buildPivotZonesForActivities } from "~/utils/series-transforms";
 import type { GpsDistanceOptions } from "~/utils/gps-distance";
 import { DEFAULT_GPS_DISTANCE_OPTIONS, filterGpsDistanceDeltaMeters } from "~/utils/gps-distance";
 
@@ -158,7 +159,9 @@ export const useActivityStore = defineStore("activity", () => {
     return generateChartSeries(config);
   });
 
-  function calculateXExtentFromSeries(series: EChartsSeries[]): { min: number; max: number } | undefined {
+  function calculateXExtentFromSeries(
+    series: EChartsSeries[],
+  ): { min: number; max: number } | undefined {
     let minX = Infinity;
     let maxX = -Infinity;
     let hasData = false;
@@ -178,7 +181,8 @@ export const useActivityStore = defineStore("activity", () => {
       }
     }
 
-    if (!hasData || !Number.isFinite(minX) || !Number.isFinite(maxX) || minX === maxX) return undefined;
+    if (!hasData || !Number.isFinite(minX) || !Number.isFinite(maxX) || minX === maxX)
+      return undefined;
     return { min: minX, max: maxX };
   }
 
@@ -187,44 +191,49 @@ export const useActivityStore = defineStore("activity", () => {
   // ============================================
 
   const chartOption = computed(() => {
-    const metrics =
-      selectedMetrics.value.length > 0 ? selectedMetrics.value : ["hr" as MetricType];
+    const metrics = selectedMetrics.value.length > 0 ? selectedMetrics.value : ["hr" as MetricType];
     const transforms = chartTransforms.value;
 
     if (transforms.viewMode === "pivotZones") {
-      const metric = (chartSeries.value[0]?.metric as MetricType | undefined) ?? selectedMetric.value;
-      const xExtent = calculateXExtentFromSeries(chartSeries.value);
+      const metric =
+        (chartSeries.value[0]?.metric as MetricType | undefined) ?? selectedMetric.value;
+      const activeActivities = activities.value.filter((a) => !disabledActivities.value.has(a.id));
+      const pivot = buildPivotZonesForActivities(activeActivities, metric, transforms);
+      const bucketLabels = pivot?.bucketLabels ?? [];
 
       return {
         tooltip: buildTooltipConfigUtil(xAxisType.value, (params) =>
           formatTooltipParams(params, xAxisType.value),
         ),
         legend: {
-          data: chartSeries.value.map((s: EChartsSeries) => s.name),
-          bottom: 0,
-          type: "scroll",
-          pageIconColor: "#5470c6",
-          pageIconInactiveColor: "#aaa",
+          show: false,
         },
-        grid: buildGridConfig(false),
+        grid: {
+          ...buildGridConfig(false),
+          bottom: "15%",
+        },
         dataZoom: [],
         xAxis: {
-          type: "value",
+          type: "category",
+          data: bucketLabels,
           name: METRIC_LABELS[metric],
           nameLocation: "middle",
-          nameGap: 35,
-          scale: true,
-          axisLabel: { show: true, formatter: formatAxisNumber },
-          ...(xExtent !== undefined ? { min: xExtent.min, max: xExtent.max } : {}),
+          nameGap: bucketLabels.length > 10 ? 50 : 35,
+          axisLabel: {
+            show: true,
+            rotate: bucketLabels.length > 10 ? 45 : 0,
+            interval: 0,
+          },
         },
         yAxis: {
           type: "value",
           show: true,
           name: "Time (%)",
           nameLocation: "middle",
-          nameGap: 35,
+          nameGap: 40,
           nameRotate: 90,
-          scale: true,
+          scale: false,
+          min: 0,
           axisLabel: { show: true, formatter: (v: number | string) => `${Number(v).toFixed(0)}%` },
         },
         series: chartSeries.value,
@@ -237,20 +246,17 @@ export const useActivityStore = defineStore("activity", () => {
     const baseXAxisConfig = buildXAxisConfigUtil(xAxisType.value);
     const xExtent = calculateXExtentFromSeries(chartSeries.value);
 
-    const xAxisConfig = xExtent !== undefined
-      ? { ...baseXAxisConfig, min: xExtent.min, max: xExtent.max }
-      : baseXAxisConfig;
+    const xAxisConfig =
+      xExtent !== undefined
+        ? { ...baseXAxisConfig, min: xExtent.min, max: xExtent.max }
+        : baseXAxisConfig;
 
     return {
       tooltip: buildTooltipConfigUtil(xAxisType.value, (params) =>
-        formatTooltipParams(params, xAxisType.value)
+        formatTooltipParams(params, xAxisType.value),
       ),
       legend: {
-        data: chartSeries.value.map((s: any) => s.name),
-        bottom: 0,
-        type: "scroll",
-        pageIconColor: "#5470c6",
-        pageIconInactiveColor: "#aaa",
+        show: false,
       },
       grid: buildGridConfig(hasMultipleYAxes),
       dataZoom: buildDataZoomConfigUtil(metrics.length, hasMultipleYAxes ? 2 : 1),
@@ -260,12 +266,11 @@ export const useActivityStore = defineStore("activity", () => {
         showDelta.value,
         deltaMode.value,
         selectedMetric.value,
-        activities.value.length >= 2
+        activities.value.length >= 2,
       ),
       series: chartSeries.value,
     };
   });
-
 
   // ============================================
   // ACTIONS

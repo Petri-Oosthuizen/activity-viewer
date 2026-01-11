@@ -39,35 +39,22 @@
           {{
             chartTransforms.viewMode === 'timeseries'
               ? 'Plot metric values along the activity (time, distance, or local time).'
-              : 'Shows percentage of time spent in each value range (bin) of the selected metric. Value ranges are divided into bins using quantiles or equal spacing.'
+              : 'Shows percentage of time spent in each value range (bucket) of the selected metric. Value ranges are divided into equal-size buckets starting from round numbers.'
           }}
         </p>
 
         <!-- Distribution settings -->
         <div v-if="chartTransforms.viewMode === 'pivotZones'" class="mt-3 space-y-3 sm:space-y-4">
-          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-            <div>
-              <label class="mb-1 block text-xs font-medium text-gray-700">Bin count</label>
-              <input
-                type="number"
-                min="5"
-                step="1"
-                class="w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/10 sm:px-2 sm:py-1.5"
-                :value="chartTransforms.pivotZones.zoneCount"
-                @input="setPivotZoneCount"
-              />
-            </div>
-            <div>
-              <label class="mb-1 block text-xs font-medium text-gray-700">Binning</label>
-              <select
-                :value="chartTransforms.pivotZones.strategy"
-                class="w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/10 sm:px-2 sm:py-1.5"
-                @change="setPivotZoneStrategy"
-              >
-                <option value="quantiles">Quantiles</option>
-                <option value="equalRange">Equal range</option>
-              </select>
-            </div>
+          <div>
+            <label class="mb-1 block text-xs font-medium text-gray-700">Bin count</label>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              class="w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/10 sm:px-2 sm:py-1.5"
+              :value="chartTransforms.pivotZones.zoneCount"
+              @input="setPivotZoneCount"
+            />
           </div>
         </div>
       </div>
@@ -392,7 +379,6 @@ import type {
   ChartViewMode,
   CumulativeMode,
   OutlierHandling,
-  PivotZoneStrategy,
   SmoothingMode,
 } from "~/utils/chart-settings";
 
@@ -534,17 +520,10 @@ const setPivotZoneCount = (event: Event) => {
     ...chartTransforms.value,
     pivotZones: {
       ...chartTransforms.value.pivotZones,
-      zoneCount: Number.isFinite(next) ? Math.max(5, next) : chartTransforms.value.pivotZones.zoneCount,
+      zoneCount: Number.isFinite(next) ? Math.max(1, next) : chartTransforms.value.pivotZones.zoneCount,
     },
   });
 };
 
-const setPivotZoneStrategy = (event: Event) => {
-  const target = event.target as HTMLSelectElement;
-  activityStore.setChartTransforms({
-    ...chartTransforms.value,
-    pivotZones: { ...chartTransforms.value.pivotZones, strategy: target.value as PivotZoneStrategy },
-  });
-};
 </script>
 

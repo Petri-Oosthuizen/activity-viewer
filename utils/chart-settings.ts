@@ -80,7 +80,7 @@ export const DEFAULT_CHART_TRANSFORM_SETTINGS: Readonly<ChartTransformSettings> 
   },
   pivotZones: {
     zoneCount: 5,
-    strategy: "quantiles",
+    strategy: "equalRange",
   },
 };
 

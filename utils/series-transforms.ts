@@ -284,6 +284,57 @@ export function buildTransformedChartData(
 export interface PivotZoneResult {
   binCenters: number[];
   totalsSeconds: number[];
+  bucketLabels?: string[];
+}
+
+function calculateNiceBucketSize(range: number, zoneCount: number, min: number, max: number): number {
+  const rawStep = range / zoneCount;
+  const orderOfMagnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  const normalized = rawStep / orderOfMagnitude;
+  
+  let niceStep;
+  if (normalized <= 1) niceStep = 1 * orderOfMagnitude;
+  else if (normalized <= 2) niceStep = 2 * orderOfMagnitude;
+  else if (normalized <= 5) niceStep = 5 * orderOfMagnitude;
+  else niceStep = 10 * orderOfMagnitude;
+  
+  const candidates = [10, 5, 2, 1].map(mult => mult * orderOfMagnitude);
+  const startIndex = candidates.indexOf(niceStep);
+  
+  for (let i = Math.max(0, startIndex); i < candidates.length; i++) {
+    const candidate = candidates[i];
+    if (candidate === undefined) continue;
+    const startValue = Math.floor(min / candidate) * candidate;
+    const endValue = Math.ceil(max / candidate) * candidate;
+    const adjustedRange = endValue - startValue;
+    const adjustedStep = adjustedRange / zoneCount;
+    
+    if (Number.isInteger(adjustedStep)) {
+      return candidate;
+    }
+  }
+  
+  return niceStep;
+}
+
+function formatBucketLabel(lo: number, hi: number, metric: MetricType): string {
+  const bucketSize = hi - lo;
+  const useDecimals = bucketSize < 1;
+
+  if (metric === "pace") {
+    const formatPace = (v: number) => {
+      const minutes = Math.floor(v);
+      const seconds = Math.round((v - minutes) * 60);
+      return minutes > 0 ? `${minutes}:${seconds.toString().padStart(2, "0")}` : `${seconds}`;
+    };
+    return `${formatPace(lo)}-${formatPace(hi)}`;
+  }
+
+  if (useDecimals) {
+    return `${lo.toFixed(1)}-${hi.toFixed(1)}`;
+  }
+
+  return `${Math.round(lo)}-${Math.round(hi)}`;
 }
 
 function quantile(sorted: number[], p: number): number {
@@ -305,7 +356,7 @@ export function buildPivotZones(
   metric: MetricType,
   transforms: ChartTransformSettings,
 ): PivotZoneResult | null {
-  const zoneCount = Math.max(5, Math.floor(transforms.pivotZones.zoneCount));
+  const zoneCount = Math.max(1, Math.floor(transforms.pivotZones.zoneCount));
 
   let smoothingSettings: ChartTransformSettings["smoothing"];
   if (metric === "pace" && transforms.paceSmoothing.enabled) {
@@ -393,7 +444,7 @@ export function buildPivotZones(
 }
 
 export interface PivotZonesMultiResult {
-  binCenters: number[];
+  bucketLabels: string[];
   totalsSecondsByActivityId: Record<string, number[]>;
 }
 
@@ -407,7 +458,7 @@ export function buildPivotZonesForActivities(
     return pivotZonesCache.get(key) ?? null;
   }
 
-  const zoneCount = Math.max(5, Math.floor(transforms.pivotZones.zoneCount));
+  const zoneCount = Math.max(1, Math.floor(transforms.pivotZones.zoneCount));
 
   const activitySegments = new Map<string, Array<{ v: number; dt: number }>>();
   const allValues: number[] = [];
@@ -461,26 +512,23 @@ export function buildPivotZonesForActivities(
     return null;
   }
 
+  const range = max - min;
+  const bucketSize = calculateNiceBucketSize(range, zoneCount, min, max);
+  const startValue = Math.floor(min / bucketSize) * bucketSize;
+  const endValue = Math.ceil(max / bucketSize) * bucketSize;
+  const adjustedRange = endValue - startValue;
+  const adjustedBucketSize = adjustedRange / zoneCount;
+
   const edges: number[] = [];
-  if (transforms.pivotZones.strategy === "equalRange") {
-    const step = (max - min) / zoneCount;
-    for (let i = 0; i <= zoneCount; i++) edges.push(min + step * i);
-  } else {
-    for (let i = 0; i <= zoneCount; i++) edges.push(quantile(numeric, i / zoneCount));
-    for (let i = 1; i < edges.length; i++) {
-      const prevEdge = edges[i - 1];
-      const currEdge = edges[i];
-      if (prevEdge !== undefined && currEdge !== undefined) {
-        edges[i] = Math.max(currEdge, prevEdge);
-      }
-    }
+  for (let i = 0; i <= zoneCount; i++) {
+    edges.push(startValue + adjustedBucketSize * i);
   }
 
-  const binCenters = Array.from({ length: zoneCount }, (_, i) => {
+  const bucketLabels = Array.from({ length: zoneCount }, (_, i) => {
     const loEdge = edges[i];
     const hiEdge = edges[i + 1];
-    if (loEdge === undefined || hiEdge === undefined) return 0;
-    return (loEdge + hiEdge) / 2;
+    if (loEdge === undefined || hiEdge === undefined) return "";
+    return formatBucketLabel(loEdge, hiEdge, metric);
   });
 
   const totalsSecondsByActivityId: Record<string, number[]> = {};
@@ -506,7 +554,7 @@ export function buildPivotZonesForActivities(
     totalsSecondsByActivityId[activityId] = totals;
   }
 
-  const result = { binCenters, totalsSecondsByActivityId };
+  const result = { bucketLabels, totalsSecondsByActivityId };
   pivotZonesCache.set(key, result);
   return result;
 }

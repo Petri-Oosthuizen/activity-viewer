@@ -16,11 +16,12 @@
 
       <!-- Toolbar (below chart) -->
       <div
+        v-if="chartTransforms.viewMode !== 'pivotZones'"
         class="mt-3 inline-flex flex-wrap items-center gap-1 rounded-md border border-gray-200 bg-gray-50 p-1 sm:mt-4"
       >
         <button
           type="button"
-          class="border-primary text-primary active:bg-primary sm:hover:bg-primary flex h-11 w-11 touch-manipulation items-center justify-center rounded-md border bg-white shadow-xs transition-all active:text-white sm:h-9 sm:w-9 sm:hover:text-white"
+          :class="[BUTTON_CLASSES.icon, 'h-11 w-11 sm:h-9 sm:w-9']"
           @click="zoomIn"
           title="Zoom In"
           aria-label="Zoom In"
@@ -29,7 +30,7 @@
         </button>
         <button
           type="button"
-          class="border-primary text-primary active:bg-primary sm:hover:bg-primary flex h-11 w-11 touch-manipulation items-center justify-center rounded-md border bg-white shadow-xs transition-all active:text-white sm:h-9 sm:w-9 sm:hover:text-white"
+          :class="[BUTTON_CLASSES.icon, 'h-11 w-11 sm:h-9 sm:w-9']"
           @click="zoomOut"
           title="Zoom Out"
           aria-label="Zoom Out"
@@ -38,16 +39,23 @@
         </button>
         <button
           type="button"
-          class="border-primary text-primary active:bg-primary sm:hover:bg-primary flex h-11 w-11 touch-manipulation items-center justify-center rounded-md border bg-white shadow-xs transition-all active:text-white sm:h-9 sm:w-9 sm:hover:text-white"
+          :class="[BUTTON_CLASSES.icon, 'h-11 w-11 sm:h-9 sm:w-9']"
           @click="resetZoom"
           title="Reset Zoom"
           aria-label="Reset Zoom"
         >
-          <span class="text-base sm:text-sm">🔍</span>
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            />
+          </svg>
         </button>
         <button
           type="button"
-          class="ml-2 flex h-11 w-11 touch-manipulation items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 shadow-xs transition-all active:bg-gray-100 sm:h-9 sm:w-9 sm:hover:bg-gray-50"
+          :class="[BUTTON_CLASSES.icon, 'h-11 w-11 sm:h-9 sm:w-9 ml-2']"
           @click="panLeft"
           title="Pan Left"
           aria-label="Pan Left"
@@ -63,7 +71,7 @@
         </button>
         <button
           type="button"
-          class="flex h-11 w-11 touch-manipulation items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 shadow-xs transition-all active:bg-gray-100 sm:h-9 sm:w-9 sm:hover:bg-gray-50"
+          :class="[BUTTON_CLASSES.icon, 'h-11 w-11 sm:h-9 sm:w-9']"
           @click="panRight"
           title="Pan Right"
           aria-label="Pan Right"
@@ -78,7 +86,7 @@
           </svg>
         </button>
         <label
-          class="ml-2 inline-flex h-11 items-center gap-2 rounded-md border border-gray-200 bg-white px-3 text-[10px] text-gray-700 select-none sm:h-9 sm:text-xs"
+          class="inline-flex h-11 items-center gap-2 rounded-md border-2 border-gray-300 bg-white px-3 text-[10px] text-gray-700 select-none sm:h-9 sm:text-xs ml-2"
           title="When enabled, Y rescales to the visible X window"
         >
           <input
@@ -127,6 +135,7 @@ import { ref, onMounted, onUnmounted, watch, nextTick, computed } from "vue";
 import { useDebounceFn } from "@vueuse/core";
 import { useActivityStore } from "~/stores/activity";
 import type { MetricType } from "~/utils/chart-config";
+import { BUTTON_CLASSES } from "~/constants/ui";
 import type { EChartsOption } from "echarts";
 import {
   findNearestIndex,
@@ -137,6 +146,7 @@ import {
 import { useECharts } from "~/composables/useECharts";
 import MetricSelector from "./MetricSelector.vue";
 import ChartAdvancedSettings from "./ChartAdvancedSettings.vue";
+import FileNameDisplay from "./FileNameDisplay.vue";
 
 const chartContainer = ref<HTMLDivElement | null>(null);
 const activityStore = useActivityStore();
@@ -164,6 +174,11 @@ const metricAvailability = computed(() => activityStore.metricAvailability);
 const availableMetrics = computed(() => activityStore.availableMetrics);
 const hasChartData = computed(() => activityStore.chartSeries.length > 0);
 const metricSelectionMode = computed(() => activityStore.metricSelectionMode);
+const chartTransforms = computed(() => activityStore.chartTransforms);
+
+const activeActivitiesForLegend = computed(() =>
+  activities.value.filter((a) => !activityStore.isActivityDisabled(a.id)),
+);
 
 // Settings handlers
 const setMetric = (metric: MetricType) => {
@@ -218,7 +233,7 @@ watch(
 
 watch(
   () => activityStore.selectedMetrics,
-  () => {
+  async () => {
     // Fully update chart when metrics change to show multiple Y-axes
     // Need to replace both series and yAxis to properly display multiple metrics
     if (chartInstance.value) {
@@ -226,8 +241,9 @@ watch(
       // Use replaceMerge to replace series and yAxis while preserving tooltip and other config
       chartInstance.value.setOption(option, {
         notMerge: false,
-        replaceMerge: ["series", "yAxis", "legend"],
+        replaceMerge: ["series", "yAxis", "legend", "xAxis"],
       });
+      await nextTick();
     }
   },
   { deep: true },
@@ -295,15 +311,16 @@ watch(
 
 watch(
   () => activityStore.chartTransforms,
-  () => {
+  async () => {
     // Replace series completely when chart transforms change (outliers, smoothing, cumulative, etc.)
     // Use notMerge: false with replaceMerge to preserve tooltip and other config
     if (chartInstance.value) {
       const option = activityStore.chartOption as EChartsOption;
       chartInstance.value.setOption(option, {
         notMerge: false,
-        replaceMerge: ["series", "yAxis", "legend"],
+        replaceMerge: ["series", "yAxis", "legend", "xAxis"],
       });
+      await nextTick();
     }
   },
   { deep: true },
@@ -359,6 +376,7 @@ const panXAxisWindow = (direction: -1 | 1) => {
 function applyAutoYFit() {
   if (!chartInstance.value) return;
   if (!autoFitYEnabled.value) return;
+  if (chartTransforms.value.viewMode === "pivotZones") return;
 
   const option = chartInstance.value.getOption() as any;
   const seriesOptions: any[] = option?.series ?? [];
@@ -368,49 +386,68 @@ function applyAutoYFit() {
 
   if (yAxisOptions.length === 0 || seriesOptions.length === 0) return;
 
-  const dataZooms: any[] = option?.dataZoom ?? [];
-  const xZoom =
-    dataZooms.find((z) => z?.xAxisIndex === 0 && z?.type === "slider") ??
-    dataZooms.find((z) => z?.xAxisIndex === 0 && z?.type === "inside");
-  const xStartPct = typeof xZoom?.start === "number" ? xZoom.start : 0;
-  const xEndPct = typeof xZoom?.end === "number" ? xZoom.end : 100;
-
-  let globalMinX = Infinity;
-  let globalMaxX = -Infinity;
-  for (const s of seriesOptions) {
-    const data: any[] = s?.data ?? [];
-    for (const p of data) {
-      if (!Array.isArray(p) || typeof p[0] !== "number") continue;
-      const x = p[0];
-      if (x < globalMinX) globalMinX = x;
-      if (x > globalMaxX) globalMaxX = x;
-    }
-  }
-
-  if (!Number.isFinite(globalMinX) || !Number.isFinite(globalMaxX) || globalMinX === globalMaxX)
-    return;
-
-  const xStart = globalMinX + ((globalMaxX - globalMinX) * xStartPct) / 100;
-  const xEnd = globalMinX + ((globalMaxX - globalMinX) * xEndPct) / 100;
-  const lo = Math.min(xStart, xEnd);
-  const hi = Math.max(xStart, xEnd);
+  const xAxisOptions = Array.isArray(option?.xAxis) ? option.xAxis : [option?.xAxis].filter(Boolean);
+  const isCategoryAxis = xAxisOptions[0]?.type === "category";
 
   const minByAxis = new Map<number, number>();
   const maxByAxis = new Map<number, number>();
 
-  for (const s of seriesOptions) {
-    const axisIndex = typeof s?.yAxisIndex === "number" ? s.yAxisIndex : 0;
-    const data: any[] = s?.data ?? [];
-    for (const p of data) {
-      if (!Array.isArray(p) || typeof p[0] !== "number") continue;
-      const x = p[0] as number;
-      if (x < lo || x > hi) continue;
-      const y = p[1];
-      if (typeof y !== "number" || !Number.isFinite(y)) continue;
-      const prevMin = minByAxis.get(axisIndex);
-      const prevMax = maxByAxis.get(axisIndex);
-      minByAxis.set(axisIndex, prevMin === undefined ? y : Math.min(prevMin, y));
-      maxByAxis.set(axisIndex, prevMax === undefined ? y : Math.max(prevMax, y));
+  if (isCategoryAxis) {
+    for (const s of seriesOptions) {
+      const axisIndex = typeof s?.yAxisIndex === "number" ? s.yAxisIndex : 0;
+      const data: any[] = s?.data ?? [];
+      for (const p of data) {
+        if (!Array.isArray(p)) continue;
+        const y = p[1];
+        if (typeof y !== "number" || !Number.isFinite(y)) continue;
+        const prevMin = minByAxis.get(axisIndex);
+        const prevMax = maxByAxis.get(axisIndex);
+        minByAxis.set(axisIndex, prevMin === undefined ? y : Math.min(prevMin, y));
+        maxByAxis.set(axisIndex, prevMax === undefined ? y : Math.max(prevMax, y));
+      }
+    }
+  } else {
+    const dataZooms: any[] = option?.dataZoom ?? [];
+    const xZoom =
+      dataZooms.find((z) => z?.xAxisIndex === 0 && z?.type === "slider") ??
+      dataZooms.find((z) => z?.xAxisIndex === 0 && z?.type === "inside");
+    const xStartPct = typeof xZoom?.start === "number" ? xZoom.start : 0;
+    const xEndPct = typeof xZoom?.end === "number" ? xZoom.end : 100;
+
+    let globalMinX = Infinity;
+    let globalMaxX = -Infinity;
+    for (const s of seriesOptions) {
+      const data: any[] = s?.data ?? [];
+      for (const p of data) {
+        if (!Array.isArray(p) || typeof p[0] !== "number") continue;
+        const x = p[0];
+        if (x < globalMinX) globalMinX = x;
+        if (x > globalMaxX) globalMaxX = x;
+      }
+    }
+
+    if (!Number.isFinite(globalMinX) || !Number.isFinite(globalMaxX) || globalMinX === globalMaxX)
+      return;
+
+    const xStart = globalMinX + ((globalMaxX - globalMinX) * xStartPct) / 100;
+    const xEnd = globalMinX + ((globalMaxX - globalMinX) * xEndPct) / 100;
+    const lo = Math.min(xStart, xEnd);
+    const hi = Math.max(xStart, xEnd);
+
+    for (const s of seriesOptions) {
+      const axisIndex = typeof s?.yAxisIndex === "number" ? s.yAxisIndex : 0;
+      const data: any[] = s?.data ?? [];
+      for (const p of data) {
+        if (!Array.isArray(p) || typeof p[0] !== "number") continue;
+        const x = p[0] as number;
+        if (x < lo || x > hi) continue;
+        const y = p[1];
+        if (typeof y !== "number" || !Number.isFinite(y)) continue;
+        const prevMin = minByAxis.get(axisIndex);
+        const prevMax = maxByAxis.get(axisIndex);
+        minByAxis.set(axisIndex, prevMin === undefined ? y : Math.min(prevMin, y));
+        maxByAxis.set(axisIndex, prevMax === undefined ? y : Math.max(prevMax, y));
+      }
     }
   }
 
@@ -619,7 +656,9 @@ watch(
       });
 
       // Keep Y scale fitted to the visible X window.
-      debouncedApplyAutoYFit();
+      if (chartTransforms.value.viewMode !== "pivotZones") {
+        debouncedApplyAutoYFit();
+      }
     };
 
     // Initialize window state + keep it updated when zooming/panning changes.
