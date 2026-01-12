@@ -651,6 +651,13 @@
                 <div :class="formatBestSplit(a.id, splitLabel) === '—' ? 'text-gray-400' : ''">
                   {{ formatBestSplit(a.id, splitLabel) }}
                 </div>
+                <div
+                  v-if="isBaselineActive"
+                  class="mt-0.5 text-[10px] text-gray-400 sm:text-xs"
+                  :title="formatBestSplitDelta(a.id, splitLabel) === '—' ? 'Same as baseline' : ''"
+                >
+                  {{ formatBestSplitDelta(a.id, splitLabel) }}
+                </div>
               </td>
             </tr>
           </template>
@@ -965,6 +972,34 @@ function formatBestSplit(activityId: string, splitLabel: string): string {
   const split = stats.bestSplits[splitLabel];
   if (!split || split.timeSeconds === null) return "—";
   return formatTime(split.timeSeconds);
+}
+
+function formatBestSplitDelta(activityId: string, splitLabel: string): string {
+  if (!isBaselineActive.value) return "";
+  const base = baselineStats.value;
+  if (!base?.bestSplits) return "—";
+  const current = statsById.value[activityId];
+  if (!current?.bestSplits) return "—";
+
+  const baseSplit = base.bestSplits[splitLabel];
+  const currentSplit = current.bestSplits[splitLabel];
+  if (!baseSplit || baseSplit.timeSeconds === null) return "—";
+  if (!currentSplit || currentSplit.timeSeconds === null) return "—";
+
+  const a = currentSplit.timeSeconds;
+  const b = baseSplit.timeSeconds;
+  const diff = a - b;
+  const pct = b === 0 ? null : (diff / b) * 100;
+  const absDiff = Math.abs(diff);
+  const absPct = pct !== null ? Math.abs(pct) : 0;
+
+  if (activityId === baselineActivityId.value) return "baseline";
+  if (absDiff < 0.5 && absPct < 0.05) return "—";
+
+  const diffLabel = `${diff >= 0 ? "+" : ""}${Math.round(diff)}s`;
+  const formattedPct = pct !== null ? pct.toFixed(1).replace(/\.0$/, "") : "";
+  const pctLabel = pct !== null ? ` (${diff >= 0 ? "+" : ""}${formattedPct}%)` : "";
+  return `${diffLabel}${pctLabel}`;
 }
 
 const hasAnyPowerMetrics = computed(() => {
