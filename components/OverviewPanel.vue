@@ -624,19 +624,6 @@
           </template>
 
           <template v-if="hasAnyAdditionalMetrics && availableAdditionalMetrics.length > 0">
-            <tr class="bg-gray-50">
-              <td
-                colspan="2"
-                class="sticky left-0 z-10 w-20 border-b border-gray-200 bg-gray-50 px-2 py-2 font-semibold sm:w-24 sm:px-3"
-              >
-                Additional Metrics
-              </td>
-              <td
-                v-for="a in activeActivities.slice(1)"
-                :key="a.id"
-                class="border-b border-gray-200 bg-gray-50"
-              ></td>
-            </tr>
             <template v-for="fieldName in availableAdditionalMetrics" :key="fieldName">
               <tr class="bg-gray-50">
                 <td
@@ -675,14 +662,21 @@
                     {{
                       statsById[a.id]?.additionalMetrics?.[fieldName]?.min !== null &&
                       statsById[a.id]?.additionalMetrics?.[fieldName]?.min !== undefined
-                        ? formatAdditionalMetricValue(fieldName, statsById[a.id]!.additionalMetrics![fieldName].min!)
+                        ? formatAdditionalMetricValue(
+                            fieldName,
+                            statsById[a.id]!.additionalMetrics![fieldName]!.min!,
+                          )
                         : "—"
                     }}
                   </div>
                   <div
                     v-if="isBaselineActive"
                     class="mt-0.5 text-[10px] text-gray-400 sm:text-xs"
-                    :title="formatAdditionalMetricDelta(a.id, fieldName, 'min') === '—' ? 'Same as baseline' : ''"
+                    :title="
+                      formatAdditionalMetricDelta(a.id, fieldName, 'min') === '—'
+                        ? 'Same as baseline'
+                        : ''
+                    "
                   >
                     {{ formatAdditionalMetricDelta(a.id, fieldName, "min") }}
                   </div>
@@ -710,14 +704,21 @@
                     {{
                       statsById[a.id]?.additionalMetrics?.[fieldName]?.avg !== null &&
                       statsById[a.id]?.additionalMetrics?.[fieldName]?.avg !== undefined
-                        ? formatAdditionalMetricValue(fieldName, statsById[a.id]!.additionalMetrics![fieldName].avg!)
+                        ? formatAdditionalMetricValue(
+                            fieldName,
+                            statsById[a.id]!.additionalMetrics![fieldName]!.avg!,
+                          )
                         : "—"
                     }}
                   </div>
                   <div
                     v-if="isBaselineActive"
                     class="mt-0.5 text-[10px] text-gray-400 sm:text-xs"
-                    :title="formatAdditionalMetricDelta(a.id, fieldName, 'avg') === '—' ? 'Same as baseline' : ''"
+                    :title="
+                      formatAdditionalMetricDelta(a.id, fieldName, 'avg') === '—'
+                        ? 'Same as baseline'
+                        : ''
+                    "
                   >
                     {{ formatAdditionalMetricDelta(a.id, fieldName, "avg") }}
                   </div>
@@ -745,14 +746,21 @@
                     {{
                       statsById[a.id]?.additionalMetrics?.[fieldName]?.max !== null &&
                       statsById[a.id]?.additionalMetrics?.[fieldName]?.max !== undefined
-                        ? formatAdditionalMetricValue(fieldName, statsById[a.id]!.additionalMetrics![fieldName].max!)
+                        ? formatAdditionalMetricValue(
+                            fieldName,
+                            statsById[a.id]!.additionalMetrics![fieldName]!.max!,
+                          )
                         : "—"
                     }}
                   </div>
                   <div
                     v-if="isBaselineActive"
                     class="mt-0.5 text-[10px] text-gray-400 sm:text-xs"
-                    :title="formatAdditionalMetricDelta(a.id, fieldName, 'max') === '—' ? 'Same as baseline' : ''"
+                    :title="
+                      formatAdditionalMetricDelta(a.id, fieldName, 'max') === '—'
+                        ? 'Same as baseline'
+                        : ''
+                    "
                   >
                     {{ formatAdditionalMetricDelta(a.id, fieldName, "max") }}
                   </div>
@@ -1171,11 +1179,24 @@ function getAdditionalMetricDisplayName(fieldName: string): string {
   }
 
   displayName = displayName
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
     .replace(/_/g, " ")
     .replace(/\b\w/g, (l) => l.toUpperCase())
     .replace(/\b(Gps|Gps|Hr|Cad|Pwr|Temp|Alt|Sat|Hdop|Vdop|Gct|Atemp)\b/gi, (match) => {
       const upper = match.toUpperCase();
-      if (upper === "GPS" || upper === "HR" || upper === "CAD" || upper === "PWR" || upper === "TEMP" || upper === "ALT" || upper === "SAT" || upper === "HDOP" || upper === "VDOP" || upper === "GCT" || upper === "ATEMP") {
+      if (
+        upper === "GPS" ||
+        upper === "HR" ||
+        upper === "CAD" ||
+        upper === "PWR" ||
+        upper === "TEMP" ||
+        upper === "ALT" ||
+        upper === "SAT" ||
+        upper === "HDOP" ||
+        upper === "VDOP" ||
+        upper === "GCT" ||
+        upper === "ATEMP"
+      ) {
         return upper;
       }
       return match;
@@ -1184,7 +1205,11 @@ function getAdditionalMetricDisplayName(fieldName: string): string {
   return displayName + unit;
 }
 
-function formatAdditionalMetricDelta(activityId: string, fieldName: string, statType: "min" | "avg" | "max"): string {
+function formatAdditionalMetricDelta(
+  activityId: string,
+  fieldName: string,
+  statType: "min" | "avg" | "max",
+): string {
   if (!isBaselineActive.value) return "";
   const base = baselineStats.value;
   if (!base?.additionalMetrics?.[fieldName]) return "—";
@@ -1265,47 +1290,6 @@ function formatBestSplitDelta(activityId: string, splitLabel: string): string {
   const formattedPct = pct !== null ? pct.toFixed(1).replace(/\.0$/, "") : "";
   const pctLabel = pct !== null ? ` (${diff >= 0 ? "+" : ""}${formattedPct}%)` : "";
   return `${diffLabel}${pctLabel}`;
-}
-
-const hasAnyPowerMetrics = computed(() => {
-  return activeActivities.value.some((a) => {
-    const stats = statsById.value[a.id];
-    if (!stats?.powerMetrics) return false;
-    return (
-      stats.powerMetrics.normalizedPower !== null ||
-      stats.powerMetrics.best12MinPower !== null ||
-      stats.powerMetrics.best20MinPower !== null
-    );
-  });
-});
-
-const hasNormalizedPower = computed(() => {
-  return activeActivities.value.some(
-    (a) => statsById.value[a.id]?.powerMetrics?.normalizedPower !== null,
-  );
-});
-
-const has12MinPower = computed(() => {
-  return activeActivities.value.some(
-    (a) => statsById.value[a.id]?.powerMetrics?.best12MinPower !== null,
-  );
-});
-
-const has20MinPower = computed(() => {
-  return activeActivities.value.some(
-    (a) => statsById.value[a.id]?.powerMetrics?.best20MinPower !== null,
-  );
-});
-
-function formatPowerMetric(
-  activityId: string,
-  metric: "normalizedPower" | "best12MinPower" | "best20MinPower",
-): string {
-  const stats = statsById.value[activityId];
-  if (!stats?.powerMetrics) return "—";
-  const value = stats.powerMetrics[metric];
-  if (value === null || value === undefined) return "—";
-  return formatPower(value);
 }
 
 function formatDelta(field: "durationSeconds" | "distanceMeters", activityId: string): string {
