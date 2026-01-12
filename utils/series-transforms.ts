@@ -2,6 +2,7 @@ import type { Activity, ActivityRecord } from "~/types/activity";
 import type { ChartDataPoint, MetricType, XAxisType } from "~/utils/chart-config";
 import { calculateXValue } from "~/utils/chart-config";
 import type { ChartTransformSettings } from "~/utils/chart-settings";
+import { calculateGpsSpeed, DEFAULT_GPS_DISTANCE_OPTIONS } from "~/utils/gps-distance";
 
 type NullableNumber = number | null;
 
@@ -81,6 +82,29 @@ function getMetricValue(
   index?: number,
 ): NullableNumber {
   if (metric === "pace") {
+    // Prefer embedded speed if available (TCX/FIT files)
+    if (record.speed !== undefined && record.speed !== null && record.speed > 0 && Number.isFinite(record.speed)) {
+      // Convert speed (m/s) to pace (min/km)
+      // pace = (1000 meters / speed_mps) / 60 seconds = 1000 / (speed_mps * 60)
+      const paceMinPerKm = 1000 / (record.speed * 60);
+      return Number.isFinite(paceMinPerKm) && paceMinPerKm > 0 ? paceMinPerKm : null;
+    }
+    // For GPX files: calculate speed directly from GPS coordinates with filtering
+    if (activity && index !== undefined && index > 0) {
+      const prev = activity.records[index - 1];
+      if (prev && record.lat !== undefined && record.lon !== undefined && prev.lat !== undefined && prev.lon !== undefined) {
+        const speed = calculateGpsSpeed(
+          { lat: prev.lat, lon: prev.lon, t: prev.t, alt: prev.alt },
+          { lat: record.lat, lon: record.lon, t: record.t, alt: record.alt },
+          DEFAULT_GPS_DISTANCE_OPTIONS
+        );
+        if (speed !== null && speed > 0 && Number.isFinite(speed)) {
+          const paceMinPerKm = 1000 / (speed * 60);
+          return Number.isFinite(paceMinPerKm) && paceMinPerKm > 0 ? paceMinPerKm : null;
+        }
+      }
+    }
+    // Fall back to cumulative distance/time calculation (less accurate)
     if (!activity || index === undefined || index === 0) return null;
     const prev = activity.records[index - 1];
     if (!prev) return null;

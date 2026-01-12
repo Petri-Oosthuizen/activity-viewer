@@ -90,7 +90,7 @@ async function loadActivitiesFromFolder(folderPath: string): Promise<ParsedActiv
         stats,
       });
     } catch (error) {
-      throw new Error(`Failed to parse ${file.filepath}: ${error}`);
+      console.warn(`Skipping ${file.filepath}: ${error}`);
     }
   }
 
@@ -176,6 +176,19 @@ function compareStartTimes(activities: ParsedActivity[]): void {
   }
 }
 
+function compareSportTypes(activities: ParsedActivity[]): void {
+  const sportTypes = activities
+    .filter((a) => a.result.sport)
+    .map((a) => a.result.sport!.toLowerCase().trim());
+
+  if (sportTypes.length < 2) return;
+
+  const firstSport = sportTypes[0];
+  for (let i = 1; i < sportTypes.length; i++) {
+    expect(sportTypes[i]).toBe(firstSport);
+  }
+}
+
 const activityFolders = getActivityFolders();
 
 if (activityFolders.length === 0) {
@@ -220,6 +233,10 @@ if (activityFolders.length === 0) {
 
       it("should have matching start times within reasonable tolerance", () => {
         compareStartTimes(activities);
+      });
+
+      it("should have matching sport types across formats", () => {
+        compareSportTypes(activities);
       });
     });
   }

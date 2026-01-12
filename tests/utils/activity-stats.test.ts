@@ -26,7 +26,7 @@ describe("activity-stats", () => {
       expect(stats.metrics.hr.min).toBe(100);
       expect(stats.metrics.hr.max).toBe(130);
       expect(stats.metrics.hr.count).toBe(4);
-      expect(stats.elevationGainMeters).toBeCloseTo((12 - 10) + (15 - 11), 6);
+      expect(stats.elevationGainMeters).toBeCloseTo(12 - 10 + (15 - 11), 6);
     });
 
     it("computes elevation loss correctly", () => {
@@ -45,7 +45,7 @@ describe("activity-stats", () => {
       };
 
       const stats = computeActivityStats(activity);
-      expect(stats.elevationLossMeters).toBeCloseTo((100 - 95) + (95 - 90), 6);
+      expect(stats.elevationLossMeters).toBeCloseTo(100 - 95 + (95 - 90), 6);
     });
 
     it("handles missing metrics and missing altitude", () => {
@@ -55,7 +55,10 @@ describe("activity-stats", () => {
         offset: 0,
         scale: 1,
         color: "#000",
-        records: [{ t: 0, d: 0 }, { t: 10, d: 50, hr: 120 }],
+        records: [
+          { t: 0, d: 0 },
+          { t: 10, d: 50, hr: 120 },
+        ],
       };
 
       const stats = computeActivityStats(activity);
@@ -167,8 +170,9 @@ describe("activity-stats", () => {
       expect(stats.metrics.pace.count).toBe(3);
       expect(stats.metrics.pace.min).toBeCloseTo(1.0, 6);
       expect(stats.metrics.pace.max).toBeCloseTo(2.0, 6);
-      const expectedAvg = (2.0 + 1.0 + 1.0) / 3;
-      expect(stats.metrics.pace.avg).toBeCloseTo(expectedAvg, 6);
+      // Average pace is calculated from total distance/time, not arithmetic mean of individual paces
+      // Total: 2500m in 180s = 1.2 min/km
+      expect(stats.metrics.pace.avg).toBeCloseTo(1.2, 6);
     });
 
     it("handles single record (no pace possible)", () => {
@@ -190,7 +194,7 @@ describe("activity-stats", () => {
 
       const stats = computeActivityStatsFromRecords(records);
       expect(stats.metrics.pace.count).toBe(1);
-      expect(stats.metrics.pace.avg).toBeCloseTo((10 / 60) / (100 / 1000), 6);
+      expect(stats.metrics.pace.avg).toBeCloseTo(10 / 60 / (100 / 1000), 6);
     });
 
     it("handles zero or negative time delta (no pace)", () => {
@@ -203,7 +207,7 @@ describe("activity-stats", () => {
 
       const stats = computeActivityStatsFromRecords(records);
       expect(stats.metrics.pace.count).toBe(1);
-      expect(stats.metrics.pace.avg).toBeCloseTo((10 / 60) / (100 / 1000), 6);
+      expect(stats.metrics.pace.avg).toBeCloseTo(10 / 60 / (100 / 1000), 6);
     });
 
     it("handles negative distance delta (no pace)", () => {
@@ -215,7 +219,7 @@ describe("activity-stats", () => {
 
       const stats = computeActivityStatsFromRecords(records);
       expect(stats.metrics.pace.count).toBe(1);
-      expect(stats.metrics.pace.avg).toBeCloseTo((10 / 60) / (100 / 1000), 6);
+      expect(stats.metrics.pace.avg).toBeCloseTo(10 / 60 / (100 / 1000), 6);
     });
 
     it("computes pace for real-world running example", () => {
@@ -387,4 +391,3 @@ describe("activity-stats", () => {
     });
   });
 });
-

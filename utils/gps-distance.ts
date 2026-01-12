@@ -79,3 +79,33 @@ export function filterGpsDistanceDeltaMeters(
   return dist;
 }
 
+/**
+ * Calculate speed from GPS coordinates with minimal filtering.
+ * Returns speed in m/s, or null if the segment should be filtered out.
+ * Uses minimal filtering for speed calculation to capture all valid movement.
+ * Only filters extreme GPS errors that are clearly impossible.
+ */
+export function calculateGpsSpeed(
+  prev: GpsPoint,
+  next: GpsPoint,
+  options: GpsDistanceOptions,
+): number | null {
+  const dt = clampNonNegative(next.t - prev.t);
+  if (dt <= 0) return null;
+  
+  const dist = computeSegmentDistanceMeters(prev, next, options);
+  const speed = dist / dt;
+  
+  // Minimal filtering for speed calculation - only filter extreme GPS errors
+  // Don't use minMoveMeters - we want to capture all movement for accurate pace
+  // Use a very high maxSpeed threshold (100 m/s = 360 km/h) to only filter GPS errors
+  // Only filter extreme jumps when time delta is very small (< 0.5s)
+  const maxSpeedForSpeedCalc = 100; // Very lenient - only filter obvious GPS errors
+  const isSpeedSpike = speed > maxSpeedForSpeedCalc;
+  const isJumpSpike = dt < 0.5 && dist > 500; // Only filter extreme jumps (>500m in <0.5s)
+
+  if (isSpeedSpike || isJumpSpike) return null;
+  
+  return speed;
+}
+

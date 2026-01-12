@@ -1,32 +1,33 @@
 <template>
   <div class="flex min-h-screen flex-col">
-    <header class="border-b border-gray-200 bg-white p-4 sm:p-6 md:p-8">
-      <div class="flex items-center">
-        <div class="flex-1"></div>
-        <div class="flex-1 text-center">
-          <h1 class="m-0 mb-1 text-xl font-bold text-gray-800 sm:mb-2 sm:text-2xl md:text-3xl">
-            Activity Viewer
-          </h1>
-          <p class="m-0 text-sm text-gray-600 sm:text-base">Compare GPX, FIT, and TCX files</p>
-        </div>
-        <div class="flex flex-1 justify-end">
-          <a
-            :href="githubUrl"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="flex items-center justify-center rounded-md p-2 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
-            title="View on GitHub"
-            aria-label="View on GitHub"
-          >
-            <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path
-                fill-rule="evenodd"
-                d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
-                clip-rule="evenodd"
-              />
-            </svg>
-          </a>
-        </div>
+    <header class="relative border-b border-gray-200 bg-white p-2.5 sm:p-3 md:p-4">
+      <div class="page-ear"></div>
+      <a
+        :href="githubUrl"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="page-ear-link touch-manipulation"
+        title="View on GitHub"
+        aria-label="View on GitHub"
+      >
+        <svg
+          class="h-4 w-4 text-white sm:h-5 sm:w-5"
+          fill="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            fill-rule="evenodd"
+            d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+            clip-rule="evenodd"
+          />
+        </svg>
+      </a>
+      <div class="text-center">
+        <h1 class="m-0 text-lg font-bold text-gray-800 sm:text-xl md:text-2xl">Activity Viewer</h1>
+        <p class="m-0 mt-0.5 text-xs text-gray-600 sm:text-sm md:text-base">
+          Compare GPX, FIT, and TCX files
+        </p>
       </div>
     </header>
     <main class="mx-auto w-full max-w-[1400px] flex-1 p-4 sm:p-6 md:p-8">
@@ -39,7 +40,7 @@
         </div>
       </div>
       <div v-else class="flex flex-col gap-4 sm:gap-6 md:gap-8">
-        <section v-if="shouldShowUploader" class="w-full">
+        <section class="w-full">
           <ActivityList />
         </section>
         <section v-if="hasActivities" class="w-full">
@@ -128,7 +129,6 @@ import { useActivityStore } from "~/stores/activity";
 import { useLocalStoragePersistence } from "~/composables/useLocalStoragePersistence";
 import ActivityMap from "~/components/ActivityMap.vue";
 import OverviewPanel from "~/components/OverviewPanel.vue";
-import ChartLegend from "~/components/ChartLegend.vue";
 
 const config = useRuntimeConfig();
 const buildNumber = computed(() => config.public.buildNumber);

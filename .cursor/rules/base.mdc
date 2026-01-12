@@ -57,13 +57,13 @@ Avoid deep if checks for nested properties.
 **Bad**
 
 ```typescript
-const name = user && user.profile && user.profile.name ? user.profile.name : 'Guest';
+const name = user && user.profile && user.profile.name ? user.profile.name : "Guest";
 ```
 
 **Good**
 
 ```typescript
-const name = user?.profile?.name ?? 'Guest';
+const name = user?.profile?.name ?? "Guest";
 ```
 
 ### Async/Await and Error Handling
@@ -73,16 +73,16 @@ Always handle potential failures in asynchronous operations using try/catch or
 **Bad**
 
 ```typescript
-const data = await $fetch('/api/data'); // No error handling
+const data = await $fetch("/api/data"); // No error handling
 ```
 
 **Good**
 
 ```typescript
 try {
-  const data = await $fetch('/api/data');
+  const data = await $fetch("/api/data");
 } catch (error) {
-  console.error('Fetch failed:', error);
+  console.error("Fetch failed:", error);
   // Handle specific UI feedback or error state
 }
 ```
@@ -138,7 +138,7 @@ When using Pinia in a Nuxt 3 environment, follow these specific patterns to main
 Prefer **Setup Stores** (using a function) as they feel more natural with Vue 3's Composition API and allow for more flexible logic.
 
 ```typescript
-export const useUserStore = defineStore('user', () => {
+export const useUserStore = defineStore("user", () => {
   const user = ref(null);
   const isLoggedIn = computed(() => !!user.value);
   function logout() {
@@ -185,7 +185,12 @@ Drive filters, pagination, and selections from the **URL** (query parameters) 
 
 ## Naming Conventions
 
-**CategoryConventionExampleVariables & Functions**camelCasefetchActiveSubscriptions**Types & Components**PascalCaseUserAccount**Constants**UPPERCASEMAX_RETRIES**Boolean Flags**Prefix with is, has, shouldisLoaded, hasError
+| Category              | Convention                        | Example                  |
+| --------------------- | --------------------------------- | ------------------------ |
+| Variables & Functions | camelCase                         | fetchActiveSubscriptions |
+| Types & Components    | PascalCase                        | UserAccount              |
+| Constants             | UPPERCASE                         | MAX_RETRIES              |
+| Boolean Flags         | Prefix with `is`, `has`, `should` | isLoaded, hasError       |
 
 ## Testing
 

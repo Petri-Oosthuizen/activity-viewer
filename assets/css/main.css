@@ -71,3 +71,59 @@
   @apply z-[99999];
   pointer-events: auto;
 }
+
+.page-ear {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  background-color: #1f2937;
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+  z-index: 10;
+}
+
+.page-ear-link {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 5px;
+  transition: opacity 0.2s;
+  z-index: 11;
+}
+
+.page-ear-link:hover {
+  opacity: 0.85;
+}
+
+@media (min-width: 640px) {
+  .page-ear {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .page-ear-link {
+    width: 48px;
+    height: 48px;
+    padding: 6px;
+  }
+}
+
+@media (min-width: 768px) {
+  .page-ear {
+    width: 56px;
+    height: 56px;
+  }
+  
+  .page-ear-link {
+    width: 56px;
+    height: 56px;
+    padding: 7px;
+  }
+}

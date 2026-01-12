@@ -234,7 +234,14 @@ export function transformToChartData(
     const x = calculateXValue(record, activity, xAxisType);
     let y: number | null = null;
     if (metric === "pace") {
-      if (i > 0) {
+      // Prefer speed if available (more accurate for GPX files)
+      if (record.speed !== undefined && record.speed !== null && record.speed > 0 && Number.isFinite(record.speed)) {
+        // Convert speed (m/s) to pace (min/km)
+        // pace = (1000 meters / speed_mps) / 60 seconds = 1000 / (speed_mps * 60)
+        const paceMinPerKm = 1000 / (record.speed * 60);
+        y = Number.isFinite(paceMinPerKm) && paceMinPerKm > 0 ? paceMinPerKm : null;
+      } else if (i > 0) {
+        // Fall back to distance/time calculation
         const prev = activity.records[i - 1];
         if (prev) {
           const dt = record.t - prev.t;

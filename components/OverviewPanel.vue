@@ -16,7 +16,7 @@
           </span>
           <button
             type="button"
-            class="ml-1 flex items-center justify-center rounded p-1 hover:bg-amber-100 focus:outline-none focus:ring-1 focus:ring-amber-300"
+            class="ml-1 flex items-center justify-center rounded p-1 hover:bg-amber-100 focus:ring-1 focus:ring-amber-300 focus:outline-none"
             title="Clear chart window"
             aria-label="Clear chart window"
             @click="clearChartWindow"
@@ -28,17 +28,36 @@
               viewBox="0 0 24 24"
               xmlns="http://www.w3.org/2000/svg"
             >
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
       </div>
 
-      <div v-if="showBaseline" class="flex flex-col gap-1 sm:items-end">
-        <label class="text-[10px] font-medium text-gray-600 sm:text-xs">Baseline</label>
+      <div v-if="showBaseline" class="flex flex-col gap-2 sm:items-end">
+        <label
+          class="flex cursor-pointer items-center gap-1.5"
+          title="Enable comparison with a baseline activity. Delta values show the difference between each activity and the selected baseline."
+        >
+          <input
+            type="checkbox"
+            :checked="baselineEnabled"
+            class="text-primary focus:ring-primary h-4 w-4 cursor-pointer rounded-sm border-gray-300"
+            @change="toggleBaseline"
+          />
+          <span class="text-[10px] font-medium text-gray-600 sm:text-xs"
+            >Enable Baseline Comparison</span
+          >
+        </label>
         <select
+          v-if="baselineEnabled"
           :value="baselineActivityId || ''"
-          class="baseline-select focus:border-primary focus:ring-primary/10 w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:ring-2 focus:outline-hidden sm:w-auto sm:min-w-[200px] sm:max-w-[400px] md:max-w-[500px] sm:px-3 sm:py-1.5"
+          class="baseline-select focus:border-primary focus:ring-primary/10 w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:ring-2 focus:outline-hidden sm:w-auto sm:max-w-[400px] sm:min-w-[200px] sm:px-3 sm:py-1.5 md:max-w-[500px]"
           @change="setBaselineActivityId"
         >
           <option v-for="a in activeActivities" :key="a.id" :value="a.id">
@@ -88,7 +107,7 @@
             >
               <div>{{ formatTime(statsById[a.id]?.durationSeconds ?? 0) }}</div>
               <div
-                v-if="showBaseline"
+                v-if="isBaselineActive"
                 class="mt-0.5 text-[10px] text-gray-400 sm:text-xs"
                 :title="formatDelta('durationSeconds', a.id) === '—' ? 'Same as baseline' : ''"
               >
@@ -110,11 +129,28 @@
             >
               <div>{{ formatDistance(statsById[a.id]?.distanceMeters ?? 0) }}</div>
               <div
-                v-if="showBaseline"
+                v-if="isBaselineActive"
                 class="mt-0.5 text-[10px] text-gray-400 sm:text-xs"
                 :title="formatDelta('distanceMeters', a.id) === '—' ? 'Same as baseline' : ''"
               >
                 {{ formatDelta("distanceMeters", a.id) }}
+              </div>
+            </td>
+          </tr>
+
+          <tr class="bg-white" v-if="hasAnySport">
+            <td
+              class="sticky left-0 z-10 w-20 border-b border-gray-100 bg-white px-2 py-2.5 font-medium sm:w-24 sm:px-3"
+            >
+              Type
+            </td>
+            <td
+              v-for="a in activeActivities"
+              :key="a.id"
+              class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
+            >
+              <div :class="a.sport ? '' : 'text-gray-400'">
+                {{ a.sport ?? "—" }}
               </div>
             </td>
           </tr>
@@ -130,16 +166,21 @@
               :key="a.id"
               class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
             >
-              <div :class="(statsById[a.id]?.calories === null || statsById[a.id]?.calories === undefined) ? 'text-gray-400' : ''">
+              <div
+                :class="
+                  statsById[a.id]?.calories === null || statsById[a.id]?.calories === undefined
+                    ? 'text-gray-400'
+                    : ''
+                "
+              >
                 {{
-                  statsById[a.id]?.calories !== null &&
-                  statsById[a.id]?.calories !== undefined
+                  statsById[a.id]?.calories !== null && statsById[a.id]?.calories !== undefined
                     ? `${Math.round(statsById[a.id]!.calories!)} kcal`
                     : "—"
                 }}
               </div>
               <div
-                v-if="showBaseline"
+                v-if="isBaselineActive"
                 class="mt-0.5 text-[10px] text-gray-400 sm:text-xs"
                 :title="formatCaloriesDelta(a.id) === '—' ? 'Same as baseline' : ''"
               >
@@ -173,7 +214,14 @@
                 :key="a.id"
                 class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
               >
-                <div :class="(statsById[a.id]?.metrics.pace?.min === null || statsById[a.id]?.metrics.pace?.min === undefined) ? 'text-gray-400' : ''">
+                <div
+                  :class="
+                    statsById[a.id]?.metrics.pace?.min === null ||
+                    statsById[a.id]?.metrics.pace?.min === undefined
+                      ? 'text-gray-400'
+                      : ''
+                  "
+                >
                   {{
                     statsById[a.id]?.metrics.pace?.min !== null &&
                     statsById[a.id]?.metrics.pace?.min !== undefined
@@ -182,7 +230,7 @@
                   }}
                 </div>
                 <div
-                  v-if="showBaseline"
+                  v-if="isBaselineActive"
                   class="mt-0.5 text-[10px] text-gray-400 sm:text-xs"
                   :title="formatMetricMinDelta('pace', a.id) === '—' ? 'Same as baseline' : ''"
                 >
@@ -201,7 +249,14 @@
                 :key="a.id"
                 class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
               >
-                <div :class="(statsById[a.id]?.metrics.pace?.avg === null || statsById[a.id]?.metrics.pace?.avg === undefined) ? 'text-gray-400' : ''">
+                <div
+                  :class="
+                    statsById[a.id]?.metrics.pace?.avg === null ||
+                    statsById[a.id]?.metrics.pace?.avg === undefined
+                      ? 'text-gray-400'
+                      : ''
+                  "
+                >
                   {{
                     statsById[a.id]?.metrics.pace?.avg !== null &&
                     statsById[a.id]?.metrics.pace?.avg !== undefined
@@ -210,7 +265,7 @@
                   }}
                 </div>
                 <div
-                  v-if="showBaseline"
+                  v-if="isBaselineActive"
                   class="mt-0.5 text-[10px] text-gray-400 sm:text-xs"
                   :title="formatMetricAvgDelta('pace', a.id) === '—' ? 'Same as baseline' : ''"
                 >
@@ -229,7 +284,14 @@
                 :key="a.id"
                 class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
               >
-                <div :class="(statsById[a.id]?.metrics.pace?.max === null || statsById[a.id]?.metrics.pace?.max === undefined) ? 'text-gray-400' : ''">
+                <div
+                  :class="
+                    statsById[a.id]?.metrics.pace?.max === null ||
+                    statsById[a.id]?.metrics.pace?.max === undefined
+                      ? 'text-gray-400'
+                      : ''
+                  "
+                >
                   {{
                     statsById[a.id]?.metrics.pace?.max !== null &&
                     statsById[a.id]?.metrics.pace?.max !== undefined
@@ -238,7 +300,7 @@
                   }}
                 </div>
                 <div
-                  v-if="showBaseline"
+                  v-if="isBaselineActive"
                   class="mt-0.5 text-[10px] text-gray-400 sm:text-xs"
                   :title="formatMetricMaxDelta('pace', a.id) === '—' ? 'Same as baseline' : ''"
                 >
@@ -273,7 +335,14 @@
                 :key="a.id"
                 class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
               >
-                <div :class="(statsById[a.id]?.elevationGainMeters === null || statsById[a.id]?.elevationGainMeters === undefined) ? 'text-gray-400' : ''">
+                <div
+                  :class="
+                    statsById[a.id]?.elevationGainMeters === null ||
+                    statsById[a.id]?.elevationGainMeters === undefined
+                      ? 'text-gray-400'
+                      : ''
+                  "
+                >
                   {{
                     statsById[a.id]?.elevationGainMeters === null ||
                     statsById[a.id]?.elevationGainMeters === undefined
@@ -282,9 +351,13 @@
                   }}
                 </div>
                 <div
-                  v-if="showBaseline"
+                  v-if="isBaselineActive"
                   class="mt-0.5 text-[10px] text-gray-400 sm:text-xs"
-                  :title="formatNullableDelta('elevationGainMeters', a.id) === '—' ? 'Same as baseline' : ''"
+                  :title="
+                    formatNullableDelta('elevationGainMeters', a.id) === '—'
+                      ? 'Same as baseline'
+                      : ''
+                  "
                 >
                   {{ formatNullableDelta("elevationGainMeters", a.id) }}
                 </div>
@@ -301,7 +374,14 @@
                 :key="a.id"
                 class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
               >
-                <div :class="(statsById[a.id]?.elevationLossMeters === null || statsById[a.id]?.elevationLossMeters === undefined) ? 'text-gray-400' : ''">
+                <div
+                  :class="
+                    statsById[a.id]?.elevationLossMeters === null ||
+                    statsById[a.id]?.elevationLossMeters === undefined
+                      ? 'text-gray-400'
+                      : ''
+                  "
+                >
                   {{
                     statsById[a.id]?.elevationLossMeters === null ||
                     statsById[a.id]?.elevationLossMeters === undefined
@@ -310,9 +390,13 @@
                   }}
                 </div>
                 <div
-                  v-if="showBaseline"
+                  v-if="isBaselineActive"
                   class="mt-0.5 text-[10px] text-gray-400 sm:text-xs"
-                  :title="formatNullableDelta('elevationLossMeters', a.id) === '—' ? 'Same as baseline' : ''"
+                  :title="
+                    formatNullableDelta('elevationLossMeters', a.id) === '—'
+                      ? 'Same as baseline'
+                      : ''
+                  "
                 >
                   {{ formatNullableDelta("elevationLossMeters", a.id) }}
                 </div>
@@ -326,7 +410,9 @@
                 colspan="2"
                 class="sticky left-0 z-10 w-20 border-b border-gray-200 bg-gray-50 px-2 py-2 font-semibold sm:w-24 sm:px-3"
               >
-                <span :title="getMetricDescription(getMetricName(metric))">{{ getMetricName(metric) }}</span>
+                <span :title="getMetricDescription(getMetricName(metric))">{{
+                  getMetricName(metric)
+                }}</span>
               </td>
               <td
                 v-for="a in activeActivities.slice(1)"
@@ -345,7 +431,14 @@
                 :key="a.id"
                 class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
               >
-                <div :class="(statsById[a.id]?.metrics[metric]?.min === null || statsById[a.id]?.metrics[metric]?.min === undefined) ? 'text-gray-400' : ''">
+                <div
+                  :class="
+                    statsById[a.id]?.metrics[metric]?.min === null ||
+                    statsById[a.id]?.metrics[metric]?.min === undefined
+                      ? 'text-gray-400'
+                      : ''
+                  "
+                >
                   {{
                     statsById[a.id]?.metrics[metric]?.min !== null &&
                     statsById[a.id]?.metrics[metric]?.min !== undefined
@@ -354,7 +447,7 @@
                   }}
                 </div>
                 <div
-                  v-if="showBaseline"
+                  v-if="isBaselineActive"
                   class="mt-0.5 text-[10px] text-gray-400 sm:text-xs"
                   :title="formatMetricMinDelta(metric, a.id) === '—' ? 'Same as baseline' : ''"
                 >
@@ -373,7 +466,14 @@
                 :key="a.id"
                 class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
               >
-                <div :class="(statsById[a.id]?.metrics[metric]?.avg === null || statsById[a.id]?.metrics[metric]?.avg === undefined) ? 'text-gray-400' : ''">
+                <div
+                  :class="
+                    statsById[a.id]?.metrics[metric]?.avg === null ||
+                    statsById[a.id]?.metrics[metric]?.avg === undefined
+                      ? 'text-gray-400'
+                      : ''
+                  "
+                >
                   {{
                     statsById[a.id]?.metrics[metric]?.avg !== null &&
                     statsById[a.id]?.metrics[metric]?.avg !== undefined
@@ -382,7 +482,7 @@
                   }}
                 </div>
                 <div
-                  v-if="showBaseline"
+                  v-if="isBaselineActive"
                   class="mt-0.5 text-[10px] text-gray-400 sm:text-xs"
                   :title="formatMetricAvgDelta(metric, a.id) === '—' ? 'Same as baseline' : ''"
                 >
@@ -401,7 +501,14 @@
                 :key="a.id"
                 class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
               >
-                <div :class="(statsById[a.id]?.metrics[metric]?.max === null || statsById[a.id]?.metrics[metric]?.max === undefined) ? 'text-gray-400' : ''">
+                <div
+                  :class="
+                    statsById[a.id]?.metrics[metric]?.max === null ||
+                    statsById[a.id]?.metrics[metric]?.max === undefined
+                      ? 'text-gray-400'
+                      : ''
+                  "
+                >
                   {{
                     statsById[a.id]?.metrics[metric]?.max !== null &&
                     statsById[a.id]?.metrics[metric]?.max !== undefined
@@ -410,7 +517,7 @@
                   }}
                 </div>
                 <div
-                  v-if="showBaseline"
+                  v-if="isBaselineActive"
                   class="mt-0.5 text-[10px] text-gray-400 sm:text-xs"
                   :title="formatMetricMaxDelta(metric, a.id) === '—' ? 'Same as baseline' : ''"
                 >
@@ -515,6 +622,38 @@
               </td>
             </tr>
           </template>
+
+          <template v-if="hasAnyBestSplits">
+            <tr class="bg-gray-50">
+              <td
+                colspan="2"
+                class="sticky left-0 z-10 w-20 border-b border-gray-200 bg-gray-50 px-2 py-2 font-semibold sm:w-24 sm:px-3"
+              >
+                <span :title="getMetricDescription('Best Splits')">Best Splits</span>
+              </td>
+              <td
+                v-for="a in activeActivities.slice(1)"
+                :key="a.id"
+                class="border-b border-gray-200 bg-gray-50"
+              ></td>
+            </tr>
+            <tr v-for="splitLabel in availableSplitLabels" :key="splitLabel" class="bg-white">
+              <td
+                class="sticky left-0 z-10 w-20 border-b border-gray-100 bg-white px-2 py-2.5 font-medium sm:w-24 sm:px-3"
+              >
+                {{ splitLabel }}
+              </td>
+              <td
+                v-for="a in activeActivities"
+                :key="a.id"
+                class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
+              >
+                <div :class="formatBestSplit(a.id, splitLabel) === '—' ? 'text-gray-400' : ''">
+                  {{ formatBestSplit(a.id, splitLabel) }}
+                </div>
+              </td>
+            </tr>
+          </template>
         </tbody>
       </table>
     </div>
@@ -525,10 +664,17 @@
 import { computed, ref, watch } from "vue";
 import { useActivityStore } from "~/stores/activity";
 import { computeActivityStatsFromRecords, computeActivityStats } from "~/utils/activity-stats";
-import { formatDistance, formatMetricValue, formatTime, formatSpeed } from "~/utils/format";
+import {
+  formatDistance,
+  formatMetricValue,
+  formatTime,
+  formatSpeed,
+  formatPower,
+} from "~/utils/format";
 import type { MetricType } from "~/utils/chart-config";
 import type { Activity } from "~/types/activity";
 import { METRIC_DESCRIPTIONS } from "~/utils/metric-descriptions";
+import { COMMON_SPLITS } from "~/utils/best-splits";
 import {
   computeGlobalXExtent,
   filterRecordsByXRange,
@@ -542,16 +688,18 @@ const activeActivities = computed(() =>
   activityStore.activities.filter((a) => !activityStore.disabledActivities.has(a.id)),
 );
 
-
-
 const showBaseline = computed(() => activeActivities.value.length >= 2);
+const isBaselineActive = computed(() => showBaseline.value && baselineEnabled.value);
 const descriptionText = computed(() =>
-  showBaseline.value
+  isBaselineActive.value
     ? "Min, average, and max values per activity, compared to the baseline."
-    : "Min, average, and max values for this activity.",
+    : showBaseline.value
+      ? "Min, average, and max values per activity."
+      : "Min, average, and max values for this activity.",
 );
 
 const baselineActivityId = ref<string | null>(null);
+const baselineEnabled = ref<boolean>(true);
 
 watch(
   activeActivities,
@@ -570,6 +718,11 @@ watch(
   { immediate: true },
 );
 
+function toggleBaseline(event: Event) {
+  const target = event.target as HTMLInputElement;
+  baselineEnabled.value = target.checked;
+}
+
 const setBaselineActivityId = (event: Event) => {
   const target = event.target as HTMLSelectElement;
   baselineActivityId.value = target.value;
@@ -579,7 +732,16 @@ const clearChartWindow = () => {
   activityStore.resetZoom();
 };
 
-const allMetrics = ["hr", "pwr", "cad", "alt", "speed", "temp", "grade", "vSpeed"] as const satisfies readonly MetricType[];
+const allMetrics = [
+  "hr",
+  "pwr",
+  "cad",
+  "alt",
+  "speed",
+  "temp",
+  "grade",
+  "vSpeed",
+] as const satisfies readonly MetricType[];
 const metricLabels = computed(() => activityStore.metricLabels);
 
 const metrics = computed(() => {
@@ -654,7 +816,9 @@ const statsById = computed(() => {
 
   for (const a of acts) {
     const subset = filterRecordsByXRange(a, xAxisType.value, range);
-    const subsetStats = computeActivityStatsFromRecords(subset.length > 0 ? subset : a.records.slice(0, 1));
+    const subsetStats = computeActivityStatsFromRecords(
+      subset.length > 0 ? subset : a.records.slice(0, 1),
+    );
     const fullStats = computeActivityStats(a);
     map[a.id] = {
       ...subsetStats,
@@ -689,10 +853,11 @@ const hasAnyPace = computed(() =>
 const hasAnyCalories = computed(() =>
   activeActivities.value.some(
     (a) =>
-      statsById.value[a.id]?.calories !== null &&
-      statsById.value[a.id]?.calories !== undefined,
+      statsById.value[a.id]?.calories !== null && statsById.value[a.id]?.calories !== undefined,
   ),
 );
+
+const hasAnySport = computed(() => activeActivities.value.some((a) => a.sport));
 
 const hasAnyElevation = computed(() =>
   activeActivities.value.some(
@@ -702,9 +867,7 @@ const hasAnyElevation = computed(() =>
   ),
 );
 
-const hasAnyLaps = computed(() =>
-  activeActivities.value.some((a) => a.laps && a.laps.length > 0),
-);
+const hasAnyLaps = computed(() => activeActivities.value.some((a) => a.laps && a.laps.length > 1));
 
 const hasAnyLapTime = computed(() =>
   activeActivities.value.some((a) =>
@@ -720,7 +883,9 @@ const hasAnyLapDistance = computed(() =>
 
 const hasAnyLapHeartRate = computed(() =>
   activeActivities.value.some((a) =>
-    a.laps?.some((lap) => lap.averageHeartRateBpm !== undefined && lap.averageHeartRateBpm !== null),
+    a.laps?.some(
+      (lap) => lap.averageHeartRateBpm !== undefined && lap.averageHeartRateBpm !== null,
+    ),
   ),
 );
 
@@ -732,7 +897,9 @@ const hasAnyLapSpeed = computed(() =>
 
 function formatLapAvgTime(laps: Activity["laps"]): string {
   if (!laps || laps.length === 0) return "—";
-  const validLaps = laps.filter((lap) => lap.totalTimeSeconds !== undefined && lap.totalTimeSeconds !== null);
+  const validLaps = laps.filter(
+    (lap) => lap.totalTimeSeconds !== undefined && lap.totalTimeSeconds !== null,
+  );
   if (validLaps.length === 0) return "—";
   const totalTime = validLaps.reduce((sum, lap) => sum + (lap.totalTimeSeconds ?? 0), 0);
   const avgTime = totalTime / validLaps.length;
@@ -741,7 +908,9 @@ function formatLapAvgTime(laps: Activity["laps"]): string {
 
 function formatLapAvgDistance(laps: Activity["laps"]): string {
   if (!laps || laps.length === 0) return "—";
-  const validLaps = laps.filter((lap) => lap.distanceMeters !== undefined && lap.distanceMeters !== null);
+  const validLaps = laps.filter(
+    (lap) => lap.distanceMeters !== undefined && lap.distanceMeters !== null,
+  );
   if (validLaps.length === 0) return "—";
   const totalDistance = validLaps.reduce((sum, lap) => sum + (lap.distanceMeters ?? 0), 0);
   const avgDistance = totalDistance / validLaps.length;
@@ -761,15 +930,86 @@ function formatLapAvgHeartRate(laps: Activity["laps"]): string {
 
 function formatLapAvgSpeed(laps: Activity["laps"]): string {
   if (!laps || laps.length === 0) return "—";
-  const validLaps = laps.filter((lap) => lap.averageSpeed !== undefined && lap.averageSpeed !== null);
+  const validLaps = laps.filter(
+    (lap) => lap.averageSpeed !== undefined && lap.averageSpeed !== null,
+  );
   if (validLaps.length === 0) return "—";
   const totalSpeed = validLaps.reduce((sum, lap) => sum + (lap.averageSpeed ?? 0), 0);
   const avgSpeed = totalSpeed / validLaps.length;
   return formatSpeed(avgSpeed);
 }
 
+const hasAnyBestSplits = computed(() => {
+  return activeActivities.value.some((a) => {
+    const stats = statsById.value[a.id];
+    if (!stats || !stats.bestSplits) return false;
+    return Object.keys(stats.bestSplits).length > 0;
+  });
+});
+
+const availableSplitLabels = computed(() => {
+  const allLabels = new Set<string>();
+  for (const a of activeActivities.value) {
+    const stats = statsById.value[a.id];
+    if (stats?.bestSplits) {
+      Object.keys(stats.bestSplits).forEach((label) => allLabels.add(label));
+    }
+  }
+  // Return in the order defined in COMMON_SPLITS
+  return COMMON_SPLITS.map((split) => split.label).filter((label) => allLabels.has(label));
+});
+
+function formatBestSplit(activityId: string, splitLabel: string): string {
+  const stats = statsById.value[activityId];
+  if (!stats?.bestSplits) return "—";
+  const split = stats.bestSplits[splitLabel];
+  if (!split || split.timeSeconds === null) return "—";
+  return formatTime(split.timeSeconds);
+}
+
+const hasAnyPowerMetrics = computed(() => {
+  return activeActivities.value.some((a) => {
+    const stats = statsById.value[a.id];
+    if (!stats?.powerMetrics) return false;
+    return (
+      stats.powerMetrics.normalizedPower !== null ||
+      stats.powerMetrics.best12MinPower !== null ||
+      stats.powerMetrics.best20MinPower !== null
+    );
+  });
+});
+
+const hasNormalizedPower = computed(() => {
+  return activeActivities.value.some(
+    (a) => statsById.value[a.id]?.powerMetrics?.normalizedPower !== null,
+  );
+});
+
+const has12MinPower = computed(() => {
+  return activeActivities.value.some(
+    (a) => statsById.value[a.id]?.powerMetrics?.best12MinPower !== null,
+  );
+});
+
+const has20MinPower = computed(() => {
+  return activeActivities.value.some(
+    (a) => statsById.value[a.id]?.powerMetrics?.best20MinPower !== null,
+  );
+});
+
+function formatPowerMetric(
+  activityId: string,
+  metric: "normalizedPower" | "best12MinPower" | "best20MinPower",
+): string {
+  const stats = statsById.value[activityId];
+  if (!stats?.powerMetrics) return "—";
+  const value = stats.powerMetrics[metric];
+  if (value === null || value === undefined) return "—";
+  return formatPower(value);
+}
+
 function formatDelta(field: "durationSeconds" | "distanceMeters", activityId: string): string {
-  if (!showBaseline.value) return "";
+  if (!isBaselineActive.value) return "";
   const base = baselineStats.value;
   if (!base) return "—";
   const current = statsById.value[activityId];
@@ -795,7 +1035,7 @@ function formatDelta(field: "durationSeconds" | "distanceMeters", activityId: st
 }
 
 function formatCaloriesDelta(activityId: string): string {
-  if (!showBaseline.value) return "";
+  if (!isBaselineActive.value) return "";
   const base = baselineStats.value;
   if (!base) return "—";
   const current = statsById.value[activityId];
@@ -822,7 +1062,7 @@ function formatNullableDelta(
   field: "elevationGainMeters" | "elevationLossMeters",
   activityId: string,
 ): string {
-  if (!showBaseline.value) return "";
+  if (!isBaselineActive.value) return "";
   const base = baselineStats.value;
   if (!base) return "—";
   const current = statsById.value[activityId];
@@ -846,7 +1086,7 @@ function formatNullableDelta(
 }
 
 function formatMetricAvgDelta(metric: MetricType, activityId: string): string {
-  if (!showBaseline.value) return "";
+  if (!isBaselineActive.value) return "";
   const base = baselineStats.value;
   if (!base) return "—";
   const current = statsById.value[activityId];
@@ -874,7 +1114,7 @@ function formatMetricAvgDelta(metric: MetricType, activityId: string): string {
 }
 
 function formatMetricMinDelta(metric: MetricType, activityId: string): string {
-  if (!showBaseline.value) return "";
+  if (!isBaselineActive.value) return "";
   const base = baselineStats.value;
   if (!base) return "—";
   const current = statsById.value[activityId];
@@ -902,7 +1142,7 @@ function formatMetricMinDelta(metric: MetricType, activityId: string): string {
 }
 
 function formatMetricMaxDelta(metric: MetricType, activityId: string): string {
-  if (!showBaseline.value) return "";
+  if (!isBaselineActive.value) return "";
   const base = baselineStats.value;
   if (!base) return "—";
   const current = statsById.value[activityId];

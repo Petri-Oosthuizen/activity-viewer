@@ -69,6 +69,68 @@ describe("parseGPX", () => {
     expect(() => parseGPX(gpx)).toThrow("No track points found");
   });
 
+  it("should extract activity type from GPX file", () => {
+    const gpx = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1">
+  <trk>
+    <type>Running</type>
+    <trkseg>
+      <trkpt lat="37.7749" lon="-122.4194">
+        <ele>10</ele>
+        <time>2024-01-01T00:00:00Z</time>
+      </trkpt>
+      <trkpt lat="37.7750" lon="-122.4195">
+        <ele>12</ele>
+        <time>2024-01-01T00:00:01Z</time>
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>`;
+
+    const result = parseGPX(gpx);
+    expect(result.sport).toBe("Running");
+  });
+
+  it("should handle GPX file without type element", () => {
+    const gpx = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1">
+  <trk>
+    <trkseg>
+      <trkpt lat="37.7749" lon="-122.4194">
+        <ele>10</ele>
+        <time>2024-01-01T00:00:00Z</time>
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>`;
+
+    const result = parseGPX(gpx);
+    expect(result.sport).toBeUndefined();
+  });
+
+  it("should extract activity type from GPX file with XML namespaces", () => {
+    const gpx = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="RunGap" xmlns="http://www.topografix.com/GPX/1/1" xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <trk>
+    <name>Test Activity</name>
+    <type>Running</type>
+    <trkseg>
+      <trkpt lat="37.7749" lon="-122.4194">
+        <ele>10</ele>
+        <time>2024-01-01T00:00:00Z</time>
+      </trkpt>
+      <trkpt lat="37.7750" lon="-122.4195">
+        <ele>12</ele>
+        <time>2024-01-01T00:00:01Z</time>
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>`;
+
+    const result = parseGPX(gpx);
+    expect(result.sport).toBe("Running");
+  });
+
   it("should ignore tiny GPS jitter when computing distance (configurable)", () => {
     const gpx = `<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1">

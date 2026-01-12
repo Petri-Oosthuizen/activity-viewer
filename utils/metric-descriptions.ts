@@ -18,4 +18,8 @@ export const METRIC_DESCRIPTIONS: Record<string, string> = {
   Grade: "Gradient/slope calculated as percentage of elevation change over horizontal distance",
   "Vertical Speed": "Vertical ascent rate (VAM - Vertical Ascent Meters) in meters per hour",
   Laps: "Lap segments within the activity with individual statistics",
+  "Best Splits": "Best (fastest) time to complete common distance segments within the activity",
+  "Normalized Power": "Weighted average power that gives more weight to higher power outputs (cycling metric)",
+  "12 Minute Power": "Best average power over a 12-minute segment",
+  "20 Minute Power": "Best average power over a 20-minute segment",
 };

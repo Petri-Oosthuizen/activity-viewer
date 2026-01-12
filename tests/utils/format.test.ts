@@ -25,10 +25,17 @@ describe("format utilities", () => {
   });
 
   describe("formatDistance", () => {
-    it("should format meters as km when >= 1000", () => {
-      expect(formatDistance(1000)).toBe("1.00 km");
-      expect(formatDistance(1500)).toBe("1.50 km");
+    it("should format meters as km with 3 decimals when >= 1000 and < 10000", () => {
+      expect(formatDistance(1000)).toBe("1.000 km");
+      expect(formatDistance(1500)).toBe("1.500 km");
+      expect(formatDistance(5040)).toBe("5.040 km");
+      expect(formatDistance(9999)).toBe("9.999 km");
+    });
+
+    it("should format meters as km with 2 decimals when >= 10000", () => {
       expect(formatDistance(10000)).toBe("10.00 km");
+      expect(formatDistance(15000)).toBe("15.00 km");
+      expect(formatDistance(42195)).toBe("42.20 km");
     });
 
     it("should format meters as m when < 1000", () => {

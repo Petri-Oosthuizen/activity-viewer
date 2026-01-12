@@ -41,7 +41,7 @@ export interface EChartsSeries {
   yAxisIndex: number;
   emphasis: {
     focus: string;
-    lineStyle: { width: number };
+    lineStyle: { width: number; type?: "solid" | "dashed" | "dotted" | "dashDot" };
     itemStyle: { color: string };
     symbol: string;
     symbolSize: number;
@@ -58,6 +58,10 @@ const METRIC_LINE_STYLES: Readonly<Record<MetricType, "solid" | "dashed" | "dott
   pwr: "dotted",
   cad: "dashDot",
   pace: "solid",
+  speed: "solid",
+  temp: "dashed",
+  grade: "dotted",
+  vSpeed: "dashDot",
 } as const;
 
 export function generateBaseSeries(
@@ -152,13 +156,21 @@ export function generateChartSeries(config: SeriesConfig): EChartsSeries[] {
         name: `${activity.name} - ${METRIC_LABELS[metric]}`,
         type: "bar",
         data,
+        smooth: false,
         large: true,
         largeThreshold: 2000,
         itemStyle: { color: activity.color },
+        lineStyle: { color: activity.color, width: 1 },
+        symbol: "circle",
+        symbolSize: 0,
+        showSymbol: false,
         yAxisIndex: 0,
         emphasis: {
           focus: "none",
+          lineStyle: { width: 1.5 },
           itemStyle: { color: activity.color },
+          symbol: "circle",
+          symbolSize: 6,
         },
         animation: true,
       };

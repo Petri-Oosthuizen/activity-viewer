@@ -19,10 +19,14 @@ export function formatTime(seconds: number): string {
 
 /**
  * Format distance as km or m
+ * Shows meters precision when the distance is less than 10km
  */
 export function formatDistance(meters: number): string {
-  if (meters >= 1000) {
+  if (meters >= 10000) {
     return `${(meters / 1000).toFixed(2)} km`;
+  }
+  if (meters >= 1000) {
+    return `${(meters / 1000).toFixed(3)} km`;
   }
   return `${Math.round(meters)} m`;
 }
