@@ -68,6 +68,35 @@ export function formatPace(minPerKm: number): string {
 }
 
 /**
+ * Format speed (m/s to km/h)
+ */
+export function formatSpeed(metersPerSecond: number): string {
+  const kmh = metersPerSecond * 3.6;
+  return `${kmh.toFixed(1)} km/h`;
+}
+
+/**
+ * Format temperature
+ */
+export function formatTemperature(celsius: number): string {
+  return `${Math.round(celsius)}°C`;
+}
+
+/**
+ * Format grade (gradient percentage)
+ */
+export function formatGrade(percent: number): string {
+  return `${percent.toFixed(1)}%`;
+}
+
+/**
+ * Format vertical speed (m/h)
+ */
+export function formatVerticalSpeed(metersPerHour: number): string {
+  return `${Math.round(metersPerHour)} m/h`;
+}
+
+/**
  * Format metric value based on type
  */
 export function formatMetricValue(value: number, metricType: string): string {
@@ -82,6 +111,14 @@ export function formatMetricValue(value: number, metricType: string): string {
       return formatCadence(value);
     case "pace":
       return formatPace(value);
+    case "speed":
+      return formatSpeed(value);
+    case "temp":
+      return formatTemperature(value);
+    case "grade":
+      return formatGrade(value);
+    case "vSpeed":
+      return formatVerticalSpeed(value);
     default:
       return value.toFixed(1);
   }

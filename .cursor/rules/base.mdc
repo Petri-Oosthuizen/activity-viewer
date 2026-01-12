@@ -2,178 +2,193 @@
 alwaysApply: true
 ---
 
-# Nuxt 3 & TypeScript Senior Development Standards
+# Nuxt 3 & TypeScript Development Standards
 
 This document defines the architectural and coding standards for this project. Adherence ensures consistency, performance (Web Vitals), and long-term maintainability.
 
 ---
 
-## 1. Project Architecture & Conventions
+# Nuxt 3 & TypeScript Development Standards
 
-### 1.1 Directory Roles
+This document defines the architectural and coding standards for this project. Adherence ensures consistency, performance (**Web Vitals**), and long-term maintainability.
 
-Nuxt 3 is highly opinionated; follow the structure to leverage auto-imports and Nitro optimization.
+## Purpose and Scope
 
-- **`components/`**: UI components. Use PascalCase. Group by domain (e.g., `components/auth/`).
-- **`composables/`**: Shared stateful logic (`useAuth.ts`). Auto-imported.
-- **`server/`**: Nitro API routes (`server/api/`) and server utilities.
-- **`layouts/`**: Top-level page wrappers.
-- **`middleware/`**: Navigation guards (e.g., `auth.global.ts`).
+These standards define the default way code is written, structured, and evolved. They exist to reduce **cognitive load**, prevent accidental complexity, and make the system understandable to both humans and AI agents.
 
-### 1.2 Naming Conventions
+- **Established patterns** must be followed. Deviations require team agreement.
+- **Continuous learning** and refactoring are core expectations.
+- **No rule is absolute**; this is the baseline for the majority of scenarios.
 
-- **Components**: `PascalCase.vue` (e.g., `BaseButton.vue`).
-- **Pages/Middleware**: `kebab-case.vue` (e.g., `user-profile.vue`).
-- **Composables**: `use` prefix (e.g., `useFetchData.ts`).
+## General Principles
 
----
+- **Boy Scout Rule:** Leave the codebase in a better state than you found it.
+- **Readability Over Cleverness:** Optimize for the developer who has to fix your code at 3 AM.
+- **Type Safety:** Leverage TypeScript to make "illegal states" unrepresentable.
+- **Explicit > Implicit:** Prefer clear, verbose logic over "magic" behavior.
 
-## 2. Type-Safe Development (TypeScript)
+## Modern JavaScript & Logic Patterns
 
-Treat TypeScript as a hard requirement. Avoid `any` to prevent technical debt.
+### Destructuring and Intent
 
-### 2.1 Interface Contracts
+Use destructuring to make your data usage explicit at the top of functions or component scripts.
 
-Always define interfaces for props, emits, and API responses.
-
-❌ **BAD**
+**Bad**
 
 ```typescript
-const props = defineProps(["item"]); // Untyped
-```
-
-✅ **GOOD**
-
-```typescript
-interface Product {
-  id: string;
-  price: number;
+function printUser(user) {
+  console.log(user.firstName);
+  console.log(user.lastName);
 }
-
-const props = defineProps<{
-  item: Product;
-  variant?: "list" | "grid";
-}>();
 ```
 
-### 2.2 Narrowing "Unknown" Data
-
-Treat external API data as `unknown` until it passes a type guard or Zod validation.
-
----
-
-## 3. Data Fetching & SSR Performance
-
-### 3.1 Fetching Strategy
-
-Use Nuxt's built-in composables. Standard `axios` or `fetch` will cause double-fetching (client + server).
-
-- **`useFetch`**: Use for simple URL-based fetching.
-- **`useAsyncData`**: Use for complex logic or wrapping multiple calls.
-
-❌ **BAD: Fetching inside `onMounted**`
-
-```vue
-<script setup>
-onMounted(async () => {
-  const data = await $fetch("/api/data"); // No SEO, causes layout shift
-});
-</script>
-```
-
-✅ **GOOD: SSR-friendly Fetching**
-
-```vue
-<script setup lang="ts">
-// Fetches on server, hydrates on client without re-requesting
-const { data, pending } = await useFetch("/api/products", {
-  lazy: true,
-  transform: (res) => res.items, // Clean data before it enters state
-  pick: ["id", "title"], // Only send necessary fields to client
-});
-</script>
-```
-
-### 3.2 Performance Optimizations
-
-- **Lazy Loading**: Prefix heavy components with `Lazy` (e.g., `<LazyDashboardChart />`).
-- **Image Optimization**: Use `<NuxtImg>` for automatic WebP/AVIF resizing and lazy loading.
-- **Hybrid Rendering**: Use `routeRules` in `nuxt.config.ts` for SWR (Stale-While-Revalidate).
-
----
-
-## 4. Component Patterns
-
-### 4.1 Composition API Setup
-
-Always use `<script setup lang="ts">`. It is more concise and offers better IDE support.
-
-### 4.2 Slot-Based Flexibility
-
-Design "Headless" or "Compound" components to avoid prop-drilling.
-
-✅ **GOOD: Slot pattern**
-
-```vue
-<template>
-  <div class="card">
-    <header><slot name="header" /></header>
-    <main><slot /></main>
-  </div>
-</template>
-```
-
----
-
-## 5. Security & Server Logic
-
-### 5.1 Secret Management
-
-Never use `process.env` on the client. Use `useRuntimeConfig()`.
+**Good**
 
 ```typescript
-// nuxt.config.ts
-export default defineNuxtConfig({
-  runtimeConfig: {
-    apiSecret: "", // Server-only
-    public: {
-      apiBase: "/api", // Available on client
-    },
-  },
-});
+function printUser({ firstName, lastName }: User) {
+  console.log(firstName, lastName);
+}
 ```
 
-### 5.2 Server Handlers
+### Optional Chaining and Nullish Coalescing
 
-Validate all inputs using **Zod** in `server/api` routes.
+Avoid deep if checks for nested properties.
 
-✅ **GOOD**
+**Bad**
 
 ```typescript
-import { z } from "zod";
+const name = user && user.profile && user.profile.name ? user.profile.name : 'Guest';
+```
 
-const userSchema = z.object({
-  email: z.string().email(),
-});
+**Good**
 
-export default defineEventHandler(async (event) => {
-  const body = await readBody(event);
-  const result = userSchema.safeParse(body);
+```typescript
+const name = user?.profile?.name ?? 'Guest';
+```
 
-  if (!result.success) {
-    throw createError({ statusCode: 400, statusMessage: "Invalid Input" });
+### Async/Await and Error Handling
+
+Always handle potential failures in asynchronous operations using try/catch or Nuxt’s built-in error handling.
+
+**Bad**
+
+```typescript
+const data = await $fetch('/api/data'); // No error handling
+```
+
+**Good**
+
+```typescript
+try {
+  const data = await $fetch('/api/data');
+} catch (error) {
+  console.error('Fetch failed:', error);
+  // Handle specific UI feedback or error state
+}
+```
+
+## Functions and Components
+
+### Single Responsibility
+
+Functions and components must have a single, clear purpose.
+
+**Bad**
+
+```typescript
+function submitOrder(order) {
+  saveOrder(order);
+  sendConfirmation(order);
+  trackMetric("order_submitted");
+}
+```
+
+**Good**
+
+```typescript
+function submitOrder(order) {
+  return saveOrder(order);
+}
+function onOrderSubmitted(order) {
+  sendConfirmation(order);
+  trackMetric("order_submitted");
+}
+```
+
+### Control Flow
+
+Prefer **early returns** and **guard clauses** to reduce nesting and mental overhead.
+
+**Good**
+
+```typescript
+function process(order) {
+  if (!order?.items?.length) return;
+  if (!order.isPaid) return;
+  shipOrder(order);
+}
+```
+
+## State Management (Pinia Tips)
+
+When using Pinia in a Nuxt 3 environment, follow these specific patterns to maintain reactivity and performance.
+
+### 1\. Store Definition: Setup vs. Options
+
+Prefer **Setup Stores** (using a function) as they feel more natural with Vue 3's Composition API and allow for more flexible logic.
+
+```typescript
+export const useUserStore = defineStore('user', () => {
+  const user = ref(null);
+  const isLoggedIn = computed(() => !!user.value);
+  function logout() {
+    user.value = null;
   }
-  return { success: true };
+  return { user, isLoggedIn, logout };
 });
 ```
 
----
+### 2\. Preserving Reactivity
 
-## 6. Checklist (Pre-PR)
+Never destructure a Pinia store directly, as it breaks reactivity for state and getters. Use storeToRefs.
 
-- [ ] **Hydration**: No `v-if` based on `window` existence (prevents Hydration Mismatch).
-- [ ] **Memory**: Event listeners in `onMounted` are removed in `onUnmounted`.
-- [ ] **State**: Pinia is used for global state; `useState` for cross-component SSR state.
-- [ ] **Accessibility**: Semantic HTML tags are used instead of `<div>` soup.
-- [ ] **Async**: All `await` calls in `setup` are handled correctly to prevent blocking the UI.
-- [ ] **readme**: Update README.md with the new features and changes.
+**Bad**
+
+```typescript
+const { user } = useUserStore(); // user is no longer reactive
+```
+
+**Good**
+
+```typescript
+const store = useUserStore();
+const { user } = storeToRefs(store); // user remains a reactive Ref
+```
+
+### 3\. State as a Source of Truth
+
+Do not sync store state with local refs inside components unless you are creating a "draft" for a form.
+
+## Frontend Architecture (Nuxt 3)
+
+### Layered Responsibility
+
+1.  **Pages:** Routing, SEO metadata, and high-level composition.
+2.  **Components:** Rendering logic and user interaction only.
+3.  **Composables:** Reusable stateful logic (the "glue"). Use these for shared logic like useAuth or useForm.
+4.  **Services/Utils:** Stateless helper functions or API wrappers.
+5.  **Stores:** Global application state.
+
+### URL-Driven State
+
+Drive filters, pagination, and selections from the **URL** (query parameters) when possible. A page refresh must restore the same state; URLs should be meaningful and shareable.
+
+## Naming Conventions
+
+**CategoryConventionExampleVariables & Functions**camelCasefetchActiveSubscriptions**Types & Components**PascalCaseUserAccount**Constants**UPPERCASEMAX_RETRIES**Boolean Flags**Prefix with is, has, shouldisLoaded, hasError
+
+## Testing
+
+- **Isolation:** Each unit test must run in isolation.
+- **Independence:** Tests must not depend on execution order.
+- **Behavioral Focus:** Test what the user sees/does, not how the code is structured internally.

@@ -1,4 +1,5 @@
 import type { RawPoint } from "../activity-parser-common";
+import type { Lap } from "~/types/activity";
 import { normalizeFitPosition } from "../fit-coordinates";
 
 interface FITRecord {
@@ -10,6 +11,8 @@ interface FITRecord {
   power?: number;
   cadence?: number;
   distance?: number;
+  speed?: number;
+  temperature?: number;
 }
 
 function toTimestampMs(value: number | string | Date): number | null {
@@ -19,7 +22,69 @@ function toTimestampMs(value: number | string | Date): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-export async function extractFITPoints(arrayBuffer: ArrayBuffer): Promise<{ points: RawPoint[]; calories?: number }> {
+function extractFITLaps(data: any, recordsCount: number, startTime?: Date): Lap[] | undefined {
+  if (!data.laps || !Array.isArray(data.laps) || data.laps.length === 0) {
+    return undefined;
+  }
+
+  const laps: Lap[] = [];
+  let currentRecordIndex = 0;
+  const avgTimePerRecord = recordsCount > 0 && data.records && data.records.length > 0
+    ? (toTimestampMs(data.records[data.records.length - 1]?.timestamp) ?? startTime?.getTime() ?? 0) - (startTime?.getTime() ?? 0)
+    : 0;
+
+  for (const lapData of data.laps) {
+    const lapStartTimeMs = toTimestampMs(lapData.start_time ?? lapData.startTime ?? lapData.timestamp);
+    if (lapStartTimeMs === null) continue;
+
+    const lapStartTime = new Date(lapStartTimeMs);
+    
+    const totalElapsed = lapData.total_elapsed_time ?? lapData.totalElapsedTime ?? lapData.elapsed_time;
+    const distance = lapData.total_distance ?? lapData.distance;
+    const calories = lapData.total_calories ?? lapData.calories;
+    const avgHr = lapData.avg_heart_rate ?? lapData.avgHeartRate ?? lapData.average_heart_rate;
+    const maxHr = lapData.max_heart_rate ?? lapData.maxHeartRate ?? lapData.maximum_heart_rate;
+    const avgCadence = lapData.avg_cadence ?? lapData.avgCadence ?? lapData.average_cadence;
+    const maxCadence = lapData.max_cadence ?? lapData.maxCadence ?? lapData.maximum_cadence;
+    const avgSpeed = lapData.avg_speed ?? lapData.avgSpeed ?? lapData.average_speed;
+    const maxSpeed = lapData.max_speed ?? lapData.maxSpeed ?? lapData.maximum_speed;
+    const intensity = lapData.intensity;
+    const trigger = lapData.lap_trigger ?? lapData.lapTrigger ?? lapData.trigger;
+
+    const timeSeconds = totalElapsed ? (typeof totalElapsed === "number" ? totalElapsed : parseFloat(totalElapsed)) : undefined;
+    const recordCount = timeSeconds && avgTimePerRecord > 0
+      ? Math.max(1, Math.round((timeSeconds * 1000) / (avgTimePerRecord / recordsCount)))
+      : Math.floor(recordsCount / data.laps.length);
+
+    const startIndex = currentRecordIndex;
+    const endIndex = Math.min(currentRecordIndex + Math.max(1, recordCount) - 1, recordsCount - 1);
+
+    if (startIndex <= endIndex && startIndex < recordsCount) {
+      laps.push({
+        startTime: lapStartTime,
+        startRecordIndex: startIndex,
+        endRecordIndex: endIndex,
+        totalTimeSeconds: timeSeconds !== undefined && Number.isFinite(timeSeconds) && timeSeconds > 0 ? timeSeconds : undefined,
+        distanceMeters: distance !== undefined && Number.isFinite(distance) && distance >= 0 ? distance : undefined,
+        calories: calories !== undefined && Number.isFinite(calories) && calories > 0 ? calories : undefined,
+        averageHeartRateBpm: avgHr !== undefined && Number.isFinite(avgHr) && avgHr > 0 ? avgHr : undefined,
+        maximumHeartRateBpm: maxHr !== undefined && Number.isFinite(maxHr) && maxHr > 0 ? maxHr : undefined,
+        averageCadence: avgCadence !== undefined && Number.isFinite(avgCadence) && avgCadence >= 0 ? avgCadence : undefined,
+        maximumCadence: maxCadence !== undefined && Number.isFinite(maxCadence) && maxCadence >= 0 ? maxCadence : undefined,
+        averageSpeed: avgSpeed !== undefined && Number.isFinite(avgSpeed) && avgSpeed >= 0 ? avgSpeed : undefined,
+        maximumSpeed: maxSpeed !== undefined && Number.isFinite(maxSpeed) && maxSpeed >= 0 ? maxSpeed : undefined,
+        intensity: intensity === "active" || intensity === "Active" ? "Active" : intensity === "resting" || intensity === "Resting" ? "Resting" : undefined,
+        triggerMethod: typeof trigger === "string" ? trigger : undefined,
+      });
+
+      currentRecordIndex = endIndex + 1;
+    }
+  }
+
+  return laps.length > 0 ? laps : undefined;
+}
+
+export async function extractFITPoints(arrayBuffer: ArrayBuffer): Promise<{ points: RawPoint[]; calories?: number; sport?: string; laps?: Lap[] }> {
   try {
     const fitModule = await import("fit-file-parser");
     const FitParser = (fitModule.default || fitModule) as any;
@@ -86,6 +151,9 @@ export async function extractFITPoints(arrayBuffer: ArrayBuffer): Promise<{ poin
             continue;
           }
 
+          const speed = record.speed ?? recordAny.speed ?? recordAny.velocity;
+          const temp = record.temperature ?? recordAny.temperature ?? recordAny.temp;
+
           const point: RawPoint = {
             lat: normalized.lat,
             lon: normalized.lon,
@@ -95,6 +163,8 @@ export async function extractFITPoints(arrayBuffer: ArrayBuffer): Promise<{ poin
             pwr: record.power,
             cad: record.cadence,
             distanceMeters: record.distance,
+            speed: speed !== undefined && speed !== null && Number.isFinite(speed) && speed >= 0 ? speed : undefined,
+            temp: temp !== undefined && temp !== null && Number.isFinite(temp) ? temp : undefined,
           };
 
           points.push(point);
@@ -106,6 +176,7 @@ export async function extractFITPoints(arrayBuffer: ArrayBuffer): Promise<{ poin
         }
 
         let calories: number | undefined;
+        let sport: string | undefined;
         const dataAny = data as any;
         
         if (dataAny.activity && Array.isArray(dataAny.activity) && dataAny.activity.length > 0) {
@@ -113,6 +184,10 @@ export async function extractFITPoints(arrayBuffer: ArrayBuffer): Promise<{ poin
           const totalCalories = activity.total_calories ?? activity.calories ?? activity.Calories;
           if (typeof totalCalories === "number" && totalCalories > 0) {
             calories = totalCalories;
+          }
+          const sportType = activity.sport ?? activity.sport_type ?? activity.type;
+          if (typeof sportType === "string" && sportType) {
+            sport = sportType;
           }
         } else if (dataAny.laps && Array.isArray(dataAny.laps) && dataAny.laps.length > 0) {
           let totalCalories = 0;
@@ -129,7 +204,9 @@ export async function extractFITPoints(arrayBuffer: ArrayBuffer): Promise<{ poin
           }
         }
 
-        resolve({ points, calories });
+        const laps = extractFITLaps(dataAny, points.length, startTime !== null ? new Date(startTime) : undefined);
+
+        resolve({ points, calories, sport, laps });
       });
     });
   } catch (error) {

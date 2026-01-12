@@ -1,5 +1,6 @@
 import type { ActivityRecord, ParseResult } from "~/types/activity";
 import { DEFAULT_GPS_DISTANCE_OPTIONS, filterGpsDistanceDeltaMeters, type GpsDistanceOptions, type GpsPoint } from "~/utils/gps-distance";
+import { calculateDerivedMetrics } from "~/utils/calculate-derived-metrics";
 
 export interface RawPoint {
   lat: number;
@@ -10,6 +11,8 @@ export interface RawPoint {
   cad?: number;
   pwr?: number;
   distanceMeters?: number;
+  speed?: number; // Speed in m/s
+  temp?: number; // Temperature in Celsius
 }
 
 function calculateElapsedTime(
@@ -99,6 +102,8 @@ function processPointsToRecords(
       hr: point.hr,
       cad: point.cad,
       pwr: point.pwr,
+      speed: point.speed,
+      temp: point.temp,
     };
 
     records.push(record);
@@ -122,10 +127,11 @@ export function createParseResult(
   }
 
   const records = processPointsToRecords(points, distOpts);
+  const recordsWithDerived = calculateDerivedMetrics(records);
   const startTime = firstPoint.time || new Date();
 
   return {
-    records,
+    records: recordsWithDerived,
     startTime: startTime instanceof Date ? startTime : undefined,
   };
 }

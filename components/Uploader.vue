@@ -144,7 +144,7 @@ const processFile = async (file: File) => {
         try {
           const text = e.target?.result as string;
           const result = parseGPX(text, activityStore.gpsDistanceOptions);
-          activityStore.addActivity(result.records, file.name, result.startTime, "gpx", result.calories);
+          activityStore.addActivity(result.records, file.name, result.startTime, "gpx", result.calories, result.sport, result.laps);
           resolve();
         } catch (err) {
           reject(err);
@@ -160,7 +160,7 @@ const processFile = async (file: File) => {
         try {
           const arrayBuffer = e.target?.result as ArrayBuffer;
           const result = await parseFIT(arrayBuffer);
-          activityStore.addActivity(result.records, file.name, result.startTime, "fit", result.calories);
+          activityStore.addActivity(result.records, file.name, result.startTime, "fit", result.calories, result.sport, result.laps);
           resolve();
         } catch (err) {
           reject(err);
@@ -176,7 +176,7 @@ const processFile = async (file: File) => {
         try {
           const text = e.target?.result as string;
           const result = parseTCX(text, activityStore.gpsDistanceOptions);
-          activityStore.addActivity(result.records, file.name, result.startTime, "tcx", result.calories);
+          activityStore.addActivity(result.records, file.name, result.startTime, "tcx", result.calories, result.sport, result.laps);
           resolve();
         } catch (err) {
           reject(err);

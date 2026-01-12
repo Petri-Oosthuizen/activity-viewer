@@ -8,11 +8,28 @@
 
     <!-- Chart Container -->
     <div v-if="hasChartData" class="mt-4 w-full flex-1 overflow-visible sm:mt-6">
-      <div
-        ref="chartContainer"
-        class="h-full min-h-[400px] w-full touch-manipulation sm:min-h-[500px]"
-        style="touch-action: pan-x pan-y pinch-zoom; position: relative"
-      ></div>
+      <div class="flex items-center">
+        <!-- Y Axis Label (left side, rotated 180 degrees) -->
+        <div
+          v-if="yAxisLabel"
+          class="flex shrink-0 items-center justify-center pr-2"
+          style="writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg)"
+        >
+          <span class="text-sm text-gray-700">{{ yAxisLabel }}</span>
+        </div>
+        <!-- Chart -->
+        <div class="relative flex-1">
+          <div
+            ref="chartContainer"
+            class="h-full min-h-[400px] w-full touch-manipulation sm:min-h-[500px]"
+            style="touch-action: pan-x pan-y pinch-zoom; position: relative"
+          ></div>
+        </div>
+      </div>
+      <!-- X Axis Label (below chart) -->
+      <div v-if="xAxisLabel" class="mt-2 flex justify-center">
+        <span class="text-sm text-gray-700">{{ xAxisLabel }}</span>
+      </div>
 
       <!-- Toolbar (below chart) -->
       <div
@@ -21,30 +38,37 @@
       >
         <button
           type="button"
-          :class="[BUTTON_CLASSES.icon, 'h-11 w-11 sm:h-9 sm:w-9']"
+          :class="[BUTTON_CLASSES.icon, 'h-11 gap-1.5 px-3 sm:h-9 sm:gap-1 sm:px-2']"
           @click="zoomIn"
           title="Zoom In"
           aria-label="Zoom In"
         >
-          <span class="text-2xl leading-none font-light sm:text-xl">+</span>
+          <span class="text-lg leading-none sm:text-base">+</span>
+          <span class="text-xs sm:text-sm">Zoom In</span>
         </button>
         <button
           type="button"
-          :class="[BUTTON_CLASSES.icon, 'h-11 w-11 sm:h-9 sm:w-9']"
+          :class="[BUTTON_CLASSES.icon, 'h-11 gap-1.5 px-3 sm:h-9 sm:gap-1 sm:px-2']"
           @click="zoomOut"
           title="Zoom Out"
           aria-label="Zoom Out"
         >
-          <span class="text-2xl leading-none font-light sm:text-xl">−</span>
+          <span class="text-lg leading-none sm:text-base">−</span>
+          <span class="text-xs sm:text-sm">Zoom Out</span>
         </button>
         <button
           type="button"
-          :class="[BUTTON_CLASSES.icon, 'h-11 w-11 sm:h-9 sm:w-9']"
+          :class="[BUTTON_CLASSES.icon, 'h-11 gap-1.5 px-3 sm:h-9 sm:gap-1 sm:px-2']"
           @click="resetZoom"
           title="Reset Zoom"
           aria-label="Reset Zoom"
         >
-          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg
+            class="h-4 w-4 sm:h-3.5 sm:w-3.5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -52,15 +76,21 @@
               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
             />
           </svg>
+          <span class="text-xs sm:text-sm">Reset Zoom</span>
         </button>
         <button
           type="button"
-          :class="[BUTTON_CLASSES.icon, 'h-11 w-11 sm:h-9 sm:w-9 ml-2']"
+          :class="[BUTTON_CLASSES.icon, 'ml-2 h-11 px-3 sm:h-9 sm:px-2']"
           @click="panLeft"
           title="Pan Left"
           aria-label="Pan Left"
         >
-          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg
+            class="h-4 w-4 sm:h-3.5 sm:w-3.5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -68,15 +98,21 @@
               d="M15 19l-7-7 7-7"
             />
           </svg>
+          <span class="text-xs sm:text-sm">Pan Left</span>
         </button>
         <button
           type="button"
-          :class="[BUTTON_CLASSES.icon, 'h-11 w-11 sm:h-9 sm:w-9']"
+          :class="[BUTTON_CLASSES.icon, 'h-11 gap-1.5 px-3 sm:h-9 sm:gap-1 sm:px-2']"
           @click="panRight"
           title="Pan Right"
           aria-label="Pan Right"
         >
-          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg
+            class="h-4 w-4 sm:h-3.5 sm:w-3.5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -84,9 +120,10 @@
               d="M9 5l7 7-7 7"
             />
           </svg>
+          <span class="text-xs sm:text-sm">Pan Right</span>
         </button>
         <label
-          class="inline-flex h-11 items-center gap-2 rounded-md border-2 border-gray-300 bg-white px-3 text-[10px] text-gray-700 select-none sm:h-9 sm:text-xs ml-2"
+          class="ml-2 inline-flex h-11 items-center gap-2 rounded-md border-2 border-gray-300 bg-white px-3 text-[10px] text-gray-700 select-none sm:h-9 sm:text-xs"
           title="When enabled, Y rescales to the visible X window"
         >
           <input
@@ -135,6 +172,7 @@ import { ref, onMounted, onUnmounted, watch, nextTick, computed } from "vue";
 import { useDebounceFn } from "@vueuse/core";
 import { useActivityStore } from "~/stores/activity";
 import type { MetricType } from "~/utils/chart-config";
+import { METRIC_LABELS } from "~/utils/chart-config";
 import { BUTTON_CLASSES } from "~/constants/ui";
 import type { EChartsOption } from "echarts";
 import {
@@ -175,6 +213,46 @@ const availableMetrics = computed(() => activityStore.availableMetrics);
 const hasChartData = computed(() => activityStore.chartSeries.length > 0);
 const metricSelectionMode = computed(() => activityStore.metricSelectionMode);
 const chartTransforms = computed(() => activityStore.chartTransforms);
+const xAxisType = computed(() => activityStore.xAxisType);
+const showDelta = computed(() => activityStore.showDelta);
+const deltaMode = computed(() => activityStore.deltaMode);
+
+const xAxisLabel = computed(() => {
+  if (chartTransforms.value.viewMode === "pivotZones") {
+    const metric = (selectedMetrics.value[0] as MetricType | undefined) ?? selectedMetric.value;
+    return METRIC_LABELS[metric];
+  }
+  if (xAxisType.value === "localTime") {
+    return "Local Time";
+  }
+  if (xAxisType.value === "time") {
+    return "Time (seconds)";
+  }
+  return "Distance";
+});
+
+const yAxisLabel = computed(() => {
+  if (chartTransforms.value.viewMode === "pivotZones") {
+    return "Time (%)";
+  }
+  const metrics = selectedMetrics.value.length > 0 ? selectedMetrics.value : ["hr" as MetricType];
+  const hasActivities = activityStore.activities.length >= 2;
+
+  if (showDelta.value && deltaMode.value === "delta-only" && hasActivities) {
+    const label = METRIC_LABELS[selectedMetric.value];
+    const match = label.match(/^(.+?)\s*\(([^)]+)\)$/);
+    if (match) {
+      return `Δ ${match[1]} (${match[2]})`;
+    }
+    return `Δ ${label}`;
+  }
+
+  if (metrics.length === 1 && !showDelta.value) {
+    return METRIC_LABELS[metrics[0]!];
+  }
+
+  return null;
+});
 
 const activeActivitiesForLegend = computed(() =>
   activities.value.filter((a) => !activityStore.isActivityDisabled(a.id)),
@@ -386,7 +464,9 @@ function applyAutoYFit() {
 
   if (yAxisOptions.length === 0 || seriesOptions.length === 0) return;
 
-  const xAxisOptions = Array.isArray(option?.xAxis) ? option.xAxis : [option?.xAxis].filter(Boolean);
+  const xAxisOptions = Array.isArray(option?.xAxis)
+    ? option.xAxis
+    : [option?.xAxis].filter(Boolean);
   const isCategoryAxis = xAxisOptions[0]?.type === "category";
 
   const minByAxis = new Map<number, number>();

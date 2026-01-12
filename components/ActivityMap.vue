@@ -43,15 +43,13 @@
       <template #title>Advanced Settings</template>
       <div class="space-y-4 sm:space-y-6">
         <div class="space-y-3 sm:space-y-4">
-          <h4 class="m-0 text-sm font-semibold text-gray-800 sm:text-base">GPS Smoothing</h4>
-          <p class="text-xs text-gray-500 sm:text-sm">
-            Smooth the GPS track to reduce jitter (affects map rendering and hover snapping).
-          </p>
-
-          <div
-            class="rounded-md border border-gray-200 bg-white p-3 sm:p-4"
-            :class="chartTransforms.gpsSmoothing.enabled ? '' : 'opacity-50'"
-          >
+          <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h4 class="m-0 text-sm font-semibold text-gray-800 sm:text-base">GPS Smoothing</h4>
+              <p class="mt-1 text-xs text-gray-500 sm:text-sm">
+                Smooth the GPS track to reduce jitter (affects map rendering and hover snapping).
+              </p>
+            </div>
             <label class="flex cursor-pointer touch-manipulation items-center gap-2">
               <input
                 type="checkbox"
@@ -61,19 +59,19 @@
               />
               <span class="text-xs text-gray-700 sm:text-sm">Enable</span>
             </label>
+          </div>
 
-            <div class="mt-3">
-              <label class="mb-1 block text-xs font-medium text-gray-700">Window (points)</label>
-              <input
-                type="number"
-                min="1"
-                step="1"
-                class="w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/10 sm:w-auto sm:px-2 sm:py-1.5"
-                :value="chartTransforms.gpsSmoothing.windowPoints"
-                :disabled="!chartTransforms.gpsSmoothing.enabled"
-                @input="setGpsSmoothingWindowPoints"
-              />
-            </div>
+          <div class="mt-3">
+            <label class="mb-1 block text-xs font-medium text-gray-700">Window (points)</label>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              class="w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/10 sm:w-auto sm:px-2 sm:py-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              :value="chartTransforms.gpsSmoothing.windowPoints"
+              :disabled="!chartTransforms.gpsSmoothing.enabled"
+              @input="setGpsSmoothingWindowPoints"
+            />
           </div>
         </div>
       </div>

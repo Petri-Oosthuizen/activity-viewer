@@ -216,9 +216,6 @@ export const useActivityStore = defineStore("activity", () => {
         xAxis: {
           type: "category",
           data: bucketLabels,
-          name: METRIC_LABELS[metric],
-          nameLocation: "middle",
-          nameGap: bucketLabels.length > 10 ? 50 : 35,
           axisLabel: {
             show: true,
             rotate: bucketLabels.length > 10 ? 45 : 0,
@@ -228,10 +225,6 @@ export const useActivityStore = defineStore("activity", () => {
         yAxis: {
           type: "value",
           show: true,
-          name: "Time (%)",
-          nameLocation: "middle",
-          nameGap: 40,
-          nameRotate: 90,
           scale: false,
           min: 0,
           axisLabel: { show: true, formatter: (v: number | string) => `${Number(v).toFixed(0)}%` },
@@ -282,6 +275,8 @@ export const useActivityStore = defineStore("activity", () => {
     startTime?: Date,
     sourceType?: Activity["sourceType"],
     calories?: number,
+    sport?: string,
+    laps?: Activity["laps"],
   ) {
     const id = generateActivityId();
     // Assign color based on index (position in list)
@@ -290,7 +285,7 @@ export const useActivityStore = defineStore("activity", () => {
 
     activities.value = [
       ...activities.value,
-      { id, name, records, sourceType, offset: 0, scale: 1, color, startTime, calories },
+      { id, name, records, sourceType, offset: 0, scale: 1, color, startTime, calories, sport, laps },
     ];
   }
 

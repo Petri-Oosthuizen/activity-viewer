@@ -69,6 +69,8 @@ function parseTCXPoint(trackpoint: Element): RawPoint | null {
   const cad = cadText ? parseFloat(cadText) : undefined;
 
   let pwr: number | undefined;
+  let speed: number | undefined;
+  let temp: number | undefined;
   const extensions = trackpoint.querySelector("Extensions");
   if (extensions) {
     const tpx = Array.from(extensions.children).find(
@@ -82,6 +84,14 @@ function parseTCXPoint(trackpoint: Element): RawPoint | null {
       if (watts) {
         pwr = parseFloat(watts.textContent || "");
         if (isNaN(pwr)) pwr = undefined;
+      }
+
+      const speedEl = Array.from(tpx.children).find(
+        (el) => el.localName === "Speed",
+      );
+      if (speedEl) {
+        speed = parseFloat(speedEl.textContent || "");
+        if (isNaN(speed) || speed < 0) speed = undefined;
       }
     }
 
@@ -102,6 +112,8 @@ function parseTCXPoint(trackpoint: Element): RawPoint | null {
     hr,
     cad,
     pwr,
+    speed,
+    temp,
     distanceMeters: distanceMeters !== undefined && !isNaN(distanceMeters) ? distanceMeters : undefined,
   };
 }

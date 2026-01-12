@@ -72,7 +72,7 @@ export function buildDataZoomConfig(metricCount: number, yAxisCount: number) {
     {
       type: "slider",
       xAxisIndex: 0,
-      bottom: "8%",
+      bottom: "5%",
       height: 20,
       filterMode: "none",
       handleStyle: { color: "#5470c6" },
@@ -119,15 +119,6 @@ export function buildXAxisConfig(xAxisType: XAxisType) {
   return {
     type: "value",
     show: true,
-    name:
-      xAxisType === "localTime"
-        ? "Local Time"
-        : xAxisType === "time"
-          ? "Time (seconds)"
-          : "Distance",
-    nameLocation: "middle",
-    nameGap: 35,
-    nameTextStyle: { padding: [10, 0, 0, 0] },
     scale: true,
     axisLabel,
   };
@@ -149,10 +140,6 @@ export function buildYAxisConfig(
       {
         type: "value",
         show: true,
-        name: `Δ ${METRIC_LABELS[selectedMetric]}`,
-        nameLocation: "middle",
-        nameGap: 35,
-        nameRotate: 90,
         scale: true,
         axisLabel: { show: true, formatter: formatAxisNumber },
         position: "left",
@@ -169,10 +156,6 @@ export function buildYAxisConfig(
     return {
       type: "value",
       show: true,
-      name: METRIC_LABELS[firstMetric],
-      nameLocation: "middle",
-      nameGap: 35,
-      nameRotate: 90,
       scale: true,
       axisLabel: { show: true, formatter: formatAxisNumber },
     };
@@ -182,10 +165,6 @@ export function buildYAxisConfig(
   const axes = metrics.map((metric, i) => ({
     type: "value" as const,
     show: true,
-    name: METRIC_LABELS[metric],
-    nameLocation: "middle" as const,
-    nameGap: 35,
-    nameRotate: 90,
     scale: true,
     axisLabel: { show: true, formatter: formatAxisNumber },
     position: (i % 2 === 0 ? "left" : "right") as "left" | "right",
@@ -193,17 +172,9 @@ export function buildYAxisConfig(
 
   // Add delta axis if needed (only scaled in overlay mode)
   if (showDelta && hasActivities) {
-    const deltaLabel =
-      deltaMode === "overlay"
-        ? `Δ ${METRIC_LABELS[selectedMetric]} (×0.1)`
-        : `Δ ${METRIC_LABELS[selectedMetric]}`;
     axes.push({
       type: "value" as const,
       show: true,
-      name: deltaLabel,
-      nameLocation: "middle" as const,
-      nameGap: 35,
-      nameRotate: 90,
       scale: true,
       axisLabel: { show: true, formatter: formatAxisNumber },
       position: "right" as "left" | "right",
@@ -217,14 +188,14 @@ export function buildYAxisConfig(
  * Build grid configuration for ECharts
  */
 export function buildGridConfig(hasMultipleYAxes: boolean) {
-  // Increase left/right margins when there are multiple Y-axes to accommodate labels
-  const leftMargin = hasMultipleYAxes ? "8%" : "5%";
-  const rightMargin = hasMultipleYAxes ? "8%" : "5%";
+  // Reduced margins since axis labels are now outside the chart
+  const leftMargin = hasMultipleYAxes ? "3%" : "2%";
+  const rightMargin = hasMultipleYAxes ? "3%" : "2%";
 
   return {
     left: leftMargin,
     right: rightMargin,
-    bottom: "25%",
+    bottom: "20%",
     top: "5%",
     containLabel: true,
   };

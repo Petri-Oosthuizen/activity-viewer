@@ -329,10 +329,7 @@
         </div>
 
         <!-- Pace Smoothing -->
-        <div
-          class="rounded-md border border-gray-200 bg-white p-3 sm:p-4"
-          :class="chartTransforms.paceSmoothing.enabled ? '' : 'opacity-50'"
-        >
+        <div class="rounded-md border border-gray-200 bg-white p-3 sm:p-4">
           <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div class="text-xs font-medium text-gray-800 sm:text-sm">Pace Smoothing</div>

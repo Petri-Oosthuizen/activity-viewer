@@ -94,5 +94,26 @@ function parseGPXPoint(trkpt: Element): RawPoint | null {
     }
   }
 
-  return { lat, lon, alt: ele, time, hr, cad, pwr, distanceMeters };
+  let speed: number | undefined;
+  let temp: number | undefined;
+
+  if (extensions) {
+    const speedEl = Array.from(extensions.children).find(
+      (el) => el.localName === "speed" || el.localName === "Speed",
+    );
+    if (speedEl) {
+      speed = parseFloat(speedEl.textContent || "");
+      if (isNaN(speed) || speed < 0) speed = undefined;
+    }
+
+    const tempEl = Array.from(extensions.children).find(
+      (el) => el.localName === "temperature" || el.localName === "Temperature" || el.localName === "temp" || el.localName === "Temp",
+    );
+    if (tempEl) {
+      temp = parseFloat(tempEl.textContent || "");
+      if (isNaN(temp)) temp = undefined;
+    }
+  }
+
+  return { lat, lon, alt: ele, time, hr, cad, pwr, distanceMeters, speed, temp };
 }

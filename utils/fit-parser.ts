@@ -7,7 +7,7 @@ export async function parseFIT(
   arrayBuffer: ArrayBuffer,
   distanceOptions: Partial<GpsDistanceOptions> = {},
 ): Promise<ParseResult> {
-  const { points, calories } = await extractFITPoints(arrayBuffer);
+  const { points, calories, sport, laps } = await extractFITPoints(arrayBuffer);
   const result = createParseResult(points, distanceOptions);
-  return { ...result, calories };
+  return { ...result, calories, sport, laps };
 }

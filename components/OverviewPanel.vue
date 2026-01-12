@@ -79,7 +79,7 @@
             <td
               class="sticky left-0 z-10 w-20 border-b border-gray-100 bg-white px-2 py-2.5 font-medium sm:w-24 sm:px-3"
             >
-              Duration
+              <span :title="getMetricDescription('Duration')">Duration</span>
             </td>
             <td
               v-for="a in activeActivities"
@@ -101,7 +101,7 @@
             <td
               class="sticky left-0 z-10 w-20 border-b border-gray-100 bg-white px-2 py-2.5 font-medium sm:w-24 sm:px-3"
             >
-              Distance
+              <span :title="getMetricDescription('Distance')">Distance</span>
             </td>
             <td
               v-for="a in activeActivities"
@@ -123,14 +123,14 @@
             <td
               class="sticky left-0 z-10 w-20 border-b border-gray-100 bg-white px-2 py-2.5 font-medium sm:w-24 sm:px-3"
             >
-              Calories
+              <span :title="getMetricDescription('Calories')">Calories</span>
             </td>
             <td
               v-for="a in activeActivities"
               :key="a.id"
               class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
             >
-              <div>
+              <div :class="(statsById[a.id]?.calories === null || statsById[a.id]?.calories === undefined) ? 'text-gray-400' : ''">
                 {{
                   statsById[a.id]?.calories !== null &&
                   statsById[a.id]?.calories !== undefined
@@ -154,7 +154,7 @@
                 colspan="2"
                 class="sticky left-0 z-10 w-20 border-b border-gray-200 bg-gray-50 px-2 py-2 font-semibold sm:w-24 sm:px-3"
               >
-                Pace
+                <span :title="getMetricDescription('Pace')">Pace</span>
               </td>
               <td
                 v-for="a in activeActivities.slice(1)"
@@ -173,7 +173,7 @@
                 :key="a.id"
                 class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
               >
-                <div>
+                <div :class="(statsById[a.id]?.metrics.pace?.min === null || statsById[a.id]?.metrics.pace?.min === undefined) ? 'text-gray-400' : ''">
                   {{
                     statsById[a.id]?.metrics.pace?.min !== null &&
                     statsById[a.id]?.metrics.pace?.min !== undefined
@@ -201,7 +201,7 @@
                 :key="a.id"
                 class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
               >
-                <div>
+                <div :class="(statsById[a.id]?.metrics.pace?.avg === null || statsById[a.id]?.metrics.pace?.avg === undefined) ? 'text-gray-400' : ''">
                   {{
                     statsById[a.id]?.metrics.pace?.avg !== null &&
                     statsById[a.id]?.metrics.pace?.avg !== undefined
@@ -229,7 +229,7 @@
                 :key="a.id"
                 class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
               >
-                <div>
+                <div :class="(statsById[a.id]?.metrics.pace?.max === null || statsById[a.id]?.metrics.pace?.max === undefined) ? 'text-gray-400' : ''">
                   {{
                     statsById[a.id]?.metrics.pace?.max !== null &&
                     statsById[a.id]?.metrics.pace?.max !== undefined
@@ -254,7 +254,7 @@
                 colspan="2"
                 class="sticky left-0 z-10 w-20 border-b border-gray-200 bg-gray-50 px-2 py-2 font-semibold sm:w-24 sm:px-3"
               >
-                Elevation
+                <span :title="getMetricDescription('Elevation gain')">Elevation</span>
               </td>
               <td
                 v-for="a in activeActivities.slice(1)"
@@ -273,7 +273,7 @@
                 :key="a.id"
                 class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
               >
-                <div>
+                <div :class="(statsById[a.id]?.elevationGainMeters === null || statsById[a.id]?.elevationGainMeters === undefined) ? 'text-gray-400' : ''">
                   {{
                     statsById[a.id]?.elevationGainMeters === null ||
                     statsById[a.id]?.elevationGainMeters === undefined
@@ -301,7 +301,7 @@
                 :key="a.id"
                 class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
               >
-                <div>
+                <div :class="(statsById[a.id]?.elevationLossMeters === null || statsById[a.id]?.elevationLossMeters === undefined) ? 'text-gray-400' : ''">
                   {{
                     statsById[a.id]?.elevationLossMeters === null ||
                     statsById[a.id]?.elevationLossMeters === undefined
@@ -326,7 +326,7 @@
                 colspan="2"
                 class="sticky left-0 z-10 w-20 border-b border-gray-200 bg-gray-50 px-2 py-2 font-semibold sm:w-24 sm:px-3"
               >
-                {{ getMetricName(metric) }}
+                <span :title="getMetricDescription(getMetricName(metric))">{{ getMetricName(metric) }}</span>
               </td>
               <td
                 v-for="a in activeActivities.slice(1)"
@@ -345,7 +345,7 @@
                 :key="a.id"
                 class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
               >
-                <div>
+                <div :class="(statsById[a.id]?.metrics[metric]?.min === null || statsById[a.id]?.metrics[metric]?.min === undefined) ? 'text-gray-400' : ''">
                   {{
                     statsById[a.id]?.metrics[metric]?.min !== null &&
                     statsById[a.id]?.metrics[metric]?.min !== undefined
@@ -373,7 +373,7 @@
                 :key="a.id"
                 class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
               >
-                <div>
+                <div :class="(statsById[a.id]?.metrics[metric]?.avg === null || statsById[a.id]?.metrics[metric]?.avg === undefined) ? 'text-gray-400' : ''">
                   {{
                     statsById[a.id]?.metrics[metric]?.avg !== null &&
                     statsById[a.id]?.metrics[metric]?.avg !== undefined
@@ -401,7 +401,7 @@
                 :key="a.id"
                 class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
               >
-                <div>
+                <div :class="(statsById[a.id]?.metrics[metric]?.max === null || statsById[a.id]?.metrics[metric]?.max === undefined) ? 'text-gray-400' : ''">
                   {{
                     statsById[a.id]?.metrics[metric]?.max !== null &&
                     statsById[a.id]?.metrics[metric]?.max !== undefined
@@ -419,6 +419,102 @@
               </td>
             </tr>
           </template>
+
+          <template v-if="hasAnyLaps">
+            <tr class="bg-gray-50">
+              <td
+                colspan="2"
+                class="sticky left-0 z-10 w-20 border-b border-gray-200 bg-gray-50 px-2 py-2 font-semibold sm:w-24 sm:px-3"
+              >
+                <span :title="getMetricDescription('Laps')">Laps</span>
+              </td>
+              <td
+                v-for="a in activeActivities.slice(1)"
+                :key="a.id"
+                class="border-b border-gray-200 bg-gray-50"
+              ></td>
+            </tr>
+            <tr class="bg-white">
+              <td
+                class="sticky left-0 z-10 w-20 border-b border-gray-100 bg-white px-2 py-2.5 font-medium sm:w-24 sm:px-3"
+              >
+                Count
+              </td>
+              <td
+                v-for="a in activeActivities"
+                :key="a.id"
+                class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
+              >
+                <div>
+                  {{ a.laps && a.laps.length > 0 ? a.laps.length : "—" }}
+                </div>
+              </td>
+            </tr>
+            <tr class="bg-white" v-if="hasAnyLapTime">
+              <td
+                class="sticky left-0 z-10 w-20 border-b border-gray-100 bg-white px-2 py-2.5 font-medium sm:w-24 sm:px-3"
+              >
+                <span class="text-[10px] text-gray-500 sm:text-xs">avg time</span>
+              </td>
+              <td
+                v-for="a in activeActivities"
+                :key="a.id"
+                class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
+              >
+                <div :class="formatLapAvgTime(a.laps) === '—' ? 'text-gray-400' : ''">
+                  {{ formatLapAvgTime(a.laps) }}
+                </div>
+              </td>
+            </tr>
+            <tr class="bg-white" v-if="hasAnyLapDistance">
+              <td
+                class="sticky left-0 z-10 w-20 border-b border-gray-100 bg-white px-2 py-2.5 font-medium sm:w-24 sm:px-3"
+              >
+                <span class="text-[10px] text-gray-500 sm:text-xs">avg distance</span>
+              </td>
+              <td
+                v-for="a in activeActivities"
+                :key="a.id"
+                class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
+              >
+                <div :class="formatLapAvgDistance(a.laps) === '—' ? 'text-gray-400' : ''">
+                  {{ formatLapAvgDistance(a.laps) }}
+                </div>
+              </td>
+            </tr>
+            <tr class="bg-white" v-if="hasAnyLapHeartRate">
+              <td
+                class="sticky left-0 z-10 w-20 border-b border-gray-100 bg-white px-2 py-2.5 font-medium sm:w-24 sm:px-3"
+              >
+                <span class="text-[10px] text-gray-500 sm:text-xs">avg HR</span>
+              </td>
+              <td
+                v-for="a in activeActivities"
+                :key="a.id"
+                class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
+              >
+                <div :class="formatLapAvgHeartRate(a.laps) === '—' ? 'text-gray-400' : ''">
+                  {{ formatLapAvgHeartRate(a.laps) }}
+                </div>
+              </td>
+            </tr>
+            <tr class="bg-white" v-if="hasAnyLapSpeed">
+              <td
+                class="sticky left-0 z-10 w-20 border-b border-gray-100 bg-white px-2 py-2.5 font-medium sm:w-24 sm:px-3"
+              >
+                <span class="text-[10px] text-gray-500 sm:text-xs">avg speed</span>
+              </td>
+              <td
+                v-for="a in activeActivities"
+                :key="a.id"
+                class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
+              >
+                <div :class="formatLapAvgSpeed(a.laps) === '—' ? 'text-gray-400' : ''">
+                  {{ formatLapAvgSpeed(a.laps) }}
+                </div>
+              </td>
+            </tr>
+          </template>
         </tbody>
       </table>
     </div>
@@ -429,8 +525,10 @@
 import { computed, ref, watch } from "vue";
 import { useActivityStore } from "~/stores/activity";
 import { computeActivityStatsFromRecords, computeActivityStats } from "~/utils/activity-stats";
-import { formatDistance, formatMetricValue, formatTime } from "~/utils/format";
+import { formatDistance, formatMetricValue, formatTime, formatSpeed } from "~/utils/format";
 import type { MetricType } from "~/utils/chart-config";
+import type { Activity } from "~/types/activity";
+import { METRIC_DESCRIPTIONS } from "~/utils/metric-descriptions";
 import {
   computeGlobalXExtent,
   filterRecordsByXRange,
@@ -481,7 +579,7 @@ const clearChartWindow = () => {
   activityStore.resetZoom();
 };
 
-const allMetrics = ["hr", "pwr", "cad", "alt"] as const satisfies readonly MetricType[];
+const allMetrics = ["hr", "pwr", "cad", "alt", "speed", "temp", "grade", "vSpeed"] as const satisfies readonly MetricType[];
 const metricLabels = computed(() => activityStore.metricLabels);
 
 const metrics = computed(() => {
@@ -499,6 +597,10 @@ const getMetricName = (metric: MetricType): string => {
   const label = metricLabels.value[metric];
   const match = label.match(/^(.+?)\s*\(/);
   return match ? match[1]!.trim() : label;
+};
+
+const getMetricDescription = (metricName: string): string => {
+  return METRIC_DESCRIPTIONS[metricName] || "";
 };
 
 const getMetricUnit = (metric: MetricType): string => {
@@ -599,6 +701,72 @@ const hasAnyElevation = computed(() =>
       statsById.value[a.id]?.elevationLossMeters !== null,
   ),
 );
+
+const hasAnyLaps = computed(() =>
+  activeActivities.value.some((a) => a.laps && a.laps.length > 0),
+);
+
+const hasAnyLapTime = computed(() =>
+  activeActivities.value.some((a) =>
+    a.laps?.some((lap) => lap.totalTimeSeconds !== undefined && lap.totalTimeSeconds !== null),
+  ),
+);
+
+const hasAnyLapDistance = computed(() =>
+  activeActivities.value.some((a) =>
+    a.laps?.some((lap) => lap.distanceMeters !== undefined && lap.distanceMeters !== null),
+  ),
+);
+
+const hasAnyLapHeartRate = computed(() =>
+  activeActivities.value.some((a) =>
+    a.laps?.some((lap) => lap.averageHeartRateBpm !== undefined && lap.averageHeartRateBpm !== null),
+  ),
+);
+
+const hasAnyLapSpeed = computed(() =>
+  activeActivities.value.some((a) =>
+    a.laps?.some((lap) => lap.averageSpeed !== undefined && lap.averageSpeed !== null),
+  ),
+);
+
+function formatLapAvgTime(laps: Activity["laps"]): string {
+  if (!laps || laps.length === 0) return "—";
+  const validLaps = laps.filter((lap) => lap.totalTimeSeconds !== undefined && lap.totalTimeSeconds !== null);
+  if (validLaps.length === 0) return "—";
+  const totalTime = validLaps.reduce((sum, lap) => sum + (lap.totalTimeSeconds ?? 0), 0);
+  const avgTime = totalTime / validLaps.length;
+  return formatTime(avgTime);
+}
+
+function formatLapAvgDistance(laps: Activity["laps"]): string {
+  if (!laps || laps.length === 0) return "—";
+  const validLaps = laps.filter((lap) => lap.distanceMeters !== undefined && lap.distanceMeters !== null);
+  if (validLaps.length === 0) return "—";
+  const totalDistance = validLaps.reduce((sum, lap) => sum + (lap.distanceMeters ?? 0), 0);
+  const avgDistance = totalDistance / validLaps.length;
+  return formatDistance(avgDistance);
+}
+
+function formatLapAvgHeartRate(laps: Activity["laps"]): string {
+  if (!laps || laps.length === 0) return "—";
+  const validLaps = laps.filter(
+    (lap) => lap.averageHeartRateBpm !== undefined && lap.averageHeartRateBpm !== null,
+  );
+  if (validLaps.length === 0) return "—";
+  const totalHr = validLaps.reduce((sum, lap) => sum + (lap.averageHeartRateBpm ?? 0), 0);
+  const avgHr = totalHr / validLaps.length;
+  return `${Math.round(avgHr)} bpm`;
+}
+
+function formatLapAvgSpeed(laps: Activity["laps"]): string {
+  if (!laps || laps.length === 0) return "—";
+  const validLaps = laps.filter((lap) => lap.averageSpeed !== undefined && lap.averageSpeed !== null);
+  if (validLaps.length === 0) return "—";
+  const totalSpeed = validLaps.reduce((sum, lap) => sum + (lap.averageSpeed ?? 0), 0);
+  const avgSpeed = totalSpeed / validLaps.length;
+  return formatSpeed(avgSpeed);
+}
 
 function formatDelta(field: "durationSeconds" | "distanceMeters", activityId: string): string {
   if (!showBaseline.value) return "";

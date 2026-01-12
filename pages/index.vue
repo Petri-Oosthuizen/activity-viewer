@@ -39,7 +39,7 @@
         </div>
       </div>
       <div v-else class="flex flex-col gap-4 sm:gap-6 md:gap-8">
-        <section class="w-full">
+        <section v-if="shouldShowUploader" class="w-full">
           <ActivityList />
         </section>
         <section v-if="hasActivities" class="w-full">

@@ -6,7 +6,7 @@
 import type { Activity, ActivityRecord } from "~/types/activity";
 
 // Metric type definition
-export type MetricType = "hr" | "alt" | "pwr" | "cad" | "pace";
+export type MetricType = "hr" | "alt" | "pwr" | "cad" | "pace" | "speed" | "temp" | "grade" | "vSpeed";
 
 // X-axis type definition
 export type XAxisType = "time" | "distance" | "localTime";
@@ -21,9 +21,13 @@ export const METRIC_LABELS: Readonly<Record<MetricType, string>> = {
   pwr: "Power (W)",
   cad: "Cadence (rpm)",
   pace: "Pace (min/km)",
+  speed: "Speed (m/s)",
+  temp: "Temperature (°C)",
+  grade: "Grade (%)",
+  vSpeed: "Vertical Speed (m/h)",
 };
 
-const METRIC_ORDER: readonly MetricType[] = ["alt", "hr", "pwr", "cad", "pace"] as const;
+const METRIC_ORDER: readonly MetricType[] = ["alt", "hr", "pwr", "cad", "pace", "speed", "temp", "grade", "vSpeed"] as const;
 
 // Default color palette for activities
 export const ACTIVITY_COLORS = [
@@ -56,6 +60,9 @@ export function activityHasMetric(activity: Activity, metric: MetricType): boole
       const dd = r.d - prev.d;
       return dt > 0 && dd > 0;
     });
+  }
+  if (metric === "grade" || metric === "vSpeed") {
+    return activity.records.some((r) => r[metric] !== null && r[metric] !== undefined);
   }
   return activity.records.some(
     (record) => record[metric] !== null && record[metric] !== undefined
@@ -96,6 +103,10 @@ export function getAvailableMetrics(activities: Activity[]): MetricType[] {
       if (record.alt !== undefined && record.alt !== null) metrics.add("alt");
       if (record.pwr !== undefined && record.pwr !== null) metrics.add("pwr");
       if (record.cad !== undefined && record.cad !== null) metrics.add("cad");
+      if (record.speed !== undefined && record.speed !== null) metrics.add("speed");
+      if (record.temp !== undefined && record.temp !== null) metrics.add("temp");
+      if (record.grade !== undefined && record.grade !== null) metrics.add("grade");
+      if (record.vSpeed !== undefined && record.vSpeed !== null) metrics.add("vSpeed");
     }
     if (activity.records.length > 1) {
       const hasValidPace = activity.records.some((r, i) => {
@@ -125,10 +136,14 @@ export function getMetricAvailability(
     pwr: [],
     cad: [],
     pace: [],
+    speed: [],
+    temp: [],
+    grade: [],
+    vSpeed: [],
   };
 
   activities.forEach((activity) => {
-    (["hr", "alt", "pwr", "cad"] as MetricType[]).forEach((metric) => {
+    (["hr", "alt", "pwr", "cad", "speed", "temp", "grade", "vSpeed"] as MetricType[]).forEach((metric) => {
       if (activityHasMetric(activity, metric)) {
         availability[metric].push(activity.id);
       }

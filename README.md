@@ -21,13 +21,20 @@ Everything is processed **locally in your browser**. Files are not uploaded to a
 - GPX, FIT, TCX support
 - Multiple file upload (drag & drop or file picker)
 - Sensible distance handling (prefers device-provided distance where available, with GPS fallback)
+- Extracts comprehensive metrics: GPS coordinates, elevation, heart rate, power, cadence, speed, temperature
+- Calculated metrics: pace, grade (gradient), vertical speed (VAM)
+- Lap extraction from TCX and FIT files (with lap statistics)
+- Sport type detection (from TCX and FIT files)
 
 ### Overview
 
 - Window-aware summary (updates with the visible chart window)
 - Baseline comparison (when 2+ activities are enabled)
-- Duration, distance, elevation gain
-- Min/avg/max for Altitude, Heart Rate, Power, Cadence
+- Duration, distance, elevation gain/loss
+- Min/avg/max for Altitude, Heart Rate, Power, Cadence, Speed, Temperature, Grade, Vertical Speed
+- Pace statistics (min/avg/max)
+- Lap information (count and details when available in TCX/FIT files)
+- Sport type display (when available in TCX/FIT files)
 - Sticky metric column for horizontal scrolling
 - Only displays metrics with available data
 

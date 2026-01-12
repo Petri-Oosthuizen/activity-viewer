@@ -17,7 +17,7 @@ export interface ActivityStats {
   metrics: Record<MetricType, MetricStats>;
 }
 
-function safeMetricStats(records: ActivityRecord[], metric: "hr" | "alt" | "pwr" | "cad"): MetricStats {
+function safeMetricStats(records: ActivityRecord[], metric: "hr" | "alt" | "pwr" | "cad" | "speed" | "temp" | "grade" | "vSpeed"): MetricStats {
   let count = 0;
   let sum = 0;
   let min: number | null = null;
@@ -134,6 +134,10 @@ export function computeActivityStatsFromRecords(records: ActivityRecord[]): Acti
       pwr: safeMetricStats(records, "pwr"),
       cad: safeMetricStats(records, "cad"),
       pace: safePaceStats(records),
+      speed: safeMetricStats(records, "speed"),
+      temp: safeMetricStats(records, "temp"),
+      grade: safeMetricStats(records, "grade"),
+      vSpeed: safeMetricStats(records, "vSpeed"),
     },
   };
 }
