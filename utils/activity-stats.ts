@@ -29,6 +29,7 @@ export interface ActivityStats {
   metrics: Record<MetricType, MetricStats>;
   bestSplits: Record<string, BestSplit>;
   powerMetrics: PowerMetrics;
+  additionalMetrics: Record<string, MetricStats>;
 }
 
 function safeMetricStats(records: ActivityRecord[], metric: "hr" | "alt" | "pwr" | "cad" | "speed" | "temp" | "grade" | "vSpeed"): MetricStats {
@@ -174,6 +175,48 @@ function safePaceStats(records: ActivityRecord[]): MetricStats {
   };
 }
 
+function safeAdditionalFieldStats(records: ActivityRecord[], fieldName: string): MetricStats {
+  let count = 0;
+  let sum = 0;
+  let min: number | null = null;
+  let max: number | null = null;
+
+  for (const r of records) {
+    const v = r.additionalFields?.[fieldName];
+    if (v === undefined || v === null || !Number.isFinite(v)) continue;
+    count++;
+    sum += v;
+    min = min === null ? v : Math.min(min, v);
+    max = max === null ? v : Math.max(max, v);
+  }
+
+  return {
+    count,
+    min,
+    max,
+    avg: count > 0 ? sum / count : null,
+  };
+}
+
+function computeAdditionalMetrics(records: ActivityRecord[]): Record<string, MetricStats> {
+  const fieldNames = new Set<string>();
+  for (const r of records) {
+    if (r.additionalFields) {
+      Object.keys(r.additionalFields).forEach((key) => fieldNames.add(key));
+    }
+  }
+
+  const result: Record<string, MetricStats> = {};
+  for (const fieldName of fieldNames) {
+    const stats = safeAdditionalFieldStats(records, fieldName);
+    if (stats.count > 0) {
+      result[fieldName] = stats;
+    }
+  }
+
+  return result;
+}
+
 export function computeActivityStatsFromRecords(records: ActivityRecord[]): ActivityStats {
   const distanceMeters = safeDistanceMeters(records);
   const hasPower = records.some((r) => r.pwr !== undefined && r.pwr !== null);
@@ -207,6 +250,7 @@ export function computeActivityStatsFromRecords(records: ActivityRecord[]): Acti
           best12MinPower: null,
           best20MinPower: null,
         },
+    additionalMetrics: computeAdditionalMetrics(records),
   };
 }
 

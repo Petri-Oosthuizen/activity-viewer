@@ -11,6 +11,8 @@ export interface ActivityRecord {
   temp?: number; // Temperature in Celsius
   grade?: number; // Grade/gradient as percentage
   vSpeed?: number; // Vertical speed (VAM) in m/h
+  /** Additional numeric fields extracted from file formats (running dynamics, GPS accuracy, etc.) */
+  additionalFields?: Record<string, number>;
 }
 
 export interface Lap {

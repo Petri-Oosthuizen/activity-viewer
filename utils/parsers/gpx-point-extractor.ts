@@ -96,6 +96,7 @@ function parseGPXPoint(trkpt: Element): RawPoint | null {
 
   let speed: number | undefined;
   let temp: number | undefined;
+  const additionalFields: Record<string, number> = {};
 
   if (extensions) {
     const speedEl = Array.from(extensions.children).find(
@@ -113,7 +114,70 @@ function parseGPXPoint(trkpt: Element): RawPoint | null {
       temp = parseFloat(tempEl.textContent || "");
       if (isNaN(temp)) temp = undefined;
     }
+
+    // Extract additional TrackPointExtension fields
+    const trackPointExt = Array.from(extensions.children).find(
+      (el) =>
+        el.localName === "TrackPointExtension" || el.localName.endsWith("TrackPointExtension"),
+    );
+    if (trackPointExt) {
+      for (const child of Array.from(trackPointExt.children)) {
+        const fieldName = child.localName;
+        if (fieldName === "hr" || fieldName === "cad") continue; // Already handled
+
+        const text = child.textContent?.trim();
+        if (!text) continue;
+
+        const value = parseFloat(text);
+        if (isNaN(value) || !Number.isFinite(value)) continue;
+
+        // Known fields with standard names
+        if (fieldName === "atemp") {
+          additionalFields["atemp_c"] = value;
+        } else if (fieldName === "sat") {
+          additionalFields["satellites"] = value;
+        } else if (fieldName === "hdop") {
+          additionalFields["hdop"] = value;
+        } else if (fieldName === "vdop") {
+          additionalFields["vdop"] = value;
+        } else {
+          // Unknown field - add with original name
+          additionalFields[fieldName] = value;
+        }
+      }
+    }
+
+    // Also check direct extension children for additional fields
+    for (const child of Array.from(extensions.children)) {
+      const fieldName = child.localName;
+      if (fieldName === "TrackPointExtension" || fieldName.endsWith("TrackPointExtension") || 
+          fieldName === "power" || fieldName === "speed" || fieldName === "Speed" ||
+          fieldName === "temperature" || fieldName === "Temperature" || fieldName === "temp" || fieldName === "Temp" ||
+          fieldName === "distance" || fieldName === "Distance") {
+        continue; // Already handled
+      }
+
+      const text = child.textContent?.trim();
+      if (!text) continue;
+
+      const value = parseFloat(text);
+      if (isNaN(value) || !Number.isFinite(value)) continue;
+
+      additionalFields[fieldName] = value;
+    }
   }
 
-  return { lat, lon, alt: ele, time, hr, cad, pwr, distanceMeters, speed, temp };
+  return {
+    lat,
+    lon,
+    alt: ele,
+    time,
+    hr,
+    cad,
+    pwr,
+    distanceMeters,
+    speed,
+    temp,
+    additionalFields: Object.keys(additionalFields).length > 0 ? additionalFields : undefined,
+  };
 }

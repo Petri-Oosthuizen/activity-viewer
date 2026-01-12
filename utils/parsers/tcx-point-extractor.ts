@@ -71,6 +71,7 @@ function parseTCXPoint(trackpoint: Element): RawPoint | null {
   let pwr: number | undefined;
   let speed: number | undefined;
   let temp: number | undefined;
+  const additionalFields: Record<string, number> = {};
   const extensions = trackpoint.querySelector("Extensions");
   if (extensions) {
     const tpx = Array.from(extensions.children).find(
@@ -93,6 +94,22 @@ function parseTCXPoint(trackpoint: Element): RawPoint | null {
         speed = parseFloat(speedEl.textContent || "");
         if (isNaN(speed) || speed < 0) speed = undefined;
       }
+
+      // Extract additional TPX fields
+      for (const child of Array.from(tpx.children)) {
+        const fieldName = child.localName;
+        if (fieldName === "Watts" || fieldName === "PowerInWatts" || fieldName === "Speed") {
+          continue; // Already handled
+        }
+
+        const text = child.textContent?.trim();
+        if (!text) continue;
+
+        const value = parseFloat(text);
+        if (isNaN(value) || !Number.isFinite(value)) continue;
+
+        additionalFields[fieldName] = value;
+      }
     }
 
     const powerEl = Array.from(extensions.children).find(
@@ -101,6 +118,22 @@ function parseTCXPoint(trackpoint: Element): RawPoint | null {
     if (powerEl && pwr === undefined) {
       pwr = parseFloat(powerEl.textContent || "");
       if (isNaN(pwr)) pwr = undefined;
+    }
+
+    // Also check other extension children
+    for (const child of Array.from(extensions.children)) {
+      const fieldName = child.localName;
+      if (fieldName === "TPX" || fieldName.endsWith("TPX") || fieldName === "power" || fieldName === "PowerInWatts") {
+        continue; // Already handled
+      }
+
+      const text = child.textContent?.trim();
+      if (!text) continue;
+
+      const value = parseFloat(text);
+      if (isNaN(value) || !Number.isFinite(value)) continue;
+
+      additionalFields[fieldName] = value;
     }
   }
 
@@ -115,5 +148,6 @@ function parseTCXPoint(trackpoint: Element): RawPoint | null {
     speed,
     temp,
     distanceMeters: distanceMeters !== undefined && !isNaN(distanceMeters) ? distanceMeters : undefined,
+    additionalFields: Object.keys(additionalFields).length > 0 ? additionalFields : undefined,
   };
 }

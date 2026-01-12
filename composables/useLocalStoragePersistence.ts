@@ -19,6 +19,24 @@ interface StoredActivity {
   scale: number;
   color: string;
   startTime?: string; // Serialized as ISO string
+  calories?: number;
+  sport?: string;
+  laps?: Array<{
+    startTime: string; // Serialized as ISO string
+    startRecordIndex: number;
+    endRecordIndex: number;
+    totalTimeSeconds?: number;
+    distanceMeters?: number;
+    calories?: number;
+    averageHeartRateBpm?: number;
+    maximumHeartRateBpm?: number;
+    averageCadence?: number;
+    maximumCadence?: number;
+    averageSpeed?: number;
+    maximumSpeed?: number;
+    intensity?: "Active" | "Resting";
+    triggerMethod?: string;
+  }>;
 }
 
 export function useLocalStoragePersistence() {
@@ -62,6 +80,23 @@ export function useLocalStoragePersistence() {
   };
 
   const serializeActivity = (activity: Activity): StoredActivity => {
+    const laps = activity.laps?.map((lap) => ({
+      startTime: lap.startTime instanceof Date ? lap.startTime.toISOString() : lap.startTime.toISOString(),
+      startRecordIndex: lap.startRecordIndex,
+      endRecordIndex: lap.endRecordIndex,
+      totalTimeSeconds: lap.totalTimeSeconds,
+      distanceMeters: lap.distanceMeters,
+      calories: lap.calories,
+      averageHeartRateBpm: lap.averageHeartRateBpm,
+      maximumHeartRateBpm: lap.maximumHeartRateBpm,
+      averageCadence: lap.averageCadence,
+      maximumCadence: lap.maximumCadence,
+      averageSpeed: lap.averageSpeed,
+      maximumSpeed: lap.maximumSpeed,
+      intensity: lap.intensity,
+      triggerMethod: lap.triggerMethod,
+    }));
+
     return {
       id: activity.id,
       name: activity.name,
@@ -71,10 +106,30 @@ export function useLocalStoragePersistence() {
       scale: activity.scale,
       color: activity.color,
       startTime: activity.startTime?.toISOString(),
+      calories: activity.calories,
+      sport: activity.sport,
+      laps: laps,
     };
   };
 
   const deserializeActivity = (stored: StoredActivity): Activity => {
+    const laps = stored.laps?.map((lap) => ({
+      startTime: new Date(lap.startTime),
+      startRecordIndex: lap.startRecordIndex,
+      endRecordIndex: lap.endRecordIndex,
+      totalTimeSeconds: lap.totalTimeSeconds,
+      distanceMeters: lap.distanceMeters,
+      calories: lap.calories,
+      averageHeartRateBpm: lap.averageHeartRateBpm,
+      maximumHeartRateBpm: lap.maximumHeartRateBpm,
+      averageCadence: lap.averageCadence,
+      maximumCadence: lap.maximumCadence,
+      averageSpeed: lap.averageSpeed,
+      maximumSpeed: lap.maximumSpeed,
+      intensity: lap.intensity,
+      triggerMethod: lap.triggerMethod,
+    }));
+    
     return {
       id: stored.id,
       name: stored.name,
@@ -84,6 +139,9 @@ export function useLocalStoragePersistence() {
       scale: stored.scale,
       color: stored.color,
       startTime: stored.startTime ? new Date(stored.startTime) : undefined,
+      calories: stored.calories,
+      sport: stored.sport,
+      laps: laps,
     };
   };
 
@@ -130,7 +188,10 @@ export function useLocalStoragePersistence() {
               activity.records,
               activity.name,
               activity.startTime,
-              activity.sourceType
+              activity.sourceType,
+              activity.calories,
+              activity.sport,
+              activity.laps
             );
             const lastIndex = activityStore.activities.length - 1;
             const addedActivity = activityStore.activities[lastIndex];

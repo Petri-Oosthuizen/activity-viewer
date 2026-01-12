@@ -13,6 +13,7 @@ export interface RawPoint {
   distanceMeters?: number;
   speed?: number; // Speed in m/s
   temp?: number; // Temperature in Celsius
+  additionalFields?: Record<string, number>;
 }
 
 function calculateElapsedTime(
@@ -104,6 +105,7 @@ function processPointsToRecords(
       pwr: point.pwr,
       speed: point.speed,
       temp: point.temp,
+      additionalFields: point.additionalFields && Object.keys(point.additionalFields).length > 0 ? point.additionalFields : undefined,
     };
 
     records.push(record);

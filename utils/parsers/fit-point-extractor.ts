@@ -154,6 +154,49 @@ export async function extractFITPoints(arrayBuffer: ArrayBuffer): Promise<{ poin
           const speed = record.speed ?? recordAny.speed ?? recordAny.velocity;
           const temp = record.temperature ?? recordAny.temperature ?? recordAny.temp;
 
+          const additionalFields: Record<string, number> = {};
+
+          // Running dynamics fields (in milliseconds, convert to seconds for consistency)
+          const stanceTime = recordAny.stance_time ?? recordAny.stanceTime;
+          if (stanceTime !== undefined && stanceTime !== null && Number.isFinite(stanceTime)) {
+            additionalFields["stance_time_ms"] = stanceTime;
+          }
+
+          // Vertical oscillation (in mm, keep as mm)
+          const verticalOscillation = recordAny.vertical_oscillation ?? recordAny.verticalOscillation;
+          if (verticalOscillation !== undefined && verticalOscillation !== null && Number.isFinite(verticalOscillation)) {
+            additionalFields["vertical_oscillation_mm"] = verticalOscillation;
+          }
+
+          // Step length (in mm, convert to cm for readability)
+          const stepLength = recordAny.step_length ?? recordAny.stepLength;
+          if (stepLength !== undefined && stepLength !== null && Number.isFinite(stepLength)) {
+            additionalFields["step_length_cm"] = stepLength / 10;
+          }
+
+          // Ground contact time balance (percentage)
+          const groundContactTimeBalance = recordAny.ground_contact_time_balance ?? recordAny.groundContactTimeBalance;
+          if (groundContactTimeBalance !== undefined && groundContactTimeBalance !== null && Number.isFinite(groundContactTimeBalance)) {
+            additionalFields["gct_balance"] = groundContactTimeBalance;
+          }
+
+          // Extract any other numeric fields that aren't already handled
+          const knownFields = new Set([
+            "timestamp", "position_lat", "position_long", "latitude", "longitude", "lat", "lon",
+            "positionLat", "positionLon", "altitude", "heart_rate", "power", "cadence",
+            "distance", "speed", "velocity", "temperature", "temp",
+            "stance_time", "stanceTime", "vertical_oscillation", "verticalOscillation",
+            "step_length", "stepLength", "ground_contact_time_balance", "groundContactTimeBalance",
+            "elapsed_time", "elapsedTime", "timer_time", "timerTime"
+          ]);
+
+          for (const [key, value] of Object.entries(recordAny)) {
+            if (knownFields.has(key)) continue;
+            if (typeof value === "number" && Number.isFinite(value) && value !== null && value !== undefined) {
+              additionalFields[key] = value;
+            }
+          }
+
           const point: RawPoint = {
             lat: normalized.lat,
             lon: normalized.lon,
@@ -165,6 +208,7 @@ export async function extractFITPoints(arrayBuffer: ArrayBuffer): Promise<{ poin
             distanceMeters: record.distance,
             speed: speed !== undefined && speed !== null && Number.isFinite(speed) && speed >= 0 ? speed : undefined,
             temp: temp !== undefined && temp !== null && Number.isFinite(temp) ? temp : undefined,
+            additionalFields: Object.keys(additionalFields).length > 0 ? additionalFields : undefined,
           };
 
           points.push(point);

@@ -22,4 +22,12 @@ export const METRIC_DESCRIPTIONS: Record<string, string> = {
   "Normalized Power": "Weighted average power that gives more weight to higher power outputs (cycling metric)",
   "12 Minute Power": "Best average power over a 12-minute segment",
   "20 Minute Power": "Best average power over a 20-minute segment",
+  "Stance Time": "Ground contact time per step in milliseconds (running metric)",
+  "Vertical Oscillation": "Vertical movement of torso during running in millimeters (running metric)",
+  "Step Length": "Distance covered per stride in centimeters (running metric)",
+  "GCT Balance": "Ground contact time balance between left and right foot as percentage",
+  "Satellites": "Number of GPS satellites used for position fix",
+  "HDOP": "Horizontal Dilution of Precision - GPS horizontal accuracy indicator (lower is better)",
+  "VDOP": "Vertical Dilution of Precision - GPS vertical accuracy indicator (lower is better)",
+  "Ambient Temperature": "Ambient/air temperature in degrees Celsius",
 };
