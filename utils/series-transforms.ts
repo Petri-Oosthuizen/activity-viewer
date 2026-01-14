@@ -34,10 +34,8 @@ function chartCacheKey(
 ): string {
   const start = activity.startTime ? activity.startTime.getTime() : 0;
   const t = transforms;
-  const smoothingKey =
-    metric === "pace" && t.paceSmoothing.enabled
-      ? `paceSm:${t.paceSmoothing.windowSeconds}`
-      : `sm:${t.smoothing.mode}:${t.smoothing.windowPoints}`;
+  // Note: Smoothing is now applied during data processing, so it's not part of the cache key
+  // The cache key only needs to track display-only transformations (cumulative)
   return [
     activity.id,
     metric,
@@ -45,8 +43,6 @@ function chartCacheKey(
     `off:${activity.offset}`,
     `scale:${activity.scale}`,
     `start:${start}`,
-    `out:${t.outliers.mode}:${t.outliers.maxPercentChange}`,
-    smoothingKey,
     `cum:${t.cumulative.mode}`,
   ].join("|");
 }
@@ -62,17 +58,8 @@ function pivotCacheKey(
     .sort()
     .join(",");
   const t = transforms;
-  const smoothingKey =
-    metric === "pace" && t.paceSmoothing.enabled
-      ? `paceSm:${t.paceSmoothing.windowSeconds}`
-      : `sm:${t.smoothing.mode}:${t.smoothing.windowPoints}`;
-  return [
-    ids,
-    metric,
-    `out:${t.outliers.mode}:${t.outliers.maxPercentChange}`,
-    smoothingKey,
-    `zones:${t.pivotZones.strategy}:${t.pivotZones.zoneCount}`,
-  ].join("|");
+  // Note: Smoothing is now applied during data processing, so it's not part of the cache key
+  return [ids, metric, `zones:${t.pivotZones.strategy}:${t.pivotZones.zoneCount}`].join("|");
 }
 
 function getMetricValue(
@@ -82,21 +69,40 @@ function getMetricValue(
   index?: number,
 ): NullableNumber {
   if (metric === "pace") {
+    // Prefer stored pace value if available (calculated during processing)
+    if (
+      record.pace !== undefined &&
+      record.pace !== null &&
+      record.pace > 0 &&
+      Number.isFinite(record.pace)
+    ) {
+      return record.pace;
+    }
+    // Fallback: calculate on-the-fly if not stored (for backward compatibility)
     // Prefer embedded speed if available (TCX/FIT files)
-    if (record.speed !== undefined && record.speed !== null && record.speed > 0 && Number.isFinite(record.speed)) {
-      // Convert speed (m/s) to pace (min/km)
-      // pace = (1000 meters / speed_mps) / 60 seconds = 1000 / (speed_mps * 60)
+    if (
+      record.speed !== undefined &&
+      record.speed !== null &&
+      record.speed > 0 &&
+      Number.isFinite(record.speed)
+    ) {
       const paceMinPerKm = 1000 / (record.speed * 60);
       return Number.isFinite(paceMinPerKm) && paceMinPerKm > 0 ? paceMinPerKm : null;
     }
     // For GPX files: calculate speed directly from GPS coordinates with filtering
     if (activity && index !== undefined && index > 0) {
       const prev = activity.records[index - 1];
-      if (prev && record.lat !== undefined && record.lon !== undefined && prev.lat !== undefined && prev.lon !== undefined) {
+      if (
+        prev &&
+        record.lat !== undefined &&
+        record.lon !== undefined &&
+        prev.lat !== undefined &&
+        prev.lon !== undefined
+      ) {
         const speed = calculateGpsSpeed(
           { lat: prev.lat, lon: prev.lon, t: prev.t, alt: prev.alt },
           { lat: record.lat, lon: record.lon, t: record.t, alt: record.alt },
-          DEFAULT_GPS_DISTANCE_OPTIONS
+          DEFAULT_GPS_DISTANCE_OPTIONS,
         );
         if (speed !== null && speed > 0 && Number.isFinite(speed)) {
           const paceMinPerKm = 1000 / (speed * 60);
@@ -111,62 +117,25 @@ function getMetricValue(
     const dt = record.t - prev.t;
     const dd = record.d - prev.d;
     if (dt <= 0 || dd <= 0) return null;
-    const paceMinPerKm = (dt / 60) / (dd / 1000);
+    const paceMinPerKm = dt / 60 / (dd / 1000);
     return Number.isFinite(paceMinPerKm) && paceMinPerKm > 0 ? paceMinPerKm : null;
   }
   const value = record[metric];
   return value === undefined || value === null ? null : value;
 }
 
-function applyOutlierHandling(
-  values: NullableNumber[],
-  settings: ChartTransformSettings["outliers"],
-): NullableNumber[] {
-  if (settings.mode === "off") return values;
+// Note: applyOutlierHandling is no longer used here as outliers are handled during data processing
+// Keeping the function for potential future use or backward compatibility
 
-  const maxPercent = Math.max(0, settings.maxPercentChange);
-  const next = values.slice();
-
-  let prev: number | null = null;
-  for (let i = 0; i < next.length; i++) {
-    const current = next[i];
-    if (current === null || current === undefined) continue;
-
-    if (prev === null) {
-      prev = current;
-      continue;
-    }
-
-    const delta = current - prev;
-    const denom = Math.max(Math.abs(prev), Math.abs(current), 1);
-    const pct = (Math.abs(delta) / denom) * 100;
-
-    if (pct <= maxPercent) {
-      prev = current;
-      continue;
-    }
-
-    if (settings.mode === "drop") {
-      next[i] = null;
-      continue;
-    }
-
-    // clamp
-    const allowedDelta = (maxPercent / 100) * denom;
-    const clamped: number = prev + Math.sign(delta) * allowedDelta;
-    next[i] = clamped;
-    prev = clamped;
-  }
-
-  return next;
-}
-
-function clampWindowPoints(windowPoints: number): number {
+export function clampWindowPoints(windowPoints: number): number {
   if (!Number.isFinite(windowPoints)) return 1;
   return Math.max(1, Math.floor(windowPoints));
 }
 
-function smoothMovingAverage(values: NullableNumber[], windowPoints: number): NullableNumber[] {
+export function smoothMovingAverage(
+  values: NullableNumber[],
+  windowPoints: number,
+): NullableNumber[] {
   const w = clampWindowPoints(windowPoints);
   if (w <= 1) return values;
 
@@ -192,7 +161,7 @@ function smoothMovingAverage(values: NullableNumber[], windowPoints: number): Nu
   return next;
 }
 
-function smoothEma(values: NullableNumber[], windowPoints: number): NullableNumber[] {
+export function smoothEma(values: NullableNumber[], windowPoints: number): NullableNumber[] {
   const w = clampWindowPoints(windowPoints);
   if (w <= 1) return values;
 
@@ -220,14 +189,8 @@ function smoothEma(values: NullableNumber[], windowPoints: number): NullableNumb
   return next;
 }
 
-function applySmoothing(
-  values: NullableNumber[],
-  settings: ChartTransformSettings["smoothing"],
-): NullableNumber[] {
-  if (settings.mode === "off") return values;
-  if (settings.mode === "movingAverage") return smoothMovingAverage(values, settings.windowPoints);
-  return smoothEma(values, settings.windowPoints);
-}
+// Note: applySmoothing is no longer used here as smoothing is handled during data processing
+// The smoothMovingAverage and smoothEma functions are exported for use in activity-processor.ts
 
 function applyCumulative(
   values: NullableNumber[],
@@ -277,28 +240,14 @@ export function buildTransformedChartData(
   const x = activity.records.map((r) => calculateXValue(r, activity, xAxisType));
   const yRaw = activity.records.map((r, i) => getMetricValue(r, metric, activity, i));
 
-  const yNoOutliers = applyOutlierHandling(yRaw, transforms.outliers);
-  
-  let smoothingSettings: ChartTransformSettings["smoothing"];
-  if (metric === "pace" && transforms.paceSmoothing.enabled) {
-    const avgInterval = calculateAverageTimeInterval(activity.records);
-    const windowPoints = Math.max(1, Math.round(transforms.paceSmoothing.windowSeconds / avgInterval));
-    smoothingSettings = {
-      mode: "movingAverage",
-      windowPoints,
-    };
-  } else {
-    smoothingSettings = transforms.smoothing;
-  }
-  
-  const ySmoothed = applySmoothing(yNoOutliers, smoothingSettings);
-  const yCumulative = applyCumulative(ySmoothed, transforms.cumulative.mode);
+  // Note: Outlier handling and smoothing are now applied during data processing,
+  // so the records already contain processed values. We only apply cumulative here
+  // as it's a display-only transformation.
+  const yCumulative = applyCumulative(yRaw, transforms.cumulative.mode);
 
   const scale = Number.isFinite(activity.scale) ? activity.scale : 1;
   const yScaled =
-    scale === 1
-      ? yCumulative
-      : yCumulative.map((v) => (v === null ? null : v * scale));
+    scale === 1 ? yCumulative : yCumulative.map((v) => (v === null ? null : v * scale));
 
   const result = x.map((xVal, i): ChartDataPoint => [xVal, yScaled[i] ?? null]);
   chartDataCache.set(key, result);
@@ -311,20 +260,25 @@ export interface PivotZoneResult {
   bucketLabels?: string[];
 }
 
-function calculateNiceBucketSize(range: number, zoneCount: number, min: number, max: number): number {
+function calculateNiceBucketSize(
+  range: number,
+  zoneCount: number,
+  min: number,
+  max: number,
+): number {
   const rawStep = range / zoneCount;
   const orderOfMagnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
   const normalized = rawStep / orderOfMagnitude;
-  
+
   let niceStep;
   if (normalized <= 1) niceStep = 1 * orderOfMagnitude;
   else if (normalized <= 2) niceStep = 2 * orderOfMagnitude;
   else if (normalized <= 5) niceStep = 5 * orderOfMagnitude;
   else niceStep = 10 * orderOfMagnitude;
-  
-  const candidates = [10, 5, 2, 1].map(mult => mult * orderOfMagnitude);
+
+  const candidates = [10, 5, 2, 1].map((mult) => mult * orderOfMagnitude);
   const startIndex = candidates.indexOf(niceStep);
-  
+
   for (let i = Math.max(0, startIndex); i < candidates.length; i++) {
     const candidate = candidates[i];
     if (candidate === undefined) continue;
@@ -332,12 +286,12 @@ function calculateNiceBucketSize(range: number, zoneCount: number, min: number, 
     const endValue = Math.ceil(max / candidate) * candidate;
     const adjustedRange = endValue - startValue;
     const adjustedStep = adjustedRange / zoneCount;
-    
+
     if (Number.isInteger(adjustedStep)) {
       return candidate;
     }
   }
-  
+
   return niceStep;
 }
 
@@ -385,7 +339,10 @@ export function buildPivotZones(
   let smoothingSettings: ChartTransformSettings["smoothing"];
   if (metric === "pace" && transforms.paceSmoothing.enabled) {
     const avgInterval = calculateAverageTimeInterval(activity.records);
-    const windowPoints = Math.max(1, Math.round(transforms.paceSmoothing.windowSeconds / avgInterval));
+    const windowPoints = Math.max(
+      1,
+      Math.round(transforms.paceSmoothing.windowSeconds / avgInterval),
+    );
     smoothingSettings = {
       mode: "movingAverage",
       windowPoints,
@@ -395,10 +352,9 @@ export function buildPivotZones(
   }
 
   // We pivot by elapsed time between points.
-  const values = applySmoothing(
-    applyOutlierHandling(activity.records.map((r, i) => getMetricValue(r, metric, activity, i)), transforms.outliers),
-    smoothingSettings,
-  );
+  // Note: Smoothing and outlier handling are now applied during data processing,
+  // so we can directly use the metric values from records
+  const values = activity.records.map((r, i) => getMetricValue(r, metric, activity, i));
 
   // Build segment durations (seconds) and associate with "current" value.
   const segments: Array<{ v: number; dt: number }> = [];
@@ -418,7 +374,14 @@ export function buildPivotZones(
   const numeric = segments.map((s) => s.v).sort((a, b) => a - b);
   const min = numeric[0];
   const max = numeric[numeric.length - 1];
-  if (min === undefined || max === undefined || !Number.isFinite(min) || !Number.isFinite(max) || min === max) return null;
+  if (
+    min === undefined ||
+    max === undefined ||
+    !Number.isFinite(min) ||
+    !Number.isFinite(max) ||
+    min === max
+  )
+    return null;
 
   const edges: number[] = [];
   if (transforms.pivotZones.strategy === "equalRange") {
@@ -488,22 +451,9 @@ export function buildPivotZonesForActivities(
   const allValues: number[] = [];
 
   for (const activity of activities) {
-    let smoothingSettings: ChartTransformSettings["smoothing"];
-    if (metric === "pace" && transforms.paceSmoothing.enabled) {
-      const avgInterval = calculateAverageTimeInterval(activity.records);
-      const windowPoints = Math.max(1, Math.round(transforms.paceSmoothing.windowSeconds / avgInterval));
-      smoothingSettings = {
-        mode: "movingAverage",
-        windowPoints,
-      };
-    } else {
-      smoothingSettings = transforms.smoothing;
-    }
-
-    const values = applySmoothing(
-      applyOutlierHandling(activity.records.map((r, i) => getMetricValue(r, metric, activity, i)), transforms.outliers),
-      smoothingSettings,
-    );
+    // Note: Smoothing and outlier handling are now applied during data processing,
+    // so we can directly use the metric values from records
+    const values = activity.records.map((r, i) => getMetricValue(r, metric, activity, i));
 
     const segments: Array<{ v: number; dt: number }> = [];
     for (let i = 0; i < activity.records.length - 1; i++) {
@@ -531,7 +481,13 @@ export function buildPivotZonesForActivities(
   const numeric = allValues.sort((a, b) => a - b);
   const min = numeric[0];
   const max = numeric[numeric.length - 1];
-  if (min === undefined || max === undefined || !Number.isFinite(min) || !Number.isFinite(max) || min === max) {
+  if (
+    min === undefined ||
+    max === undefined ||
+    !Number.isFinite(min) ||
+    !Number.isFinite(max) ||
+    min === max
+  ) {
     pivotZonesCache.set(key, null);
     return null;
   }
@@ -600,4 +556,3 @@ export function smoothGpsPoints(
     lon: lonSm[i] ?? p.lon,
   }));
 }
-

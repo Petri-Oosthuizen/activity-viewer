@@ -1,13 +1,11 @@
 <template>
   <div class="flex h-full w-full flex-col rounded-lg bg-white p-4 shadow-xs sm:p-6">
     <div class="shrink-0">
-      <h3 class="m-0 mb-3 text-base font-semibold text-gray-800 sm:mb-4 sm:text-lg">
-        Activity Chart
-      </h3>
+      <h3 class="m-0 text-base font-semibold text-gray-800 sm:text-lg">Activity Chart</h3>
     </div>
 
     <!-- Chart Container -->
-    <div v-if="hasChartData" class="mt-4 w-full flex-1 overflow-visible sm:mt-6">
+    <div v-if="hasChartData" class="mt-2 w-full flex-1 overflow-visible sm:mt-3">
       <div class="flex items-center">
         <!-- Y Axis Label (left side, rotated 180 degrees) -->
         <div
@@ -34,96 +32,100 @@
       <!-- Toolbar (below chart) -->
       <div
         v-if="chartTransforms.viewMode !== 'pivotZones'"
-        class="mt-3 inline-flex flex-wrap items-center gap-1 rounded-md border border-gray-200 bg-gray-50 p-1 sm:mt-4"
+        class="mt-3 inline-flex flex-wrap items-center gap-4 rounded-md border border-gray-200 bg-gray-50 p-1 sm:mt-4"
       >
-        <button
-          type="button"
-          :class="[BUTTON_CLASSES.icon, 'h-11 gap-1.5 px-3 sm:h-9 sm:gap-1 sm:px-2']"
-          @click="zoomIn"
-          title="Zoom In"
-          aria-label="Zoom In"
-        >
-          <span class="text-lg leading-none sm:text-base">+</span>
-          <span class="text-xs sm:text-sm">Zoom In</span>
-        </button>
-        <button
-          type="button"
-          :class="[BUTTON_CLASSES.icon, 'h-11 gap-1.5 px-3 sm:h-9 sm:gap-1 sm:px-2']"
-          @click="zoomOut"
-          title="Zoom Out"
-          aria-label="Zoom Out"
-        >
-          <span class="text-lg leading-none sm:text-base">−</span>
-          <span class="text-xs sm:text-sm">Zoom Out</span>
-        </button>
-        <button
-          type="button"
-          :class="[BUTTON_CLASSES.icon, 'h-11 gap-1.5 px-3 sm:h-9 sm:gap-1 sm:px-2']"
-          @click="resetZoom"
-          title="Reset Zoom"
-          aria-label="Reset Zoom"
-        >
-          <svg
-            class="h-4 w-4 sm:h-3.5 sm:w-3.5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        <div class="inline-flex items-center gap-1">
+          <button
+            type="button"
+            :class="[BUTTON_CLASSES.icon, 'h-11 gap-1.5 px-3 sm:h-9 sm:gap-1 sm:px-2']"
+            @click="zoomInHandler"
+            title="Zoom In"
+            aria-label="Zoom In"
           >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-            />
-          </svg>
-          <span class="text-xs sm:text-sm">Reset Zoom</span>
-        </button>
-        <button
-          type="button"
-          :class="[BUTTON_CLASSES.icon, 'ml-2 h-11 px-3 sm:h-9 sm:px-2']"
-          @click="panLeft"
-          title="Pan Left"
-          aria-label="Pan Left"
-        >
-          <svg
-            class="h-4 w-4 sm:h-3.5 sm:w-3.5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+            <span class="text-lg leading-none sm:text-base">+</span>
+            <span class="text-xs sm:text-sm">Zoom In</span>
+          </button>
+          <button
+            type="button"
+            :class="[BUTTON_CLASSES.icon, 'h-11 gap-1.5 px-3 sm:h-9 sm:gap-1 sm:px-2']"
+            @click="zoomOutHandler"
+            title="Zoom Out"
+            aria-label="Zoom Out"
           >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-          <span class="text-xs sm:text-sm">Pan Left</span>
-        </button>
-        <button
-          type="button"
-          :class="[BUTTON_CLASSES.icon, 'h-11 gap-1.5 px-3 sm:h-9 sm:gap-1 sm:px-2']"
-          @click="panRight"
-          title="Pan Right"
-          aria-label="Pan Right"
-        >
-          <svg
-            class="h-4 w-4 sm:h-3.5 sm:w-3.5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+            <span class="text-lg leading-none sm:text-base">−</span>
+            <span class="text-xs sm:text-sm">Zoom Out</span>
+          </button>
+          <button
+            type="button"
+            :class="[BUTTON_CLASSES.icon, 'h-11 gap-1.5 px-3 sm:h-9 sm:gap-1 sm:px-2']"
+            @click="resetZoomHandler"
+            title="Reset Zoom"
+            aria-label="Reset Zoom"
           >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
-          <span class="text-xs sm:text-sm">Pan Right</span>
-        </button>
+            <svg
+              class="h-4 w-4 sm:h-3.5 sm:w-3.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+            <span class="text-xs sm:text-sm">Reset Zoom</span>
+          </button>
+        </div>
+        <div class="inline-flex items-center gap-1">
+          <button
+            type="button"
+            :class="[BUTTON_CLASSES.icon, 'h-11 px-3 sm:h-9 sm:px-2']"
+            @click="panLeft"
+            title="Pan Left"
+            aria-label="Pan Left"
+          >
+            <svg
+              class="h-4 w-4 sm:h-3.5 sm:w-3.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+            <span class="text-xs sm:text-sm">Pan Left</span>
+          </button>
+          <button
+            type="button"
+            :class="[BUTTON_CLASSES.icon, 'h-11 gap-1.5 px-3 sm:h-9 sm:gap-1 sm:px-2']"
+            @click="panRight"
+            title="Pan Right"
+            aria-label="Pan Right"
+          >
+            <svg
+              class="h-4 w-4 sm:h-3.5 sm:w-3.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
+            <span class="text-xs sm:text-sm">Pan Right</span>
+          </button>
+        </div>
         <label
-          class="ml-2 inline-flex h-11 items-center gap-2 rounded-md border-2 border-gray-300 bg-white px-3 text-[10px] text-gray-700 select-none sm:h-9 sm:text-xs"
+          class="inline-flex h-11 items-center gap-2 rounded-md border-2 border-gray-300 bg-white px-3 text-[10px] text-gray-700 select-none sm:h-9 sm:text-xs"
           title="When enabled, Y rescales to the visible X window"
         >
           <input
@@ -160,9 +162,50 @@
       />
     </div>
 
-    <!-- Advanced Settings (directly below metric selector) -->
-    <div class="mt-4 sm:mt-6">
-      <ChartAdvancedSettings />
+    <!-- View Mode (below metric selector) -->
+    <div v-if="activities.length > 0" class="mt-4 sm:mt-6">
+      <div>
+        <h4 class="m-0 mb-2 text-sm font-semibold text-gray-800 sm:text-base">Graph Mode</h4>
+        <div
+          class="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white p-0.5"
+        >
+          <button
+            type="button"
+            class="rounded-sm px-2.5 py-1 text-xs font-medium transition-all sm:px-3 sm:py-1.5 sm:text-sm"
+            :class="
+              chartTransforms.viewMode === 'timeseries'
+                ? 'bg-primary text-white'
+                : 'text-gray-600 active:bg-gray-50 sm:hover:bg-gray-50'
+            "
+            @click="setViewMode('timeseries')"
+            aria-label="Time series view"
+            :aria-pressed="chartTransforms.viewMode === 'timeseries'"
+          >
+            Time series
+          </button>
+          <button
+            type="button"
+            class="rounded-sm px-2.5 py-1 text-xs font-medium transition-all sm:px-3 sm:py-1.5 sm:text-sm"
+            :class="
+              chartTransforms.viewMode === 'pivotZones'
+                ? 'bg-primary text-white'
+                : 'text-gray-600 active:bg-gray-50 sm:hover:bg-gray-50'
+            "
+            @click="setViewMode('pivotZones')"
+            aria-label="Distribution view"
+            :aria-pressed="chartTransforms.viewMode === 'pivotZones'"
+          >
+            Distribution
+          </button>
+        </div>
+        <p class="mt-2 text-xs text-gray-500 sm:text-sm">
+          {{
+            chartTransforms.viewMode === "timeseries"
+              ? "Plot metric values along the activity (time, distance, or local time)."
+              : "Shows percentage of time spent in each value range (bucket) of the selected metric. Value ranges are divided into equal-size buckets starting from round numbers."
+          }}
+        </p>
+      </div>
     </div>
   </div>
 </template>
@@ -170,9 +213,15 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, nextTick, computed } from "vue";
 import { useDebounceFn } from "@vueuse/core";
-import { useActivityStore } from "~/stores/activity";
+import { storeToRefs } from "pinia";
+import { useChartSeriesStore } from "~/stores/chartSeries";
+import { useChartOptionsStore } from "~/stores/chartOptions";
+import { useActivitySettingsStore } from "~/stores/activitySettings";
+import { useWindowActivityStore } from "~/stores/windowActivity";
+import { useUIStore } from "~/stores/ui";
+import { useActivityList } from "~/composables/useActivityList";
 import type { MetricType } from "~/utils/chart-config";
-import { METRIC_LABELS } from "~/utils/chart-config";
+import { METRIC_LABELS, getMetricAvailability } from "~/utils/chart-config";
 import { BUTTON_CLASSES } from "~/constants/ui";
 import type { EChartsOption } from "echarts";
 import {
@@ -180,25 +229,40 @@ import {
   findNearestIndexLinear,
   getActivityXValues,
 } from "~/utils/activity-xvalues";
+import { DEFAULT_CHART_TRANSFORM_SETTINGS } from "~/utils/chart-settings";
 
 import { useECharts } from "~/composables/useECharts";
 import MetricSelector from "./MetricSelector.vue";
-import ChartAdvancedSettings from "./ChartAdvancedSettings.vue";
 import FileNameDisplay from "./FileNameDisplay.vue";
+import type { ChartViewMode } from "~/utils/chart-settings";
 
 const chartContainer = ref<HTMLDivElement | null>(null);
-const activityStore = useActivityStore();
 
-const chartOption = computed(() => activityStore.chartOption as EChartsOption);
+const chartSeriesStore = useChartSeriesStore();
+const chartOptionsStore = useChartOptionsStore();
+const settingsStore = useActivitySettingsStore();
+const windowStore = useWindowActivityStore();
+const uiStore = useUIStore();
+const { activities: processedActivities } = useActivityList();
+
+const { chartOption, transformationSettings } = storeToRefs(chartSeriesStore);
+const { selectedMetrics, xAxisType, viewMode, metricSelectionMode, availableMetrics } =
+  storeToRefs(chartOptionsStore);
+const { disabledActivities, deltaSettings } = storeToRefs(settingsStore);
+const { chartWindow } = storeToRefs(windowStore);
+const { mapHoveredPoint, resetZoomTrigger, zoomInTrigger, zoomOutTrigger, chartMapSideBySide } =
+  storeToRefs(uiStore);
+
+const chartOptionECharts = computed(() => chartOption.value as EChartsOption);
 
 const { chartInstance, initChart, updateChart, handleResize } = useECharts(
   chartContainer,
-  chartOption,
+  chartOptionECharts,
 );
 
 // Computed properties for settings
 const activities = computed(() =>
-  activityStore.activities.map((a) => ({
+  processedActivities.value.map((a) => ({
     id: a.id,
     name: a.name,
     color: a.color,
@@ -206,16 +270,22 @@ const activities = computed(() =>
     activity: a, // Pass full activity for metric-specific counting
   })),
 );
-const selectedMetric = computed(() => activityStore.selectedMetric);
-const selectedMetrics = computed(() => activityStore.selectedMetrics);
-const metricAvailability = computed(() => activityStore.metricAvailability);
-const availableMetrics = computed(() => activityStore.availableMetrics);
-const hasChartData = computed(() => activityStore.chartSeries.length > 0);
-const metricSelectionMode = computed(() => activityStore.metricSelectionMode);
-const chartTransforms = computed(() => activityStore.chartTransforms);
-const xAxisType = computed(() => activityStore.xAxisType);
-const showDelta = computed(() => activityStore.showDelta);
-const deltaMode = computed(() => activityStore.deltaMode);
+const selectedMetric = computed(() => selectedMetrics.value[0] ?? "hr");
+const metricAvailability = computed(() => getMetricAvailability(processedActivities.value));
+const hasChartData = computed(() => chartSeriesStore.chartSeries.length > 0);
+
+const chartTransforms = computed(() => ({
+  viewMode: viewMode.value,
+  outliers: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.outliers },
+  smoothing: transformationSettings.value.smoothing,
+  gpsSmoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.gpsSmoothing },
+  paceSmoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.paceSmoothing },
+  cumulative: transformationSettings.value.cumulative,
+  pivotZones: transformationSettings.value.pivotZones,
+}));
+
+const showDelta = computed(() => deltaSettings.value.enabled);
+const deltaMode = computed(() => deltaSettings.value.mode);
 
 const xAxisLabel = computed(() => {
   if (chartTransforms.value.viewMode === "pivotZones") {
@@ -236,7 +306,7 @@ const yAxisLabel = computed(() => {
     return "Time (%)";
   }
   const metrics = selectedMetrics.value.length > 0 ? selectedMetrics.value : ["hr" as MetricType];
-  const hasActivities = activityStore.activities.length >= 2;
+  const hasActivities = processedActivities.value.length >= 2;
 
   if (showDelta.value && deltaMode.value === "delta-only" && hasActivities) {
     const label = METRIC_LABELS[selectedMetric.value];
@@ -255,16 +325,20 @@ const yAxisLabel = computed(() => {
 });
 
 const activeActivitiesForLegend = computed(() =>
-  activities.value.filter((a) => !activityStore.isActivityDisabled(a.id)),
+  activities.value.filter((a) => !disabledActivities.value.has(a.id)),
 );
 
 // Settings handlers
 const setMetric = (metric: MetricType) => {
-  activityStore.setMetric(metric);
+  chartOptionsStore.setSelectedMetrics([metric]);
 };
 
 const toggleMetric = (metric: MetricType) => {
-  activityStore.toggleMetric(metric);
+  chartOptionsStore.toggleMetric(metric);
+};
+
+const setViewMode = (mode: ChartViewMode) => {
+  chartOptionsStore.setViewMode(mode);
 };
 
 let chartHoverCleanup: (() => void) | null = null;
@@ -273,11 +347,11 @@ const autoFitYEnabled = ref(true);
 
 // Watch activities to reload chart when activities are added/removed
 watch(
-  () => activityStore.activities,
+  () => processedActivities.value,
   async () => {
     await nextTick();
     if (chartInstance.value) {
-      const option = activityStore.chartOption as EChartsOption;
+      const option = chartOptionECharts.value;
       chartInstance.value.setOption(option, {
         notMerge: false,
         replaceMerge: ["series", "yAxis", "legend"],
@@ -287,19 +361,19 @@ watch(
 );
 
 watch(
-  () => activityStore.xAxisType,
+  () => xAxisType.value,
   () => {
     updateChart();
   },
 );
 
 watch(
-  () => activityStore.disabledActivities,
+  () => disabledActivities.value,
   () => {
     // Replace series completely when activities are enabled/disabled
     // Use notMerge: false with replaceMerge to preserve tooltip and other config
     if (chartInstance.value) {
-      const option = activityStore.chartOption as EChartsOption;
+      const option = chartOptionECharts.value;
       // Set the full option to ensure tooltip is preserved
       chartInstance.value.setOption(option, {
         notMerge: false,
@@ -307,33 +381,38 @@ watch(
       });
     }
   },
+  { deep: true },
 );
 
 watch(
-  () => activityStore.selectedMetrics,
+  () => selectedMetrics.value,
   async () => {
     // Fully update chart when metrics change to show multiple Y-axes
     // Need to replace both series and yAxis to properly display multiple metrics
     if (chartInstance.value) {
-      const option = activityStore.chartOption as EChartsOption;
+      const option = chartOptionECharts.value;
       // Use replaceMerge to replace series and yAxis while preserving tooltip and other config
       chartInstance.value.setOption(option, {
         notMerge: false,
         replaceMerge: ["series", "yAxis", "legend", "xAxis"],
       });
       await nextTick();
+      // Auto-fit Y-axis to the new metric's data range
+      if (autoFitYEnabled.value) {
+        debouncedApplyAutoYFit();
+      }
     }
   },
   { deep: true },
 );
 
 watch(
-  () => activityStore.showDelta,
+  () => deltaSettings.value.enabled,
   () => {
     // Replace series completely when delta is toggled to avoid stale series
     // Use notMerge: false with replaceMerge to preserve tooltip and other config
     if (chartInstance.value) {
-      const option = activityStore.chartOption as EChartsOption;
+      const option = chartOptionECharts.value;
       chartInstance.value.setOption(option, {
         notMerge: false,
         replaceMerge: ["series"],
@@ -343,12 +422,12 @@ watch(
 );
 
 watch(
-  () => activityStore.deltaMode,
+  () => deltaSettings.value.mode,
   () => {
     // Replace series completely when delta mode changes
     // Use notMerge: false with replaceMerge to preserve tooltip and other config
     if (chartInstance.value) {
-      const option = activityStore.chartOption as EChartsOption;
+      const option = chartOptionECharts.value;
       chartInstance.value.setOption(option, {
         notMerge: false,
         replaceMerge: ["series"],
@@ -358,12 +437,12 @@ watch(
 );
 
 watch(
-  () => activityStore.deltaBaseActivityId,
+  () => deltaSettings.value.baseActivityId,
   () => {
     // Replace series completely when delta base activity changes
     // Use notMerge: false with replaceMerge to preserve tooltip and other config
     if (chartInstance.value) {
-      const option = activityStore.chartOption as EChartsOption;
+      const option = chartOptionECharts.value;
       chartInstance.value.setOption(option, {
         notMerge: false,
         replaceMerge: ["series"],
@@ -373,12 +452,12 @@ watch(
 );
 
 watch(
-  () => activityStore.deltaCompareActivityId,
+  () => deltaSettings.value.compareActivityId,
   () => {
     // Replace series completely when delta compare activity changes
     // Use notMerge: false with replaceMerge to preserve tooltip and other config
     if (chartInstance.value) {
-      const option = activityStore.chartOption as EChartsOption;
+      const option = chartOptionECharts.value;
       chartInstance.value.setOption(option, {
         notMerge: false,
         replaceMerge: ["series"],
@@ -388,12 +467,12 @@ watch(
 );
 
 watch(
-  () => activityStore.chartTransforms,
+  () => [viewMode.value, transformationSettings.value],
   async () => {
     // Replace series completely when chart transforms change (outliers, smoothing, cumulative, etc.)
     // Use notMerge: false with replaceMerge to preserve tooltip and other config
     if (chartInstance.value) {
-      const option = activityStore.chartOption as EChartsOption;
+      const option = chartOptionECharts.value;
       chartInstance.value.setOption(option, {
         notMerge: false,
         replaceMerge: ["series", "yAxis", "legend", "xAxis"],
@@ -583,7 +662,7 @@ const toggleAutoFitY = (event: Event) => {
 };
 
 watch(
-  () => activityStore.resetZoomTrigger,
+  () => resetZoomTrigger.value,
   () => {
     if (!chartInstance.value) return;
 
@@ -603,29 +682,29 @@ watch(
 );
 
 watch(
-  () => activityStore.zoomInTrigger,
+  () => zoomInTrigger.value,
   () => {
     performZoom(0.8);
   },
 );
 
 watch(
-  () => activityStore.zoomOutTrigger,
+  () => zoomOutTrigger.value,
   () => {
     performZoom(1.25);
   },
 );
 
-const resetZoom = () => {
-  activityStore.resetZoom();
+const resetZoomHandler = () => {
+  uiStore.resetZoom();
 };
 
-const zoomIn = () => {
-  activityStore.zoomIn();
+const zoomInHandler = () => {
+  uiStore.zoomIn();
 };
 
-const zoomOut = () => {
-  activityStore.zoomOut();
+const zoomOutHandler = () => {
+  uiStore.zoomOut();
 };
 
 const panLeft = () => panXAxisWindow(-1);
@@ -667,26 +746,26 @@ watch(
           const seriesOpt = seriesOptions[seriesIndex];
           const activityId: string | undefined = seriesOpt?.activityId;
           if (!activityId) continue;
-          if (activityStore.isActivityDisabled(activityId)) continue;
+          if (disabledActivities.value.has(activityId)) continue;
 
-          const activity = activityStore.activities.find((a) => a.id === activityId);
+          const activity = processedActivities.value.find((a) => a.id === activityId);
           const record = activity?.records[dataIndex];
           if (!record) continue;
           if (record.lat === undefined || record.lon === undefined) continue;
 
-          activityStore.setChartHoverPoint({ activityId, recordIndex: dataIndex });
+          uiStore.setChartHoverPoint({ activityId, recordIndex: dataIndex });
           return;
         }
       }
 
       // Fallback: if ECharts doesn't provide usable indices, resolve by nearest X.
       if (typeof axisValue !== "number") return;
-      const xAxisType = activityStore.xAxisType;
+      const currentXAxisType = xAxisType.value;
 
-      for (const activity of activityStore.activities) {
-        if (activityStore.isActivityDisabled(activity.id)) continue;
+      for (const activity of processedActivities.value) {
+        if (disabledActivities.value.has(activity.id)) continue;
 
-        const cached = getActivityXValues(activity as any, xAxisType as any);
+        const cached = getActivityXValues(activity as any, currentXAxisType as any);
         const idx = cached.isMonotonic
           ? findNearestIndex(cached.values, axisValue)
           : findNearestIndexLinear(cached.values, axisValue);
@@ -696,13 +775,13 @@ watch(
         if (!record) continue;
         if (record.lat === undefined || record.lon === undefined) continue;
 
-        activityStore.setChartHoverPoint({ activityId: activity.id, recordIndex: idx });
+        uiStore.setChartHoverPoint({ activityId: activity.id, recordIndex: idx });
         return;
       }
     };
 
     const handleChartLeave = () => {
-      activityStore.clearChartHoverPoint();
+      uiStore.clearChartHoverPoint();
     };
 
     // updateAxisPointer fires when axis pointer moves (works with trigger: "axis")
@@ -728,7 +807,7 @@ watch(
       const yStart = typeof yZoom?.start === "number" ? yZoom.start : 0;
       const yEnd = typeof yZoom?.end === "number" ? yZoom.end : 100;
 
-      activityStore.setChartWindow({
+      windowStore.setChartWindow({
         xStartPercent: xStart,
         xEndPercent: xEnd,
         yStartPercent: yStart,
@@ -753,7 +832,6 @@ watch(
 );
 
 // Watch for map hover to highlight point on chart
-const mapHoveredPoint = computed(() => activityStore.mapHoveredPoint);
 watch(mapHoveredPoint, (point) => {
   if (!chartInstance.value || !point) {
     // Clear highlight when no map hover
@@ -783,7 +861,7 @@ watch(mapHoveredPoint, (point) => {
   }
 
   // Prefer showing tooltip on the currently selected primary metric series (if present)
-  const preferredMetric = activityStore.selectedMetric;
+  const preferredMetric = selectedMetric.value;
   const preferredSeriesIndex =
     matchingSeriesIndices.find((i) => seriesOptions[i]?.metric === preferredMetric) ??
     matchingSeriesIndices[0];
@@ -798,7 +876,7 @@ watch(mapHoveredPoint, (point) => {
 // Watch for layout changes to trigger resize and reload (optimized for speed)
 let layoutResizeTimer: ReturnType<typeof setTimeout> | null = null;
 watch(
-  () => activityStore.chartMapSideBySide,
+  () => chartMapSideBySide.value,
   async () => {
     // Wait for DOM to update
     await nextTick();

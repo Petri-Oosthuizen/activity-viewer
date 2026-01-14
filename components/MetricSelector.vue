@@ -1,11 +1,8 @@
 <template>
   <div class="flex-1">
     <h3 class="m-0 mb-2 text-sm font-semibold text-gray-800 sm:mb-3 sm:text-base">Metrics</h3>
-    <div
-      v-if="availableMetrics.length > 0"
-      class="rounded-md border-2 border-gray-200 bg-gray-50 p-3 sm:p-4"
-    >
-      <div class="flex flex-col gap-2 sm:gap-2">
+    <template v-if="availableMetrics.length > 0">
+      <div class="flex flex-col gap-2 sm:gap-2 md:grid md:grid-cols-2 lg:grid-cols-3">
         <label
           v-for="metric in availableMetrics"
           :key="metric.value"
@@ -63,25 +60,20 @@
       <p class="mt-2 text-[10px] text-gray-500 sm:mt-3 sm:text-xs">
         {{ isMultiSelect ? 'Select multiple metrics to overlay.' : 'Select one metric to display.' }} Colored dots show which activities have data.
       </p>
-    </div>
-    <div
-      v-else-if="hasActivities"
-      class="rounded-md border-2 border-gray-200 bg-gray-50 p-4 text-center text-sm text-gray-400"
-    >
-      <p>No metrics available in loaded activities.</p>
-    </div>
-    <div
-      v-else
-      class="rounded-md border-2 border-gray-200 bg-gray-50 p-4 text-center text-sm text-gray-400"
-    >
-      <p>Upload activity files to see available metrics.</p>
-    </div>
+    </template>
+    <template v-else-if="hasActivities">
+      <p class="text-center text-sm text-gray-400">No metrics available in loaded activities.</p>
+    </template>
+    <template v-else>
+      <p class="text-center text-sm text-gray-400">Upload activity files to see available metrics.</p>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from "vue";
 import type { MetricType } from "~/utils/chart-config";
+import { METRIC_ORDER } from "~/utils/chart-config";
 import type { Activity } from "~/types/activity";
 import { METRIC_CONFIG } from "~/constants/ui";
 
@@ -118,48 +110,32 @@ const emit = defineEmits<{
   toggle: [metric: MetricType];
 }>();
 
-const allMetrics: Metric[] = [
-  {
-    value: "hr",
-    label: METRIC_CONFIG.hr.label,
-    icon: METRIC_CONFIG.hr.icon,
-    iconYOffset: METRIC_CONFIG.hr.iconYOffset,
-  },
-  {
-    value: "alt",
-    label: METRIC_CONFIG.alt.label,
-    icon: METRIC_CONFIG.alt.icon,
-    iconYOffset: METRIC_CONFIG.alt.iconYOffset,
-  },
-  {
-    value: "pwr",
-    label: METRIC_CONFIG.pwr.label,
-    icon: METRIC_CONFIG.pwr.icon,
-    iconYOffset: METRIC_CONFIG.pwr.iconYOffset,
-  },
-  {
-    value: "cad",
-    label: METRIC_CONFIG.cad.label,
-    icon: METRIC_CONFIG.cad.icon,
-    iconYOffset: METRIC_CONFIG.cad.iconYOffset,
-  },
-  {
-    value: "pace",
-    label: METRIC_CONFIG.pace.label,
-    icon: METRIC_CONFIG.pace.icon,
-    iconYOffset: METRIC_CONFIG.pace.iconYOffset,
-  },
-];
+// Build allMetrics array in canonical order
+const allMetrics: Metric[] = METRIC_ORDER.map((metricValue) => {
+  const config = METRIC_CONFIG[metricValue as keyof typeof METRIC_CONFIG];
+  if (!config) {
+    // For metrics not in METRIC_CONFIG (temp), use fallback
+    return {
+      value: metricValue,
+      label: metricValue.charAt(0).toUpperCase() + metricValue.slice(1),
+      icon: "📊",
+      iconYOffset: 0,
+    };
+  }
+  return {
+    value: metricValue,
+    label: config.label,
+    icon: config.icon,
+    iconYOffset: config.iconYOffset,
+  };
+});
 
 const availableMetrics = computed(() => {
-  const filtered = allMetrics.filter((metric) => props.availableMetrics.includes(metric.value));
-  // Keep altitude first; otherwise sort by how many activities include the metric.
-  return filtered.sort((a, b) => {
-    if (a.value === "alt" && b.value !== "alt") return -1;
-    if (b.value === "alt" && a.value !== "alt") return 1;
-    const countA = getActivityIdsForMetric(a.value).length;
-    const countB = getActivityIdsForMetric(b.value).length;
-    return countB - countA;
+  // Filter to only available metrics that have data in at least one activity, maintaining canonical order
+  return allMetrics.filter((metric) => {
+    if (!props.availableMetrics.includes(metric.value)) return false;
+    // Double-check: ensure at least one activity has data for this metric
+    return getActivityIdsForMetric(metric.value).length > 0;
   });
 });
 

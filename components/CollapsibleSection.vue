@@ -1,5 +1,5 @@
 <template>
-  <div :class="['rounded-lg border-2 border-gray-200 bg-gray-50', $attrs.class]">
+  <div :class="['rounded-lg border-2 border-gray-200 bg-white', $attrs.class]">
     <button
       type="button"
       class="collapsible-section-button w-full touch-manipulation rounded-lg p-3 text-left sm:p-4"
@@ -7,9 +7,14 @@
       @click="open = !open"
     >
       <div class="flex items-center justify-between">
-        <span class="text-sm font-semibold text-gray-800 sm:text-base">
-          <slot name="title">Advanced Settings</slot>
-        </span>
+        <div class="flex-1 text-left">
+          <span class="text-sm font-semibold text-gray-800 sm:text-base">
+            <slot name="title">Advanced Settings</slot>
+          </span>
+          <div v-if="$slots.description" class="mt-0.5 text-xs text-gray-500 sm:text-sm">
+            <slot name="description"></slot>
+          </div>
+        </div>
         <svg
           :class="['h-5 w-5 shrink-0 text-gray-600 transition-transform', open ? 'rotate-180' : '']"
           fill="none"

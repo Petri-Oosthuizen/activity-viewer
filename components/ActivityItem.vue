@@ -67,7 +67,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { Activity } from "~/types/activity";
-import { useActivityStore } from "~/stores/activity";
+import { useActivityList } from "~/composables/useActivityList";
 
 interface Props {
   activity: Activity;
@@ -75,12 +75,12 @@ interface Props {
 
 const props = defineProps<Props>();
 
-const activityStore = useActivityStore();
+const { isActivityDisabled } = useActivityList();
 
 const emit = defineEmits<{
   remove: [id: string];
   toggle: [id: string];
 }>();
 
-const isDisabled = computed(() => activityStore.isActivityDisabled(props.activity.id));
+const isDisabled = computed(() => isActivityDisabled(props.activity.id));
 </script>

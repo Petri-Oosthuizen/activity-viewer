@@ -1,7 +1,8 @@
 <template>
-  <CollapsibleSection v-if="hasGpxFiles">
-    <template #title>Advanced Settings</template>
-    <div class="space-y-4 sm:space-y-6">
+  <div v-if="hasGpxFiles" class="mt-3 border-t border-gray-200 pt-3 sm:mt-4 sm:pt-4">
+    <CollapsibleSection>
+      <template #title>Advanced Settings</template>
+      <div class="space-y-4 sm:space-y-6">
       <div class="space-y-3 sm:space-y-4">
         <h4 class="m-0 text-sm font-semibold text-gray-800 sm:text-base">GPX distance</h4>
         <p class="text-xs text-gray-500 sm:text-sm">
@@ -58,31 +59,37 @@
           </div>
         </div>
       </div>
-    </div>
-  </CollapsibleSection>
+      </div>
+    </CollapsibleSection>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from "vue";
-import { useActivityStore } from "~/stores/activity";
+import { storeToRefs } from "pinia";
+import { useActivitySettingsStore } from "~/stores/activitySettings";
+import { useActivityList } from "~/composables/useActivityList";
 import CollapsibleSection from "./CollapsibleSection.vue";
 
-const activityStore = useActivityStore();
-const opts = computed(() => activityStore.gpsDistanceOptions);
+const settingsStore = useActivitySettingsStore();
+const { activities } = useActivityList();
+
+const { gpsDistanceOptions } = storeToRefs(settingsStore);
+const opts = computed(() => gpsDistanceOptions.value);
 
 const hasGpxFiles = computed(() => {
-  return activityStore.activities.some((activity) => activity.sourceType === "gpx");
+  return activities.value.some((activity) => activity.sourceType === "gpx");
 });
 
 const setIncludeElevation = (event: Event) => {
   const target = event.target as HTMLInputElement;
-  activityStore.setGpsDistanceOptions({ includeElevation: target.checked });
+  settingsStore.setGpsDistanceOptions({ includeElevation: target.checked });
 };
 
 const setMinMove = (event: Event) => {
   const target = event.target as HTMLInputElement;
   const n = Number.parseFloat(target.value);
-  activityStore.setGpsDistanceOptions({
+  settingsStore.setGpsDistanceOptions({
     minMoveMeters: Number.isFinite(n) ? Math.max(0, n) : opts.value.minMoveMeters,
   });
 };
@@ -90,7 +97,7 @@ const setMinMove = (event: Event) => {
 const setMaxSpeed = (event: Event) => {
   const target = event.target as HTMLInputElement;
   const n = Number.parseFloat(target.value);
-  activityStore.setGpsDistanceOptions({
+  settingsStore.setGpsDistanceOptions({
     maxSpeedMps: Number.isFinite(n) ? Math.max(0, n) : opts.value.maxSpeedMps,
   });
 };
@@ -98,7 +105,7 @@ const setMaxSpeed = (event: Event) => {
 const setMaxJump = (event: Event) => {
   const target = event.target as HTMLInputElement;
   const n = Number.parseFloat(target.value);
-  activityStore.setGpsDistanceOptions({
+  settingsStore.setGpsDistanceOptions({
     maxJumpMetersAt1s: Number.isFinite(n) ? Math.max(0, n) : opts.value.maxJumpMetersAt1s,
   });
 };

@@ -36,7 +36,7 @@
           <span
             class="border-t-primary h-8 w-8 animate-spin rounded-full border-2 border-gray-200"
           ></span>
-          <p class="text-sm text-gray-600">Loading activities...</p>
+          <p class="text-sm text-gray-600">Loading saved activities from storage...</p>
         </div>
       </div>
       <div v-else class="flex flex-col gap-4 sm:gap-6 md:gap-8">
@@ -44,21 +44,26 @@
           <ActivityList />
         </section>
         <section v-if="hasActivities" class="w-full">
-          <div class="mb-4 sm:mb-6 md:mb-8">
+          <AdvancedSettings />
+        </section>
+        <section v-if="hasActivities" class="w-full">
+          <CollapsibleSection :default-open="true">
+            <template #title>Overview</template>
+            <template #description>Activity statistics and metrics summary</template>
             <OverviewPanel />
-          </div>
+          </CollapsibleSection>
           <div
             v-if="shouldShowLayoutToggle"
-            class="mb-3 hidden items-center justify-end sm:mb-4 lg:flex"
+            class="mt-4 mb-3 hidden items-center justify-end sm:mt-6 sm:mb-4 lg:flex"
           >
             <button
               type="button"
               class="flex touch-manipulation items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-all hover:bg-gray-50 sm:px-4 sm:py-2 sm:text-sm"
               @click="toggleSideBySide"
-              :title="activityStore.chartMapSideBySide ? 'View stacked' : 'View side by side'"
+              :title="chartMapSideBySide ? 'View stacked' : 'View side by side'"
             >
               <svg
-                v-if="activityStore.chartMapSideBySide"
+                v-if="chartMapSideBySide"
                 class="h-4 w-4 sm:h-5 sm:w-5"
                 fill="none"
                 stroke="currentColor"
@@ -88,15 +93,15 @@
                 />
               </svg>
               <span class="hidden sm:inline">
-                {{ activityStore.chartMapSideBySide ? "View stacked" : "View side by side" }}
+                {{ chartMapSideBySide ? "View stacked" : "View side by side" }}
               </span>
             </button>
           </div>
           <div
             :class="[
-              activityStore.chartMapSideBySide
-                ? 'grid grid-cols-1 gap-4 sm:gap-6 md:gap-8 lg:grid-cols-2 lg:items-start'
-                : 'flex flex-col gap-4 sm:gap-6 md:gap-8',
+              chartMapSideBySide
+                ? 'mt-4 grid grid-cols-1 gap-4 sm:mt-6 sm:gap-6 md:gap-8 lg:grid-cols-2 lg:items-start'
+                : 'mt-4 flex flex-col gap-4 sm:mt-6 sm:gap-6 md:gap-8',
             ]"
           >
             <div class="w-full">
@@ -125,19 +130,25 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import { useActivityStore } from "~/stores/activity";
+import { storeToRefs } from "pinia";
+import { useUIStore } from "~/stores/ui";
 import { useLocalStoragePersistence } from "~/composables/useLocalStoragePersistence";
+import { useSettingsPersistence } from "~/composables/useSettingsPersistence";
+import { useActivityList } from "~/composables/useActivityList";
 import ActivityMap from "~/components/ActivityMap.vue";
 import OverviewPanel from "~/components/OverviewPanel.vue";
+import AdvancedSettings from "~/components/AdvancedSettings.vue";
+import CollapsibleSection from "~/components/CollapsibleSection.vue";
 
 const config = useRuntimeConfig();
 const buildNumber = computed(() => config.public.buildNumber);
 const githubUrl = computed(() => config.public.githubUrl);
 
-const activityStore = useActivityStore();
-const hasActivities = computed(() => activityStore.activities.length > 0);
+const uiStore = useUIStore();
+const { hasActivities } = useActivityList();
 
 const { isLoading: isLoadingFromStorage } = useLocalStoragePersistence();
+useSettingsPersistence();
 
 // Only show layout toggle on large screens (lg breakpoint) where side-by-side actually works
 // The layout is always stacked on smaller screens regardless of the setting
@@ -145,8 +156,9 @@ const shouldShowLayoutToggle = computed(() => {
   return hasActivities.value; // Only show if there are activities
 });
 
+const { chartMapSideBySide } = storeToRefs(uiStore);
 const toggleSideBySide = () => {
-  activityStore.setChartMapSideBySide(!activityStore.chartMapSideBySide);
+  uiStore.setChartMapSideBySide(!chartMapSideBySide.value);
 };
 
 const baseURL = computed(() => {

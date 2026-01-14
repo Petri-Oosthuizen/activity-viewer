@@ -30,6 +30,12 @@ export interface GpsSmoothingSettings {
   windowPoints: number;
 }
 
+export interface GpsPaceSmoothingSettings {
+  enabled: boolean;
+  /** Window size in points used for smoothing GPS-calculated pace values. */
+  windowPoints: number;
+}
+
 export interface PaceSmoothingSettings {
   enabled: boolean;
   /** Window size in seconds used for smoothing pace values. */
@@ -82,5 +88,10 @@ export const DEFAULT_CHART_TRANSFORM_SETTINGS: Readonly<ChartTransformSettings> 
     zoneCount: 5,
     strategy: "equalRange",
   },
+};
+
+export const DEFAULT_GPS_PACE_SMOOTHING_SETTINGS: Readonly<GpsPaceSmoothingSettings> = {
+  enabled: true,
+  windowPoints: 5,
 };
 

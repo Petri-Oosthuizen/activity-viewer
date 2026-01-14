@@ -22,13 +22,13 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import { useActivityStore } from "~/stores/activity";
+import { useActivityList } from "~/composables/useActivityList";
 import FileNameDisplay from "./FileNameDisplay.vue";
 
-const activityStore = useActivityStore();
+const { activities: processedActivities, isActivityDisabled } = useActivityList();
 
 const activities = computed(() =>
-  activityStore.activities.map((a) => ({
+  processedActivities.value.map((a) => ({
     id: a.id,
     name: a.name,
     color: a.color,
@@ -36,7 +36,7 @@ const activities = computed(() =>
 );
 
 const activeActivities = computed(() =>
-  activities.value.filter((a) => !activityStore.isActivityDisabled(a.id)),
+  activities.value.filter((a) => !isActivityDisabled(a.id)),
 );
 
 const hasActivities = computed(() => activeActivities.value.length > 0);

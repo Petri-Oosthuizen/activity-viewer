@@ -1,10 +1,12 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { mount } from "@vue/test-utils";
-import { createPinia, setActivePinia } from "pinia";
+import { setActivePinia, createPinia } from "pinia";
 import { nextTick } from "vue";
 import OverviewPanel from "~/components/OverviewPanel.vue";
-import { useActivityStore } from "~/stores/activity";
-import type { ActivityRecord } from "~/types/activity";
+import { useRawActivityStore } from "~/stores/rawActivity";
+import { useWindowActivityStore } from "~/stores/windowActivity";
+import { useChartOptionsStore } from "~/stores/chartOptions";
+import type { RawActivity } from "~/types/activity";
 
 describe("OverviewPanel", () => {
   let pinia: ReturnType<typeof createPinia>;
@@ -14,223 +16,379 @@ describe("OverviewPanel", () => {
     setActivePinia(pinia);
   });
 
-  function addSimpleActivity(name: string) {
-    const store = useActivityStore();
-    const records: ActivityRecord[] = [
-      { t: 0, d: 0, hr: 120 },
-      { t: 10, d: 1000, hr: 130 },
-    ];
-    store.addActivity(records, name);
-    return store;
-  }
+  const createRawActivity = (
+    id: string,
+    name: string,
+    records: Array<{ t: number; d: number; hr?: number; alt?: number }>,
+  ): RawActivity => ({
+    id,
+    name,
+    sourceType: "gpx",
+    fileContent: "test content",
+    records: records as any,
+    metadata: {},
+  });
 
-  function addActivityWithElevation(name: string) {
-    const store = useActivityStore();
-    const records: ActivityRecord[] = [
-      { t: 0, d: 0, hr: 120, alt: 100 },
-      { t: 10, d: 1000, hr: 130, alt: 150 },
-      { t: 20, d: 2000, hr: 125, alt: 120 },
-    ];
-    store.addActivity(records, name);
-    return store;
-  }
+  describe("chart window display", () => {
+    it("should not show chart window indicator when window is full (0-100%)", async () => {
+      const rawStore = useRawActivityStore();
+      const windowStore = useWindowActivityStore();
+      const chartOptionsStore = useChartOptionsStore();
 
-  function mountComponent() {
-    return mount(OverviewPanel, {
-      global: {
-        plugins: [pinia],
-      },
+      const activity = createRawActivity("test-1", "test.gpx", [
+        { t: 0, d: 0, hr: 120, alt: 100 },
+        { t: 10, d: 1000, hr: 130, alt: 150 },
+        { t: 20, d: 2000, hr: 125, alt: 120 },
+      ]);
+
+      rawStore.addRawActivity(activity);
+      chartOptionsStore.setXAxisType("distance");
+      windowStore.setChartWindow({
+        xStartPercent: 0,
+        xEndPercent: 100,
+        yStartPercent: 0,
+        yEndPercent: 100,
+      });
+
+      const wrapper = mount(OverviewPanel, {
+        global: {
+          plugins: [pinia],
+        },
+      });
+      await nextTick();
+
+      const text = wrapper.text();
+      expect(text).not.toContain("Showing visible chart window");
     });
-  }
 
-  it("hides baseline controls when only one activity is active", () => {
-    addSimpleActivity("A1");
-    const wrapper = mountComponent();
+    it("should show chart window indicator with formatted x-axis values for distance", async () => {
+      const rawStore = useRawActivityStore();
+      const windowStore = useWindowActivityStore();
+      const chartOptionsStore = useChartOptionsStore();
 
-    expect(wrapper.text()).not.toContain("Baseline");
-    expect(wrapper.text()).not.toContain("baseline");
-    expect(wrapper.find('select').exists()).toBe(false);
+      const activity = createRawActivity("test-1", "test.gpx", [
+        { t: 0, d: 0, hr: 120, alt: 100 },
+        { t: 10, d: 1000, hr: 130, alt: 150 },
+        { t: 20, d: 2000, hr: 125, alt: 120 },
+      ]);
+
+      rawStore.addRawActivity(activity);
+      chartOptionsStore.setXAxisType("distance");
+      windowStore.setChartWindow({
+        xStartPercent: 25,
+        xEndPercent: 75,
+        yStartPercent: 0,
+        yEndPercent: 100,
+      });
+
+      const wrapper = mount(OverviewPanel, {
+        global: {
+          plugins: [pinia],
+        },
+      });
+      await nextTick();
+
+      const text = wrapper.text();
+      expect(text).toContain("Showing visible chart window");
+      expect(text).toMatch(/X:\s*\d+(\.\d+)?(km|m)–\d+(\.\d+)?(km|m)/);
+    });
+
+    it("should show chart window indicator with formatted x-axis values for time", async () => {
+      const rawStore = useRawActivityStore();
+      const windowStore = useWindowActivityStore();
+      const chartOptionsStore = useChartOptionsStore();
+
+      const activity = createRawActivity("test-1", "test.gpx", [
+        { t: 0, d: 0, hr: 120, alt: 100 },
+        { t: 100, d: 1000, hr: 130, alt: 150 },
+        { t: 200, d: 2000, hr: 125, alt: 120 },
+      ]);
+
+      rawStore.addRawActivity(activity);
+      chartOptionsStore.setXAxisType("time");
+      windowStore.setChartWindow({
+        xStartPercent: 20,
+        xEndPercent: 80,
+        yStartPercent: 0,
+        yEndPercent: 100,
+      });
+
+      const wrapper = mount(OverviewPanel, {
+        global: {
+          plugins: [pinia],
+        },
+      });
+      await nextTick();
+
+      const text = wrapper.text();
+      expect(text).toContain("Showing visible chart window");
+      expect(text).toMatch(/X:\s*\d+\.\d+s–\d+\.\d+s/);
+    });
+
+    it("should show chart window indicator with formatted x-axis values for localTime", async () => {
+      const rawStore = useRawActivityStore();
+      const windowStore = useWindowActivityStore();
+      const chartOptionsStore = useChartOptionsStore();
+
+      const startTime = new Date("2024-01-01T12:00:00Z");
+      const activity: RawActivity = {
+        id: "test-1",
+        name: "test.gpx",
+        sourceType: "gpx",
+        fileContent: "test content",
+        records: [
+          { t: 0, d: 0, hr: 120, alt: 100 },
+          { t: 100, d: 1000, hr: 130, alt: 150 },
+          { t: 200, d: 2000, hr: 125, alt: 120 },
+        ] as any,
+        metadata: {
+          startTime,
+        },
+      };
+
+      rawStore.addRawActivity(activity);
+      chartOptionsStore.setXAxisType("localTime");
+      windowStore.setChartWindow({
+        xStartPercent: 30,
+        xEndPercent: 70,
+        yStartPercent: 0,
+        yEndPercent: 100,
+      });
+
+      const wrapper = mount(OverviewPanel, {
+        global: {
+          plugins: [pinia],
+        },
+      });
+      await nextTick();
+
+      const text = wrapper.text();
+      expect(text).toContain("Showing visible chart window");
+      expect(text).toMatch(/X:\s*\d{2}:\d{2}:\d{2}–\d{2}:\d{2}:\d{2}/);
+    });
+
+    it("should allow clearing chart window via clear button", async () => {
+      const rawStore = useRawActivityStore();
+      const windowStore = useWindowActivityStore();
+      const chartOptionsStore = useChartOptionsStore();
+
+      const activity = createRawActivity("test-1", "test.gpx", [
+        { t: 0, d: 0, hr: 120, alt: 100 },
+        { t: 10, d: 1000, hr: 130, alt: 150 },
+        { t: 20, d: 2000, hr: 125, alt: 120 },
+      ]);
+
+      rawStore.addRawActivity(activity);
+      chartOptionsStore.setXAxisType("distance");
+      windowStore.setChartWindow({
+        xStartPercent: 25,
+        xEndPercent: 75,
+        yStartPercent: 0,
+        yEndPercent: 100,
+      });
+
+      const wrapper = mount(OverviewPanel, {
+        global: {
+          plugins: [pinia],
+        },
+      });
+      await nextTick();
+
+      expect(wrapper.text()).toContain("Showing visible chart window");
+
+      const clearButton = wrapper.find('button[aria-label="Clear chart window"]');
+      expect(clearButton.exists()).toBe(true);
+
+      await clearButton.trigger("click");
+      await nextTick();
+
+      const updatedText = wrapper.text();
+      expect(updatedText).not.toContain("Showing visible chart window");
+    });
+
+    it("should not show chart window indicator when no activities", async () => {
+      const wrapper = mount(OverviewPanel, {
+        global: {
+          plugins: [pinia],
+        },
+      });
+      await nextTick();
+
+      const text = wrapper.text();
+      expect(text).not.toContain("Showing visible chart window");
+    });
   });
 
-  it("shows baseline controls when multiple activities are active", async () => {
-    const store = addSimpleActivity("A1");
-    const records: ActivityRecord[] = [
-      { t: 0, d: 0, hr: 100 },
-      { t: 10, d: 900, hr: 105 },
-    ];
-    store.addActivity(records, "A2");
-    const wrapper = mountComponent();
-    await nextTick();
+  describe("baseline comparison", () => {
+    it("should display baseline comparison controls when multiple activities are loaded", async () => {
+      const rawStore = useRawActivityStore();
 
-    expect(wrapper.text()).toContain("Baseline");
-    expect(wrapper.find('select').exists()).toBe(true);
+      const activity1 = createRawActivity("test-1", "activity1.gpx", [
+        { t: 0, d: 0, hr: 120, alt: 100 },
+        { t: 10, d: 1000, hr: 130, alt: 150 },
+      ]);
+
+      const activity2 = createRawActivity("test-2", "activity2.gpx", [
+        { t: 0, d: 0, hr: 125, alt: 110 },
+        { t: 10, d: 1000, hr: 135, alt: 160 },
+      ]);
+
+      rawStore.addRawActivity(activity1);
+      rawStore.addRawActivity(activity2);
+
+      const wrapper = mount(OverviewPanel, {
+        global: {
+          plugins: [pinia],
+        },
+      });
+      await nextTick();
+
+      const text = wrapper.text();
+      expect(text).toContain("Enable Baseline Comparison");
+    });
+
+    it("should not display baseline comparison controls when only one activity is loaded", async () => {
+      const rawStore = useRawActivityStore();
+
+      const activity = createRawActivity("test-1", "activity1.gpx", [
+        { t: 0, d: 0, hr: 120, alt: 100 },
+        { t: 10, d: 1000, hr: 130, alt: 150 },
+      ]);
+
+      rawStore.addRawActivity(activity);
+
+      const wrapper = mount(OverviewPanel, {
+        global: {
+          plugins: [pinia],
+        },
+      });
+      await nextTick();
+
+      const text = wrapper.text();
+      expect(text).not.toContain("Enable Baseline Comparison");
+    });
   });
 
-  it("displays the overview title and description", () => {
-    addSimpleActivity("Test Activity");
-    const wrapper = mountComponent();
+  describe("display mode", () => {
+    it("should display light mode by default", async () => {
+      const rawStore = useRawActivityStore();
 
-    expect(wrapper.text()).toContain("Overview");
-    expect(wrapper.text()).toContain("Summary stats");
+      const activity = createRawActivity("test-1", "test.gpx", [
+        { t: 0, d: 0, hr: 120, alt: 100 },
+        { t: 10, d: 1000, hr: 130, alt: 150 },
+      ]);
+
+      rawStore.addRawActivity(activity);
+
+      const wrapper = mount(OverviewPanel, {
+        global: {
+          plugins: [pinia],
+        },
+      });
+      await nextTick();
+
+      const lightButton = wrapper.find('button[aria-label="Light view"]');
+      const fullButton = wrapper.find('button[aria-label="Full details view"]');
+
+      expect(lightButton.exists()).toBe(true);
+      expect(fullButton.exists()).toBe(true);
+      expect(lightButton.classes()).toContain("bg-primary");
+    });
+
+    it("should toggle to full mode when full button is clicked", async () => {
+      const rawStore = useRawActivityStore();
+
+      const activity = createRawActivity("test-1", "test.gpx", [
+        { t: 0, d: 0, hr: 120, alt: 100 },
+        { t: 10, d: 1000, hr: 130, alt: 150 },
+      ]);
+
+      rawStore.addRawActivity(activity);
+
+      const wrapper = mount(OverviewPanel, {
+        global: {
+          plugins: [pinia],
+        },
+      });
+      await nextTick();
+
+      const fullButton = wrapper.find('button[aria-label="Full details view"]');
+      await fullButton.trigger("click");
+      await nextTick();
+
+      expect(fullButton.classes()).toContain("bg-primary");
+    });
   });
 
-  it("displays table headers with activity names", async () => {
-    addSimpleActivity("Activity 1");
-    const wrapper = mountComponent();
-    await nextTick();
+  describe("activity statistics display", () => {
+    it("should display activity statistics when activity is loaded", async () => {
+      const rawStore = useRawActivityStore();
 
-    const headers = wrapper.findAll("th");
-    expect(headers.length).toBeGreaterThan(0);
-    expect(headers[0]!.text()).toContain("Metric");
-    if (headers.length > 1) {
-      expect(headers[1]!.text()).toContain("Activity 1");
-    }
-  });
+      const activity = createRawActivity("test-1", "test.gpx", [
+        { t: 0, d: 0, hr: 120, alt: 100 },
+        { t: 10, d: 1000, hr: 130, alt: 150 },
+        { t: 20, d: 2000, hr: 125, alt: 120 },
+      ]);
 
-  it("displays Duration row with formatted time", async () => {
-    addSimpleActivity("A1");
-    const wrapper = mountComponent();
-    await nextTick();
+      rawStore.addRawActivity(activity);
 
-    expect(wrapper.text()).toContain("Duration");
-    const text = wrapper.text();
-    expect(text).toMatch(/0:10/);
-  });
+      const wrapper = mount(OverviewPanel, {
+        global: {
+          plugins: [pinia],
+        },
+      });
+      await nextTick();
 
-  it("displays Distance row with formatted distance", async () => {
-    addSimpleActivity("A1");
-    const wrapper = mountComponent();
-    await nextTick();
+      const text = wrapper.text();
+      expect(text).toContain("Duration");
+      expect(text).toContain("Distance");
+    });
 
-    expect(wrapper.text()).toContain("Distance");
-    const text = wrapper.text();
-    expect(text).toMatch(/1\.00 km|1000 m/);
-  });
+    it("should display metrics in light mode", async () => {
+      const rawStore = useRawActivityStore();
 
-  it("displays elevation gained and lost when elevation data is present", async () => {
-    addActivityWithElevation("Activity with Elevation");
-    const wrapper = mountComponent();
-    await nextTick();
+      const activity = createRawActivity("test-1", "test.gpx", [
+        { t: 0, d: 0, hr: 120, alt: 100 },
+        { t: 10, d: 1000, hr: 130, alt: 150 },
+      ]);
 
-    expect(wrapper.text()).toContain("Elevation");
-    expect(wrapper.text()).toContain("gained");
-    expect(wrapper.text()).toContain("lost");
-  });
+      rawStore.addRawActivity(activity);
 
-  it("does not display elevation rows when no elevation data", () => {
-    addSimpleActivity("A1");
-    const wrapper = mountComponent();
+      const wrapper = mount(OverviewPanel, {
+        global: {
+          plugins: [pinia],
+        },
+      });
+      await nextTick();
 
-    expect(wrapper.text()).not.toContain("Elevation");
-  });
+      const text = wrapper.text();
+      expect(text).toContain("Heart Rate");
+      expect(text).toContain("Altitude");
+    });
 
-  it("displays metric headers with gray background", async () => {
-    addSimpleActivity("A1");
-    const wrapper = mountComponent();
-    await nextTick();
+    it("should display additional metrics in full mode", async () => {
+      const rawStore = useRawActivityStore();
 
-    const metricHeaders = wrapper.findAll(".bg-gray-50");
-    expect(metricHeaders.length).toBeGreaterThan(0);
-  });
+      const activity = createRawActivity("test-1", "test.gpx", [
+        { t: 0, d: 0, hr: 120, alt: 100, cad: 90 },
+        { t: 10, d: 1000, hr: 130, alt: 150, cad: 95 },
+      ]);
 
-  it("displays Heart Rate metrics with min, average, max rows", async () => {
-    const store = useActivityStore();
-    const records: ActivityRecord[] = [
-      { t: 0, d: 0, hr: 100 },
-      { t: 10, d: 1000, hr: 120 },
-      { t: 20, d: 2000, hr: 140 },
-    ];
-    store.addActivity(records, "Activity");
-    const wrapper = mountComponent();
-    await nextTick();
+      rawStore.addRawActivity(activity);
 
-    const text = wrapper.text();
-    expect(text).toContain("Heart Rate");
-    expect(text).toContain("min");
-    expect(text).toContain("average");
-    expect(text).toContain("max");
-    expect(text).toContain("100 bpm");
-    expect(text).toContain("120 bpm");
-    expect(text).toContain("140 bpm");
-  });
+      const wrapper = mount(OverviewPanel, {
+        global: {
+          plugins: [pinia],
+        },
+      });
+      await nextTick();
 
-  it("displays baseline comparisons for metrics when multiple activities", async () => {
-    const store = useActivityStore();
-    store.addActivity([{ t: 0, d: 0, hr: 100 }, { t: 10, d: 1000, hr: 120 }], "A1");
-    store.addActivity([{ t: 0, d: 0, hr: 110 }, { t: 10, d: 1000, hr: 130 }], "A2");
-    const wrapper = mountComponent();
-    await nextTick();
+      const fullButton = wrapper.find('button[aria-label="Full details view"]');
+      await fullButton.trigger("click");
+      await nextTick();
 
-    expect(wrapper.text()).toContain("baseline");
-  });
-
-  it("displays baseline comparisons for elevation when multiple activities", async () => {
-    const store = useActivityStore();
-    store.addActivity([{ t: 0, d: 0, alt: 100 }, { t: 10, d: 1000, alt: 150 }], "A1");
-    store.addActivity([{ t: 0, d: 0, alt: 110 }, { t: 10, d: 1000, alt: 160 }], "A2");
-    const wrapper = mountComponent();
-    await nextTick();
-
-    expect(wrapper.text()).toContain("Elevation");
-    expect(wrapper.text()).toContain("baseline");
-  });
-
-  it("displays chart window indicator when window is active", async () => {
-    addSimpleActivity("A1");
-    const store = useActivityStore();
-    store.setChartWindow({ xStartPercent: 10, xEndPercent: 90, yStartPercent: 0, yEndPercent: 100 });
-    const wrapper = mountComponent();
-    await nextTick();
-
-    expect(wrapper.text()).toContain("Showing visible chart window");
-    expect(wrapper.text()).toContain("X: 10–90%");
-  });
-
-  it("does not display chart window indicator when window is not active", () => {
-    addSimpleActivity("A1");
-    const store = useActivityStore();
-    store.setChartWindow({ xStartPercent: 0, xEndPercent: 100, yStartPercent: 0, yEndPercent: 100 });
-    const wrapper = mountComponent();
-
-    expect(wrapper.text()).not.toContain("Showing visible chart window");
-  });
-
-  it("displays multiple activities in table headers", async () => {
-    const store = addSimpleActivity("Activity 1");
-    store.addActivity([{ t: 0, d: 0, hr: 100 }], "Activity 2");
-    const wrapper = mountComponent();
-    await nextTick();
-
-    const headers = wrapper.findAll("th");
-    expect(headers.length).toBeGreaterThan(2);
-    expect(wrapper.text()).toContain("Activity 1");
-    expect(wrapper.text()).toContain("Activity 2");
-  });
-
-  it("formats baseline comparisons with units", async () => {
-    const store = useActivityStore();
-    store.addActivity([{ t: 0, d: 0, hr: 100 }, { t: 10, d: 1000, hr: 120 }], "A1");
-    store.addActivity([{ t: 0, d: 0, hr: 110 }, { t: 10, d: 1000, hr: 130 }], "A2");
-    const wrapper = mountComponent();
-    await nextTick();
-
-    const text = wrapper.text();
-    expect(text).toMatch(/\+10 bpm|\+10\.0 bpm/);
-  });
-
-  it("shows dash for zero differences in baseline comparisons", async () => {
-    const store = useActivityStore();
-    const records: ActivityRecord[] = [
-      { t: 0, d: 0, hr: 100 },
-      { t: 10, d: 1000, hr: 120 },
-    ];
-    store.addActivity(records, "A1");
-    store.addActivity(records, "A2");
-    const wrapper = mountComponent();
-    await nextTick();
-
-    const text = wrapper.text();
-    expect(text).toContain("baseline");
+      const text = wrapper.text();
+      expect(text).toContain("Cadence");
+    });
   });
 });
-

@@ -10,7 +10,8 @@ export interface ActivityRecord {
   speed?: number; // Speed in m/s
   temp?: number; // Temperature in Celsius
   grade?: number; // Grade/gradient as percentage
-  vSpeed?: number; // Vertical speed (VAM) in m/h
+  verticalSpeed?: number; // Vertical speed (VAM) in m/h
+  pace?: number; // Pace in min/km
   /** Additional numeric fields extracted from file formats (running dynamics, GPS accuracy, etc.) */
   additionalFields?: Record<string, number>;
 }
@@ -54,5 +55,24 @@ export interface ParseResult {
   calories?: number; // Total calories from the file
   sport?: string; // Sport type
   laps?: Lap[]; // Lap data if available
+}
+
+/**
+ * Raw activity data before processing
+ * Stores the original file content and parsed records
+ */
+export interface RawActivity {
+  id: string;
+  name: string;
+  sourceType: "gpx" | "fit" | "tcx";
+  fileContent?: Blob | string; // Raw file content for storage/reprocessing
+  records: ActivityRecord[]; // Parsed, unprocessed records (with unified field names)
+  metadata: {
+    startTime?: Date;
+    calories?: number;
+    sport?: string;
+    laps?: Lap[];
+  };
+  additionalFields?: Record<string, number>; // Fields we don't support yet (standardized names)
 }
 

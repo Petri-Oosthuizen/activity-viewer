@@ -1,84 +1,87 @@
 <template>
-  <div
-    :class="[
-      'relative rounded-lg border-2 border-dashed bg-white text-center transition-all cursor-pointer',
-      compact ? 'border p-3 sm:p-4' : 'border-2 p-8 sm:p-12',
-      isDragover ? 'border-primary bg-blue-50' : 'border-gray-300',
-    ]"
-    @drop="handleDrop"
-    @dragover.prevent="isDragover = true"
-    @dragleave="isDragover = false"
-    @dragenter.prevent
-    @click="triggerFileInput"
-  >
-    <input
-      ref="fileInput"
-      type="file"
-      accept=".gpx,.fit,.tcx,application/gpx+xml,application/xml,text/xml,application/octet-stream"
-      multiple
-      class="absolute h-px w-px overflow-hidden opacity-0"
-      @change="handleFileSelect"
-    />
-    <div class="pointer-events-none select-none">
-      <svg
-        v-if="!compact"
-        class="mx-auto mb-4 h-12 w-12 text-gray-400 sm:mb-5 sm:h-14 sm:w-14"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-        />
-      </svg>
-      <div v-if="!compact" class="space-y-4">
-        <div>
-          <p class="mb-2 text-base font-medium text-gray-700 sm:text-lg">
-            Drag and drop files here, or
+  <div>
+    <div
+      v-if="!isProcessing"
+      :class="[
+        'relative rounded-lg border-2 border-dashed bg-white text-center transition-all cursor-pointer',
+        compact ? 'border p-3 sm:p-4' : 'border-2 p-8 sm:p-12',
+        isDragover ? 'border-primary bg-blue-50' : 'border-gray-300',
+      ]"
+      @drop="handleDrop"
+      @dragover.prevent="isDragover = true"
+      @dragleave="isDragover = false"
+      @dragenter.prevent
+      @click="triggerFileInput"
+    >
+      <input
+        ref="fileInput"
+        type="file"
+        accept=".gpx,.fit,.tcx,application/gpx+xml,application/xml,text/xml,application/octet-stream"
+        multiple
+        class="absolute h-px w-px overflow-hidden opacity-0"
+        @change="handleFileSelect"
+      />
+      <div class="pointer-events-none select-none">
+        <svg
+          v-if="!compact"
+          class="mx-auto mb-4 h-12 w-12 text-gray-400 sm:mb-5 sm:h-14 sm:w-14"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+          />
+        </svg>
+        <div v-if="!compact" class="space-y-4">
+          <div>
+            <p class="mb-2 text-base font-medium text-gray-700 sm:text-lg">
+              Drag and drop files here, or
+              <button
+                type="button"
+                class="pointer-events-auto text-primary underline"
+                @click.stop="triggerFileInput"
+              >
+                browse
+              </button>
+            </p>
+            <p class="text-sm text-gray-500">Supports .gpx, .fit, and .tcx files</p>
+          </div>
+          <p class="text-xs text-gray-500">
+            Privacy: processing is local in your browser—nothing is uploaded to a server.
+          </p>
+        </div>
+        <div v-else class="space-y-1">
+          <p class="text-xs text-gray-600 sm:text-sm">
             <button
               type="button"
-              class="pointer-events-auto text-primary underline"
+              class="pointer-events-auto rounded-sm px-3 py-2 font-medium text-primary transition-all active:bg-blue-50 sm:px-2 sm:py-1 sm:hover:bg-blue-50"
               @click.stop="triggerFileInput"
             >
-              browse
+              Add more files
             </button>
           </p>
-          <p class="text-sm text-gray-500">Supports .gpx, .fit, and .tcx files</p>
-        </div>
-        <p class="text-xs text-gray-500">
-          Privacy: processing is local in your browser—nothing is uploaded to a server.
-        </p>
-        <div class="flex items-center justify-center gap-2 py-2" @click.stop>
-          <input
-            id="localStorageEnabled"
-            type="checkbox"
-            :checked="localStorageEnabled"
-            @change="handleLocalStorageToggle"
-            class="pointer-events-auto h-5 w-5 cursor-pointer rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
-          />
-          <label
-            for="localStorageEnabled"
-            class="pointer-events-auto cursor-pointer text-left text-sm text-gray-600"
-          >
-            Save files locally in browser (persist across page refreshes)
-          </label>
+          <p class="text-[10px] text-gray-400 sm:text-xs">Drop files here or click to add more</p>
         </div>
       </div>
-      <div v-else class="space-y-1">
-        <p class="text-xs text-gray-600 sm:text-sm">
-          <button
-            type="button"
-            class="pointer-events-auto rounded-sm px-3 py-2 font-medium text-primary transition-all active:bg-blue-50 sm:px-2 sm:py-1 sm:hover:bg-blue-50"
-            @click.stop="triggerFileInput"
-          >
-            Add more files
-          </button>
-        </p>
-        <p class="text-[10px] text-gray-400 sm:text-xs">Drop files here or click to add more</p>
-      </div>
+    </div>
+    <div v-if="!compact && !isProcessing" class="mt-4 flex items-center justify-center gap-2">
+      <input
+        id="localStorageEnabled"
+        type="checkbox"
+        :checked="localStorageEnabled"
+        @change="handleLocalStorageToggle"
+        class="h-5 w-5 cursor-pointer rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+      />
+      <label
+        for="localStorageEnabled"
+        class="cursor-pointer text-left text-sm text-gray-600"
+      >
+        Save files locally in browser (persist across page refreshes)
+      </label>
     </div>
     <div v-if="isProcessing" class="text-primary mt-4 flex items-center justify-center gap-2">
       <span
@@ -94,12 +97,12 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
-import { useActivityStore } from "~/stores/activity";
+import { storeToRefs } from "pinia";
+import { useRawActivityStore } from "~/stores/rawActivity";
+import { useActivitySettingsStore } from "~/stores/activitySettings";
 import { useLocalStoragePersistence } from "~/composables/useLocalStoragePersistence";
-import { detectFileType, isSupportedFileType } from "~/utils/file-detector";
-import { parseGPX } from "~/utils/gpx-parser";
-import { parseFIT } from "~/utils/fit-parser";
-import { parseTCX } from "~/utils/tcx-parser";
+import { isSupportedFileType } from "~/utils/file-detector";
+import { importActivityFile } from "~/utils/activity-importer";
 
 interface Props {
   compact?: boolean;
@@ -114,7 +117,9 @@ const isDragover = ref(false);
 const isProcessing = ref(false);
 const error = ref<string | null>(null);
 
-const activityStore = useActivityStore();
+const rawActivityStore = useRawActivityStore();
+const settingsStore = useActivitySettingsStore();
+const { gpsDistanceOptions } = storeToRefs(settingsStore);
 
 const {
   isEnabled: localStorageEnabled,
@@ -135,59 +140,8 @@ const processFile = async (file: File) => {
     throw new Error(`Unsupported file type: ${file.name}. Please upload a .gpx, .fit, or .tcx file.`);
   }
 
-  const fileType = detectFileType(file);
-
-  if (fileType === "gpx") {
-    return new Promise<void>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const text = e.target?.result as string;
-          const result = parseGPX(text, activityStore.gpsDistanceOptions);
-          activityStore.addActivity(result.records, file.name, result.startTime, "gpx", result.calories, result.sport, result.laps);
-          resolve();
-        } catch (err) {
-          reject(err);
-        }
-      };
-      reader.onerror = () => reject(new Error("Failed to read file"));
-      reader.readAsText(file);
-    });
-  } else if (fileType === "fit") {
-    return new Promise<void>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const arrayBuffer = e.target?.result as ArrayBuffer;
-          const result = await parseFIT(arrayBuffer);
-          activityStore.addActivity(result.records, file.name, result.startTime, "fit", result.calories, result.sport, result.laps);
-          resolve();
-        } catch (err) {
-          reject(err);
-        }
-      };
-      reader.onerror = () => reject(new Error("Failed to read file"));
-      reader.readAsArrayBuffer(file);
-    });
-  } else if (fileType === "tcx") {
-    return new Promise<void>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const text = e.target?.result as string;
-          const result = parseTCX(text, activityStore.gpsDistanceOptions);
-          activityStore.addActivity(result.records, file.name, result.startTime, "tcx", result.calories, result.sport, result.laps);
-          resolve();
-        } catch (err) {
-          reject(err);
-        }
-      };
-      reader.onerror = () => reject(new Error("Failed to read file"));
-      reader.readAsText(file);
-    });
-  } else {
-    throw new Error("Unknown file type");
-  }
+  const rawActivity = await importActivityFile(file, gpsDistanceOptions.value);
+  rawActivityStore.addRawActivity(rawActivity);
 };
 
 const handleFileSelect = async (event: Event) => {

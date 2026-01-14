@@ -70,22 +70,27 @@ describe("chart-options", () => {
       const config = buildXAxisConfig("time");
 
       expect(config.type).toBe("value");
-      expect(config.name).toBe("Time (seconds)");
-      expect(config.nameLocation).toBe("middle");
+      expect(config.show).toBe(true);
+      expect(config.scale).toBe(true);
+      expect(config.axisLabel).toBeDefined();
     });
 
     it("should build distance axis config", () => {
       const config = buildXAxisConfig("distance");
 
       expect(config.type).toBe("value");
-      expect(config.name).toBe("Distance");
+      expect(config.show).toBe(true);
+      expect(config.scale).toBe(true);
+      expect(config.axisLabel.formatter).toBeDefined();
     });
 
     it("should build localTime axis config", () => {
       const config = buildXAxisConfig("localTime");
 
       expect(config.type).toBe("value");
-      expect(config.name).toBe("Local Time");
+      expect(config.show).toBe(true);
+      expect(config.scale).toBe(true);
+      expect(config.axisLabel.formatter).toBeDefined();
     });
 
     it("should format axis labels for distance", () => {
@@ -103,8 +108,10 @@ describe("chart-options", () => {
 
       expect(Array.isArray(config) ? config.length : 1).toBe(1);
       const axis = Array.isArray(config) ? config[0] : config;
-      expect(axis.name).toContain("Heart Rate");
       expect(axis.type).toBe("value");
+      expect(axis.show).toBe(true);
+      expect(axis.scale).toBe(true);
+      expect(axis.axisLabel).toBeDefined();
     });
 
     it("should build multiple y-axis configs", () => {
@@ -113,8 +120,40 @@ describe("chart-options", () => {
       expect(Array.isArray(config)).toBe(true);
       if (Array.isArray(config)) {
         expect(config).toHaveLength(2);
-        expect(config[0].name).toContain("Heart Rate");
-        expect(config[1].name).toContain("Altitude");
+        expect(config[0].type).toBe("value");
+        expect(config[0].position).toBe("left");
+        expect(config[1].type).toBe("value");
+        expect(config[1].position).toBe("right");
+      }
+    });
+
+    it("should build delta-only axis config", () => {
+      const config = buildYAxisConfig(["hr"], true, "delta-only", "hr", true);
+
+      expect(Array.isArray(config)).toBe(true);
+      if (Array.isArray(config)) {
+        expect(config).toHaveLength(1);
+        expect(config[0].type).toBe("value");
+        expect(config[0].position).toBe("left");
+      }
+    });
+
+    it("should add delta axis in overlay mode", () => {
+      const config = buildYAxisConfig(["hr"], true, "overlay", "hr", true);
+
+      expect(Array.isArray(config)).toBe(true);
+      if (Array.isArray(config)) {
+        expect(config).toHaveLength(2); // Base + delta
+        expect(config[1].position).toBe("right");
+      }
+    });
+
+    it("should handle multi-metric with delta", () => {
+      const config = buildYAxisConfig(["hr", "alt"], true, "overlay", "hr", true);
+
+      expect(Array.isArray(config)).toBe(true);
+      if (Array.isArray(config)) {
+        expect(config.length).toBeGreaterThanOrEqual(2);
       }
     });
 
@@ -142,8 +181,8 @@ describe("chart-options", () => {
       const singleAxis = buildGridConfig(false);
       const multiAxis = buildGridConfig(true);
 
-      expect(multiAxis.right).toBe("8%");
-      expect(singleAxis.right).toBe("5%");
+      expect(multiAxis.right).toBe("3%");
+      expect(singleAxis.right).toBe("2%");
     });
   });
 
@@ -195,6 +234,51 @@ describe("chart-options", () => {
 
       const distanceResult = formatTooltipParams(params, "distance");
       expect(distanceResult).toContain("100");
+    });
+
+    it("should handle axis trigger format", () => {
+      const params = [
+        {
+          axisValue: 100,
+          seriesName: "Activity 1 - Heart Rate (bpm)",
+          value: [100, 120],
+          color: "#5470c6",
+        },
+      ];
+
+      const result = formatTooltipParams(params, "time");
+      expect(result).toContain("100.0s");
+      expect(result).toContain("Activity 1");
+    });
+
+    it("should handle null/undefined values", () => {
+      const params = [
+        {
+          seriesName: "Activity 1",
+          value: [100, null],
+          color: "#5470c6",
+        },
+      ];
+
+      const result = formatTooltipParams(params, "time");
+      expect(result).toBeDefined();
+    });
+
+    it("should handle empty params", () => {
+      expect(formatTooltipParams([], "time")).toBe("");
+      expect(formatTooltipParams(null as any, "time")).toBe("");
+      expect(formatTooltipParams(undefined as any, "time")).toBe("");
+    });
+
+    it("should handle single param object (not array)", () => {
+      const param = {
+        seriesName: "Activity 1 - Heart Rate (bpm)",
+        value: [100, 120],
+        color: "#5470c6",
+      };
+
+      const result = formatTooltipParams(param, "time");
+      expect(result).toContain("Activity 1");
     });
   });
 });

@@ -188,6 +188,46 @@ describe("chart-config utilities", () => {
       expect(data[0][0]).toBe(10);
       expect(data[1][0]).toBe(0);
     });
+
+    it("should calculate pace from speed", () => {
+      const activityWithSpeed: Activity = {
+        ...mockActivity,
+        records: [
+          { t: 0, d: 0, speed: 3.33 }, // ~5 min/km
+          { t: 10, d: 100, speed: 3.33 },
+        ],
+      };
+
+      const data = transformToChartData(activityWithSpeed, "pace", "time");
+      expect(data[0][1]).toBeCloseTo(5, 1); // ~5 min/km
+    });
+
+    it("should calculate pace from distance/time when speed not available", () => {
+      const activityNoSpeed: Activity = {
+        ...mockActivity,
+        records: [
+          { t: 0, d: 0 },
+          { t: 60, d: 200 }, // 200m in 60s = 5 min/km
+        ],
+      };
+
+      const data = transformToChartData(activityNoSpeed, "pace", "time");
+      expect(data[0][1]).toBeNull(); // First record has no previous
+      expect(data[1][1]).toBeCloseTo(5, 1);
+    });
+
+    it("should return null for pace when calculation invalid", () => {
+      const activityInvalid: Activity = {
+        ...mockActivity,
+        records: [
+          { t: 0, d: 0 },
+          { t: 0, d: 0 }, // dt = 0, invalid
+        ],
+      };
+
+      const data = transformToChartData(activityInvalid, "pace", "time");
+      expect(data[1][1]).toBeNull();
+    });
   });
 
   describe("findNearestValue", () => {
