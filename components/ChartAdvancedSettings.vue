@@ -15,10 +15,10 @@
                 : 'text-gray-600 active:bg-gray-50 sm:hover:bg-gray-50'
             "
             @click="setViewMode('timeseries')"
-            aria-label="Time series view"
+            aria-label="Series view"
             :aria-pressed="chartTransforms.viewMode === 'timeseries'"
           >
-            Time series
+            Series
           </button>
           <button
             type="button"
@@ -46,7 +46,7 @@
         <!-- Distribution settings -->
         <div v-if="chartTransforms.viewMode === 'pivotZones'" class="mt-3 space-y-3 sm:space-y-4">
           <div>
-            <label class="mb-1 block text-xs font-medium text-gray-700">Bin count</label>
+            <label class="mb-1 block text-xs font-medium text-gray-700">Bucket count</label>
             <input
               type="number"
               min="1"

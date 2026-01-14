@@ -166,44 +166,57 @@
     <div v-if="activities.length > 0" class="mt-4 sm:mt-6">
       <div>
         <h4 class="m-0 mb-2 text-sm font-semibold text-gray-800 sm:text-base">Graph Mode</h4>
-        <div
-          class="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white p-0.5"
-        >
-          <button
-            type="button"
-            class="rounded-sm px-2.5 py-1 text-xs font-medium transition-all sm:px-3 sm:py-1.5 sm:text-sm"
-            :class="
-              chartTransforms.viewMode === 'timeseries'
-                ? 'bg-primary text-white'
-                : 'text-gray-600 active:bg-gray-50 sm:hover:bg-gray-50'
-            "
-            @click="setViewMode('timeseries')"
-            aria-label="Time series view"
-            :aria-pressed="chartTransforms.viewMode === 'timeseries'"
+        <div class="flex flex-wrap items-center gap-2">
+          <div
+            class="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white p-0.5"
           >
-            Time series
-          </button>
-          <button
-            type="button"
-            class="rounded-sm px-2.5 py-1 text-xs font-medium transition-all sm:px-3 sm:py-1.5 sm:text-sm"
-            :class="
-              chartTransforms.viewMode === 'pivotZones'
-                ? 'bg-primary text-white'
-                : 'text-gray-600 active:bg-gray-50 sm:hover:bg-gray-50'
-            "
-            @click="setViewMode('pivotZones')"
-            aria-label="Distribution view"
-            :aria-pressed="chartTransforms.viewMode === 'pivotZones'"
-          >
-            Distribution
-          </button>
+            <button
+              type="button"
+              class="rounded-sm px-2.5 py-1 text-xs font-medium transition-all sm:px-3 sm:py-1.5 sm:text-sm"
+              :class="
+                chartTransforms.viewMode === 'timeseries'
+                  ? 'bg-primary text-white'
+                  : 'text-gray-600 active:bg-gray-50 sm:hover:bg-gray-50'
+              "
+              @click="setViewMode('timeseries')"
+              aria-label="Series view"
+              :aria-pressed="chartTransforms.viewMode === 'timeseries'"
+            >
+              Series
+            </button>
+            <button
+              type="button"
+              class="rounded-sm px-2.5 py-1 text-xs font-medium transition-all sm:px-3 sm:py-1.5 sm:text-sm"
+              :class="
+                chartTransforms.viewMode === 'pivotZones'
+                  ? 'bg-primary text-white'
+                  : 'text-gray-600 active:bg-gray-50 sm:hover:bg-gray-50'
+              "
+              @click="setViewMode('pivotZones')"
+              aria-label="Distribution view"
+              :aria-pressed="chartTransforms.viewMode === 'pivotZones'"
+            >
+              Distribution
+            </button>
+          </div>
+          <div v-if="chartTransforms.viewMode === 'pivotZones'" class="flex items-center gap-2">
+            <label class="text-xs font-medium text-gray-700 sm:text-sm">Bucket count:</label>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              class="focus:border-primary focus:ring-primary/10 w-16 rounded-sm border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:ring-2 focus:outline-hidden sm:px-3 sm:text-sm"
+              :value="chartTransforms.pivotZones.zoneCount"
+              @input="setPivotZoneCount"
+            />
+          </div>
         </div>
         <p class="mt-2 text-xs text-gray-500 sm:text-sm">
-          {{
-            chartTransforms.viewMode === "timeseries"
-              ? "Plot metric values along the activity (time, distance, or local time)."
-              : "Shows percentage of time spent in each value range (bucket) of the selected metric. Value ranges are divided into equal-size buckets starting from round numbers."
-          }}
+          <strong>Series:</strong> Plot metric values along the activity (time, distance, or local
+          time). <br />
+          <strong>Distribution:</strong> Shows percentage of time spent in each value range (bucket)
+          of the selected metric. Value ranges are divided into equal-size buckets starting from
+          round numbers.
         </p>
       </div>
     </div>
@@ -341,6 +354,20 @@ const setViewMode = (mode: ChartViewMode) => {
   chartOptionsStore.setViewMode(mode);
 };
 
+const setPivotZoneCount = (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const next = Number.parseInt(target.value, 10);
+  chartSeriesStore.setTransformationSettings({
+    ...transformationSettings.value,
+    pivotZones: {
+      ...transformationSettings.value.pivotZones,
+      zoneCount: Number.isFinite(next)
+        ? Math.max(1, next)
+        : transformationSettings.value.pivotZones.zoneCount,
+    },
+  });
+};
+
 let chartHoverCleanup: (() => void) | null = null;
 let chartZoomCleanup: (() => void) | null = null;
 const autoFitYEnabled = ref(true);
@@ -467,6 +494,34 @@ watch(
 );
 
 watch(
+  () => viewMode.value,
+  () => {
+    // Clear chart window when switching between Series and Distribution
+    if (chartInstance.value) {
+      // Explicitly reset dataZoom in ECharts to prevent stale state
+      chartInstance.value.dispatchAction({
+        type: "dataZoom",
+        start: 0,
+        end: 100,
+        xAxisIndex: 0,
+      });
+      chartInstance.value.dispatchAction({
+        type: "dataZoom",
+        start: 0,
+        end: 100,
+        yAxisIndex: 0,
+      });
+    }
+    windowStore.setChartWindow({
+      xStartPercent: 0,
+      xEndPercent: 100,
+      yStartPercent: 0,
+      yEndPercent: 100,
+    });
+  },
+);
+
+watch(
   () => [viewMode.value, transformationSettings.value],
   async () => {
     // Replace series completely when chart transforms change (outliers, smoothing, cumulative, etc.)
@@ -475,7 +530,7 @@ watch(
       const option = chartOptionECharts.value;
       chartInstance.value.setOption(option, {
         notMerge: false,
-        replaceMerge: ["series", "yAxis", "legend", "xAxis"],
+        replaceMerge: ["series", "yAxis", "legend", "xAxis", "dataZoom"],
       });
       await nextTick();
     }

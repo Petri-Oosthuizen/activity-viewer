@@ -20,7 +20,11 @@ import {
   formatTooltipParams,
 } from "~/utils/chart-options";
 import { buildPivotZonesForActivities } from "~/utils/series-transforms";
-import type { ChartTransformSettings, CumulativeSettings, PivotZonesSettings } from "~/utils/chart-settings";
+import type {
+  ChartTransformSettings,
+  CumulativeSettings,
+  PivotZonesSettings,
+} from "~/utils/chart-settings";
 import { DEFAULT_CHART_TRANSFORM_SETTINGS } from "~/utils/chart-settings";
 import type { MetricType } from "~/utils/chart-config";
 import { METRIC_LABELS } from "~/utils/chart-config";
@@ -81,7 +85,7 @@ export const useChartSeriesStore = defineStore("chartSeries", () => {
   // Chart options (full ECharts configuration)
   const chartOption = computed(() => {
     const metrics = selectedMetrics.value.length > 0 ? selectedMetrics.value : ["hr" as MetricType];
-    
+
     // Build full ChartTransformSettings for chart option building
     // Note: Smoothing and outliers are now handled in the processing pipeline
     const transforms: ChartTransformSettings = {
@@ -95,17 +99,24 @@ export const useChartSeriesStore = defineStore("chartSeries", () => {
     };
 
     if (transforms.viewMode === "pivotZones") {
-      const metric = (chartSeries.value[0]?.metric as MetricType | undefined) ?? selectedMetrics.value[0] ?? "hr";
-      const activeActivities = windowedActivities.value.filter((a) => !disabledActivities.value.has(a.id));
+      const metric =
+        (chartSeries.value[0]?.metric as MetricType | undefined) ??
+        selectedMetrics.value[0] ??
+        "hr";
+      const activeActivities = windowedActivities.value.filter(
+        (a) => !disabledActivities.value.has(a.id),
+      );
       const pivot = buildPivotZonesForActivities(activeActivities, metric, transforms);
       const bucketLabels = pivot?.bucketLabels ?? [];
 
       return {
-        tooltip: buildTooltipConfig(xAxisType.value, (params) => formatTooltipParams(params, xAxisType.value)),
+        tooltip: buildTooltipConfig(xAxisType.value, (params) =>
+          formatTooltipParams(params, xAxisType.value),
+        ),
         legend: { show: false },
         grid: {
           ...buildGridConfig(false),
-          bottom: "15%",
+          bottom: "5%",
         },
         dataZoom: [],
         xAxis: {
@@ -158,10 +169,15 @@ export const useChartSeriesStore = defineStore("chartSeries", () => {
       xExtent = { min: minX, max: maxX };
     }
 
-    const xAxisConfig = xExtent !== undefined ? { ...baseXAxisConfig, min: xExtent.min, max: xExtent.max } : baseXAxisConfig;
+    const xAxisConfig =
+      xExtent !== undefined
+        ? { ...baseXAxisConfig, min: xExtent.min, max: xExtent.max }
+        : baseXAxisConfig;
 
     return {
-      tooltip: buildTooltipConfig(xAxisType.value, (params) => formatTooltipParams(params, xAxisType.value)),
+      tooltip: buildTooltipConfig(xAxisType.value, (params) =>
+        formatTooltipParams(params, xAxisType.value),
+      ),
       legend: { show: false },
       grid: buildGridConfig(hasMultipleYAxes),
       dataZoom: buildDataZoomConfig(metrics.length, hasMultipleYAxes ? 2 : 1),
@@ -177,7 +193,10 @@ export const useChartSeriesStore = defineStore("chartSeries", () => {
     };
   });
 
-  function setTransformationSettings(settings: { cumulative: CumulativeSettings; pivotZones: PivotZonesSettings }) {
+  function setTransformationSettings(settings: {
+    cumulative: CumulativeSettings;
+    pivotZones: PivotZonesSettings;
+  }) {
     transformationSettings.value = {
       cumulative: { ...settings.cumulative },
       pivotZones: { ...settings.pivotZones },
