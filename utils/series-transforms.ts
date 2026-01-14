@@ -121,7 +121,15 @@ function getMetricValue(
     return Number.isFinite(paceMinPerKm) && paceMinPerKm > 0 ? paceMinPerKm : null;
   }
   const value = record[metric];
-  return value === undefined || value === null ? null : value;
+  if (value === undefined || value === null) return null;
+  
+  // Convert speed from m/s to km/h
+  if (metric === "speed") {
+    const kmh = value * 3.6;
+    return Number.isFinite(kmh) ? kmh : null;
+  }
+  
+  return value;
 }
 
 // Note: applyOutlierHandling is no longer used here as outliers are handled during data processing

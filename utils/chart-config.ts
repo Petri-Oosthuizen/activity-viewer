@@ -6,7 +6,16 @@
 import type { Activity, ActivityRecord } from "~/types/activity";
 
 // Metric type definition
-export type MetricType = "hr" | "alt" | "pwr" | "cad" | "pace" | "speed" | "temp" | "grade" | "verticalSpeed";
+export type MetricType =
+  | "hr"
+  | "alt"
+  | "pwr"
+  | "cad"
+  | "pace"
+  | "speed"
+  | "temp"
+  | "grade"
+  | "verticalSpeed";
 
 // X-axis type definition
 export type XAxisType = "time" | "distance" | "localTime";
@@ -21,7 +30,7 @@ export const METRIC_LABELS: Readonly<Record<MetricType, string>> = {
   pwr: "Power (W)",
   cad: "Cadence (rpm)",
   pace: "Pace (min/km)",
-  speed: "Speed (m/s)",
+  speed: "Speed (km/h)",
   temp: "Temperature (°C)",
   grade: "Grade (%)",
   verticalSpeed: "Vertical Speed (m/h)",
@@ -31,7 +40,17 @@ export const METRIC_LABELS: Readonly<Record<MetricType, string>> = {
  * Canonical order for displaying metrics throughout the UI
  * This ensures consistent ordering from overview panel to metric selector
  */
-export const METRIC_ORDER: readonly MetricType[] = ["alt", "hr", "pwr", "cad", "pace", "speed", "temp", "grade", "verticalSpeed"] as const;
+export const METRIC_ORDER: readonly MetricType[] = [
+  "alt",
+  "hr",
+  "pwr",
+  "cad",
+  "pace",
+  "speed",
+  "temp",
+  "grade",
+  "verticalSpeed",
+] as const;
 
 // Default color palette for activities
 export const ACTIVITY_COLORS = [
@@ -68,9 +87,7 @@ export function activityHasMetric(activity: Activity, metric: MetricType): boole
   if (metric === "grade" || metric === "verticalSpeed") {
     return activity.records.some((r) => r[metric] !== null && r[metric] !== undefined);
   }
-  return activity.records.some(
-    (record) => record[metric] !== null && record[metric] !== undefined
-  );
+  return activity.records.some((record) => record[metric] !== null && record[metric] !== undefined);
 }
 
 /**
@@ -90,7 +107,7 @@ export function countRecordsWithMetric(activity: Activity, metric: MetricType): 
     return count;
   }
   return activity.records.filter(
-    (record) => record[metric] !== null && record[metric] !== undefined
+    (record) => record[metric] !== null && record[metric] !== undefined,
   ).length;
 }
 
@@ -110,7 +127,8 @@ export function getAvailableMetrics(activities: Activity[]): MetricType[] {
       if (record.speed !== undefined && record.speed !== null) metrics.add("speed");
       if (record.temp !== undefined && record.temp !== null) metrics.add("temp");
       if (record.grade !== undefined && record.grade !== null) metrics.add("grade");
-      if (record.verticalSpeed !== undefined && record.verticalSpeed !== null) metrics.add("verticalSpeed");
+      if (record.verticalSpeed !== undefined && record.verticalSpeed !== null)
+        metrics.add("verticalSpeed");
     }
     if (activity.records.length > 1) {
       const hasValidPace = activity.records.some((r, i) => {
@@ -131,9 +149,7 @@ export function getAvailableMetrics(activities: Activity[]): MetricType[] {
 /**
  * Get metric availability map (which activities have which metrics)
  */
-export function getMetricAvailability(
-  activities: Activity[]
-): Record<MetricType, string[]> {
+export function getMetricAvailability(activities: Activity[]): Record<MetricType, string[]> {
   const availability: Record<MetricType, string[]> = {
     hr: [],
     alt: [],
@@ -147,7 +163,9 @@ export function getMetricAvailability(
   };
 
   activities.forEach((activity) => {
-    (["hr", "alt", "pwr", "cad", "speed", "temp", "grade", "verticalSpeed"] as MetricType[]).forEach((metric) => {
+    (
+      ["hr", "alt", "pwr", "cad", "speed", "temp", "grade", "verticalSpeed"] as MetricType[]
+    ).forEach((metric) => {
       if (activityHasMetric(activity, metric)) {
         availability[metric].push(activity.id);
       }
@@ -166,7 +184,7 @@ export function getMetricAvailability(
 export function calculateXValue(
   record: ActivityRecord,
   activity: Activity,
-  xAxisType: XAxisType
+  xAxisType: XAxisType,
 ): number {
   if (xAxisType === "localTime") {
     if (activity.startTime) {
@@ -230,7 +248,7 @@ export type ChartDataPoint = [number, number | null];
 export function transformToChartData(
   activity: Activity,
   metric: MetricType,
-  xAxisType: XAxisType
+  xAxisType: XAxisType,
 ): ChartDataPoint[] {
   // Preserve record order and indices to keep chart ↔ map synchronization exact.
   // Missing values are represented as `null` so ECharts can naturally gap the line.
@@ -239,9 +257,19 @@ export function transformToChartData(
     let y: number | null = null;
     if (metric === "pace") {
       // Prefer stored pace value if available (calculated during processing)
-      if (record.pace !== undefined && record.pace !== null && record.pace > 0 && Number.isFinite(record.pace)) {
+      if (
+        record.pace !== undefined &&
+        record.pace !== null &&
+        record.pace > 0 &&
+        Number.isFinite(record.pace)
+      ) {
         y = record.pace;
-      } else if (record.speed !== undefined && record.speed !== null && record.speed > 0 && Number.isFinite(record.speed)) {
+      } else if (
+        record.speed !== undefined &&
+        record.speed !== null &&
+        record.speed > 0 &&
+        Number.isFinite(record.speed)
+      ) {
         // Fallback: calculate from speed if pace not stored
         const paceMinPerKm = 1000 / (record.speed * 60);
         y = Number.isFinite(paceMinPerKm) && paceMinPerKm > 0 ? paceMinPerKm : null;
@@ -252,13 +280,17 @@ export function transformToChartData(
           const dt = record.t - prev.t;
           const dd = record.d - prev.d;
           if (dt > 0 && dd > 0) {
-            const paceMinPerKm = (dt / 60) / (dd / 1000);
+            const paceMinPerKm = dt / 60 / (dd / 1000);
             y = Number.isFinite(paceMinPerKm) && paceMinPerKm > 0 ? paceMinPerKm : null;
           }
         }
       }
     } else {
       y = record[metric] ?? null;
+      // Convert speed from m/s to km/h
+      if (metric === "speed" && y !== null && Number.isFinite(y)) {
+        y = y * 3.6;
+      }
     }
     return [x, y];
   });
@@ -270,7 +302,7 @@ export function transformToChartData(
 export function findNearestValue(
   dataMap: Map<number, number>,
   targetX: number,
-  maxDiff: number = 1000
+  maxDiff: number = 1000,
 ): number | null {
   if (dataMap.has(targetX)) {
     return dataMap.get(targetX)!;
@@ -292,5 +324,3 @@ export function findNearestValue(
   }
   return null;
 }
-
-
