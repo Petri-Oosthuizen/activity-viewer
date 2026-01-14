@@ -93,31 +93,29 @@
           </button>
         </div>
         <p class="mt-2 text-xs text-gray-500 sm:text-sm">
-          {{ metricSelectionMode === 'multi' ? 'Select multiple metrics to overlay on the chart' : 'Select one metric at a time' }}
+          {{ metricSelectionMode === 'multi' ? 'Select multiple metrics to overlay on the chart' : 'One metric displayed in the chart at a time' }}
         </p>
       </div>
 
       <!-- Cumulative -->
       <div class="space-y-3 sm:space-y-4">
         <h4 class="m-0 text-sm font-semibold text-gray-800 sm:text-base">Cumulative</h4>
-        <div class="rounded-md border border-gray-200 bg-white p-3 sm:p-4">
-          <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <div class="text-xs font-medium text-gray-800 sm:text-sm">Mode</div>
-              <div class="mt-1 text-[10px] text-gray-500 sm:text-xs">
-                Useful for things like elevation gain (positive delta sum of altitude).
-              </div>
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div class="text-xs font-medium text-gray-800 sm:text-sm">Mode</div>
+            <div class="mt-1 text-[10px] text-gray-500 sm:text-xs">
+              Useful for things like elevation gain (positive delta sum of altitude).
             </div>
-            <select
-              :value="chartTransforms.cumulative.mode"
-              class="w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/10 sm:w-52 sm:px-2 sm:py-1.5"
-              @change="setCumulativeMode"
-            >
-              <option value="off">Off</option>
-              <option value="sum">Sum</option>
-              <option value="positiveDeltaSum">Positive delta sum</option>
-            </select>
           </div>
+          <select
+            :value="chartTransforms.cumulative.mode"
+            class="w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/10 sm:w-52 sm:px-2 sm:py-1.5"
+            @change="setCumulativeMode"
+          >
+            <option value="off">Off</option>
+            <option value="sum">Sum</option>
+            <option value="positiveDeltaSum">Positive delta sum</option>
+          </select>
         </div>
       </div>
 
@@ -368,7 +366,12 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import { useActivityStore } from "~/stores/activity";
+import { storeToRefs } from "pinia";
+import { useProcessedActivityStore } from "~/stores/processedActivity";
+import { useChartOptionsStore } from "~/stores/chartOptions";
+import { useActivitySettingsStore } from "~/stores/activitySettings";
+import { useChartSeriesStore } from "~/stores/chartSeries";
+import { useActivityList } from "~/composables/useActivityList";
 import AxisTypeSelector from "./AxisTypeSelector.vue";
 import TimeOffsetControl from "./TimeOffsetControl.vue";
 import CollapsibleSection from "./CollapsibleSection.vue";
@@ -378,20 +381,37 @@ import type {
   OutlierHandling,
   SmoothingMode,
 } from "~/utils/chart-settings";
+import { DEFAULT_CHART_TRANSFORM_SETTINGS } from "~/utils/chart-settings";
 
-const activityStore = useActivityStore();
+const processedStore = useProcessedActivityStore();
+const chartOptionsStore = useChartOptionsStore();
+const settingsStore = useActivitySettingsStore();
+const chartSeriesStore = useChartSeriesStore();
+const { isActivityDisabled } = useActivityList();
 
-const activities = computed(() => activityStore.activities);
+const { processedActivities } = storeToRefs(processedStore);
+const { xAxisType, viewMode, metricSelectionMode } = storeToRefs(chartOptionsStore);
+const { outlierSettings, deltaSettings, activityOffsets, activityScales } = storeToRefs(settingsStore);
+const { transformationSettings } = storeToRefs(chartSeriesStore);
+
+const activities = computed(() => processedActivities.value);
 const activeActivities = computed(() =>
-  activities.value.filter((a) => !activityStore.isActivityDisabled(a.id))
+  activities.value.filter((a) => !isActivityDisabled(a.id))
 );
-const xAxisType = computed(() => activityStore.xAxisType);
-const showDelta = computed(() => activityStore.showDelta);
-const deltaMode = computed(() => activityStore.deltaMode);
-const deltaBaseActivityId = computed(() => activityStore.deltaBaseActivityId);
-const deltaCompareActivityId = computed(() => activityStore.deltaCompareActivityId);
-const metricSelectionMode = computed(() => activityStore.metricSelectionMode);
-const chartTransforms = computed(() => activityStore.chartTransforms);
+const showDelta = computed(() => deltaSettings.value.enabled);
+const deltaMode = computed(() => deltaSettings.value.mode);
+const deltaBaseActivityId = computed(() => deltaSettings.value.baseActivityId);
+const deltaCompareActivityId = computed(() => deltaSettings.value.compareActivityId);
+
+const chartTransforms = computed(() => ({
+  viewMode: viewMode.value,
+  outliers: outlierSettings.value,
+  smoothing: transformationSettings.value.smoothing,
+  gpsSmoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.gpsSmoothing },
+  paceSmoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.paceSmoothing },
+  cumulative: transformationSettings.value.cumulative,
+  pivotZones: transformationSettings.value.pivotZones,
+}));
 
 const effectiveDeltaBaseActivityId = computed(() => 
   deltaBaseActivityId.value || activeActivities.value[0]?.id || ''
@@ -402,122 +422,115 @@ const effectiveDeltaCompareActivityId = computed(() =>
 );
 
 const setXAxisType = (type: "time" | "distance" | "localTime") => {
-  activityStore.setXAxisType(type);
+  chartOptionsStore.setXAxisType(type);
 };
 
 const toggleDelta = (event: Event) => {
   const target = event.target as HTMLInputElement;
-  activityStore.setShowDelta(target.checked);
+  settingsStore.setDeltaSettings({ enabled: target.checked });
 };
 
 const setDeltaMode = (mode: "overlay" | "delta-only") => {
-  activityStore.setDeltaMode(mode);
+  settingsStore.setDeltaSettings({ mode });
 };
 
 const setDeltaBaseActivity = (event: Event) => {
   const target = event.target as HTMLSelectElement;
-  activityStore.setDeltaBaseActivity(target.value);
+  settingsStore.setDeltaSettings({ baseActivityId: target.value });
 };
 
 const setDeltaCompareActivity = (event: Event) => {
   const target = event.target as HTMLSelectElement;
-  activityStore.setDeltaCompareActivity(target.value);
+  settingsStore.setDeltaSettings({ compareActivityId: target.value });
 };
 
 const updateActivityOffset = (id: string, offset: number) => {
-  activityStore.updateOffset(id, offset);
+  settingsStore.setActivityOffset(id, offset);
 };
 
 const updateActivityScale = (id: string, event: Event) => {
   const target = event.target as HTMLInputElement;
   const next = Number.parseFloat(target.value);
-  activityStore.updateScale(id, Number.isFinite(next) ? next : 1);
+  settingsStore.setActivityScale(id, Number.isFinite(next) ? next : 1);
 };
 
 const setMetricSelectionMode = (mode: "multi" | "single") => {
-  activityStore.setMetricSelectionMode(mode);
+  chartOptionsStore.setMetricSelectionMode(mode);
 };
 
 const setViewMode = (mode: ChartViewMode) => {
-  activityStore.setChartTransforms({ ...chartTransforms.value, viewMode: mode });
+  chartOptionsStore.setViewMode(mode);
 };
 
 const setOutlierMode = (event: Event) => {
   const target = event.target as HTMLSelectElement;
-  activityStore.setChartTransforms({
-    ...chartTransforms.value,
-    outliers: { ...chartTransforms.value.outliers, mode: target.value as OutlierHandling },
+  settingsStore.setOutlierSettings({
+    ...outlierSettings.value,
+    mode: target.value as OutlierHandling,
   });
 };
 
 const setOutlierMaxPercentChange = (event: Event) => {
   const target = event.target as HTMLInputElement;
   const next = Number.parseFloat(target.value);
-  activityStore.setChartTransforms({
-    ...chartTransforms.value,
-    outliers: {
-      ...chartTransforms.value.outliers,
-      maxPercentChange: Number.isFinite(next) ? next : chartTransforms.value.outliers.maxPercentChange,
-    },
+  settingsStore.setOutlierSettings({
+    ...outlierSettings.value,
+    maxPercentChange: Number.isFinite(next) ? next : outlierSettings.value.maxPercentChange,
   });
 };
 
 const setSmoothingMode = (event: Event) => {
   const target = event.target as HTMLSelectElement;
-  activityStore.setChartTransforms({
-    ...chartTransforms.value,
-    smoothing: { ...chartTransforms.value.smoothing, mode: target.value as SmoothingMode },
+  chartSeriesStore.setTransformationSettings({
+    ...transformationSettings.value,
+    smoothing: {
+      ...transformationSettings.value.smoothing,
+      mode: target.value as SmoothingMode,
+    },
   });
 };
 
 const setSmoothingWindowPoints = (event: Event) => {
   const target = event.target as HTMLInputElement;
   const next = Number.parseInt(target.value, 10);
-  activityStore.setChartTransforms({
-    ...chartTransforms.value,
+  chartSeriesStore.setTransformationSettings({
+    ...transformationSettings.value,
     smoothing: {
-      ...chartTransforms.value.smoothing,
-      windowPoints: Number.isFinite(next) ? Math.max(1, next) : chartTransforms.value.smoothing.windowPoints,
+      ...transformationSettings.value.smoothing,
+      windowPoints: Number.isFinite(next) ? Math.max(1, next) : transformationSettings.value.smoothing.windowPoints,
     },
   });
 };
 
-const togglePaceSmoothing = (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  activityStore.setChartTransforms({
-    ...chartTransforms.value,
-    paceSmoothing: { ...chartTransforms.value.paceSmoothing, enabled: target.checked },
-  });
+const togglePaceSmoothing = (_event: Event) => {
+  // Pace smoothing is not stored in stores (always uses defaults)
+  // This function is a no-op
 };
 
-const setPaceSmoothingWindowSeconds = (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  const next = Number.parseInt(target.value, 10);
-  activityStore.setChartTransforms({
-    ...chartTransforms.value,
-    paceSmoothing: {
-      ...chartTransforms.value.paceSmoothing,
-      windowSeconds: Number.isFinite(next) ? Math.max(1, next) : chartTransforms.value.paceSmoothing.windowSeconds,
-    },
-  });
+const setPaceSmoothingWindowSeconds = (_event: Event) => {
+  // Pace smoothing is not stored in stores (always uses defaults)
+  // This function is a no-op
 };
 
 const setCumulativeMode = (event: Event) => {
   const target = event.target as HTMLSelectElement;
-  activityStore.setChartTransforms({
-    ...chartTransforms.value,
-    cumulative: { ...chartTransforms.value.cumulative, mode: target.value as CumulativeMode },
+  chartSeriesStore.setTransformationSettings({
+    ...transformationSettings.value,
+    cumulative: {
+      ...transformationSettings.value.cumulative,
+      mode: target.value as CumulativeMode,
+    },
   });
 };
 
 const setPivotZoneCount = (event: Event) => {
   const target = event.target as HTMLInputElement;
   const next = Number.parseInt(target.value, 10);
-  activityStore.setChartTransforms({
-    ...chartTransforms.value,
+  chartSeriesStore.setTransformationSettings({
+    ...transformationSettings.value,
     pivotZones: {
-      ...chartTransforms.value.pivotZones,
-      zoneCount: Number.isFinite(next) ? Math.max(1, next) : chartTransforms.value.pivotZones.zoneCount,
+      ...transformationSettings.value.pivotZones,
+      zoneCount: Number.isFinite(next) ? Math.max(1, next) : transformationSettings.value.pivotZones.zoneCount,
     },
   });
 };

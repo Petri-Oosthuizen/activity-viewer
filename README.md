@@ -67,7 +67,7 @@ Everything is processed **locally in your browser**. Files are not uploaded to a
 - Hide/show activities without removing them
 - Remove individual activities or clear all
 - Consistent activity colors
-- Optional local storage persistence (activities saved in browser, persist across page refreshes)
+- Optional local storage persistence (raw files saved in browser, persist across page refreshes, allows reprocessing with different settings)
 
 ### Performance
 
@@ -95,6 +95,58 @@ npm run test
 npm run build
 npm run generate
 ```
+
+### Architecture
+
+The application uses a modular store-based architecture with a clear data pipeline:
+
+#### Data Pipeline
+
+1. **Import** → Raw files are parsed and stored with original file content
+2. **Process** → Data cleaning, smoothing, scaling, and derived metric calculation
+3. **Transform** → Metric-specific transformations (smoothing, cumulative)
+4. **Window** → Data trimming based on visible chart window
+5. **Chart/Map** → Final rendering with ECharts and Leaflet
+
+#### Store Architecture
+
+The application uses 7 specialized Pinia stores:
+
+- **`rawActivity`**: Stores raw file content and initially parsed records (pre-processing)
+- **`activitySettings`**: Manages all user settings (outliers, GPS smoothing, scaling, offsets, comparison settings)
+- **`processedActivity`**: Applies processing pipeline (outliers, GPS smoothing, scaling, derived metrics, offsets)
+- **`transformedActivity`**: Applies chart transformations (currently passes through, transformations happen during chart rendering)
+- **`windowActivity`**: Applies windowing/trimming based on visible chart range
+- **`chartOptions`**: Manages chart display configuration (metric selection, view mode, X-axis type)
+- **`chartSeries`**: Converts internal data model to ECharts-compatible format
+
+#### Processing Pipeline Order
+
+The processing pipeline follows a strict order:
+
+1. **Outlier handling** (clean bad metric values)
+2. **GPS distance filtering** (happens during parsing)
+3. **Remove invalid records** (missing required fields, invalid GPS)
+4. **GPS smoothing** (smooth GPS coordinates)
+5. **Apply scaling** (Y-axis scaling per activity)
+6. **Calculate derived metrics** (grade, vertical speed, pace)
+7. **Apply offset** (time alignment) - LAST
+
+#### Field Mapping System
+
+A flexible field mapping system standardizes metric names from different file formats and providers:
+
+- **Base mappers**: `fit-mapper`, `gpx-mapper`, `tcx-mapper`
+- **Provider-specific**: `garmin-fit-mapper` (extends FIT mapper for Garmin-specific fields)
+- Maps provider-specific field names (e.g., "runcadence" from Garmin) to unified field names (e.g., "cad")
+
+#### Key Design Principles
+
+- **Testability**: Processing logic is pure functions in `utils/`, fully unit tested
+- **Separation of Concerns**: Each store has a single, clear responsibility
+- **Reactivity**: Uses Vue 3 `computed` and `shallowRef` for optimal performance
+- **Raw File Storage**: Raw files are saved to localStorage, not processed data, allowing reprocessing with different settings
+- **Type Safety**: Full TypeScript coverage with strict types
 
 ## License
 

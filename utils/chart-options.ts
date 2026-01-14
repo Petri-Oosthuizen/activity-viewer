@@ -196,7 +196,7 @@ export function buildGridConfig(hasMultipleYAxes: boolean) {
     left: leftMargin,
     right: rightMargin,
     bottom: "20%",
-    top: "5%",
+    top: "2%",
     containLabel: true,
   };
 }

@@ -6,7 +6,7 @@
 import type { Activity, ActivityRecord } from "~/types/activity";
 
 // Metric type definition
-export type MetricType = "hr" | "alt" | "pwr" | "cad" | "pace" | "speed" | "temp" | "grade" | "vSpeed";
+export type MetricType = "hr" | "alt" | "pwr" | "cad" | "pace" | "speed" | "temp" | "grade" | "verticalSpeed";
 
 // X-axis type definition
 export type XAxisType = "time" | "distance" | "localTime";
@@ -24,10 +24,14 @@ export const METRIC_LABELS: Readonly<Record<MetricType, string>> = {
   speed: "Speed (m/s)",
   temp: "Temperature (°C)",
   grade: "Grade (%)",
-  vSpeed: "Vertical Speed (m/h)",
+  verticalSpeed: "Vertical Speed (m/h)",
 };
 
-const METRIC_ORDER: readonly MetricType[] = ["alt", "hr", "pwr", "cad", "pace", "speed", "temp", "grade", "vSpeed"] as const;
+/**
+ * Canonical order for displaying metrics throughout the UI
+ * This ensures consistent ordering from overview panel to metric selector
+ */
+export const METRIC_ORDER: readonly MetricType[] = ["alt", "hr", "pwr", "cad", "pace", "speed", "temp", "grade", "verticalSpeed"] as const;
 
 // Default color palette for activities
 export const ACTIVITY_COLORS = [
@@ -61,7 +65,7 @@ export function activityHasMetric(activity: Activity, metric: MetricType): boole
       return dt > 0 && dd > 0;
     });
   }
-  if (metric === "grade" || metric === "vSpeed") {
+  if (metric === "grade" || metric === "verticalSpeed") {
     return activity.records.some((r) => r[metric] !== null && r[metric] !== undefined);
   }
   return activity.records.some(
@@ -106,7 +110,7 @@ export function getAvailableMetrics(activities: Activity[]): MetricType[] {
       if (record.speed !== undefined && record.speed !== null) metrics.add("speed");
       if (record.temp !== undefined && record.temp !== null) metrics.add("temp");
       if (record.grade !== undefined && record.grade !== null) metrics.add("grade");
-      if (record.vSpeed !== undefined && record.vSpeed !== null) metrics.add("vSpeed");
+      if (record.verticalSpeed !== undefined && record.verticalSpeed !== null) metrics.add("verticalSpeed");
     }
     if (activity.records.length > 1) {
       const hasValidPace = activity.records.some((r, i) => {
@@ -139,11 +143,11 @@ export function getMetricAvailability(
     speed: [],
     temp: [],
     grade: [],
-    vSpeed: [],
+    verticalSpeed: [],
   };
 
   activities.forEach((activity) => {
-    (["hr", "alt", "pwr", "cad", "speed", "temp", "grade", "vSpeed"] as MetricType[]).forEach((metric) => {
+    (["hr", "alt", "pwr", "cad", "speed", "temp", "grade", "verticalSpeed"] as MetricType[]).forEach((metric) => {
       if (activityHasMetric(activity, metric)) {
         availability[metric].push(activity.id);
       }
@@ -234,10 +238,11 @@ export function transformToChartData(
     const x = calculateXValue(record, activity, xAxisType);
     let y: number | null = null;
     if (metric === "pace") {
-      // Prefer speed if available (more accurate for GPX files)
-      if (record.speed !== undefined && record.speed !== null && record.speed > 0 && Number.isFinite(record.speed)) {
-        // Convert speed (m/s) to pace (min/km)
-        // pace = (1000 meters / speed_mps) / 60 seconds = 1000 / (speed_mps * 60)
+      // Prefer stored pace value if available (calculated during processing)
+      if (record.pace !== undefined && record.pace !== null && record.pace > 0 && Number.isFinite(record.pace)) {
+        y = record.pace;
+      } else if (record.speed !== undefined && record.speed !== null && record.speed > 0 && Number.isFinite(record.speed)) {
+        // Fallback: calculate from speed if pace not stored
         const paceMinPerKm = 1000 / (record.speed * 60);
         y = Number.isFinite(paceMinPerKm) && paceMinPerKm > 0 ? paceMinPerKm : null;
       } else if (i > 0) {

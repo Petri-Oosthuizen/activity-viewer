@@ -1,54 +1,72 @@
 /**
- * Composable for localStorage persistence of activities
- * Handles saving and loading activities to/from browser localStorage
+ * Composable for localStorage persistence of raw activities
+ * Handles saving and loading raw activities to/from browser localStorage
+ *
+ * Note: Saves RawActivity objects (not processed Activity objects) so that
+ * activities can be reprocessed with different settings.
  */
 
-import { ref, computed, watch, onMounted } from "vue";
-import { useActivityStore } from "~/stores/activity";
-import type { Activity } from "~/types/activity";
+import { ref, computed, watch, onMounted, nextTick } from "vue";
+import { useRawActivityStore } from "~/stores/rawActivity";
+import { useActivitySettingsStore } from "~/stores/activitySettings";
+import type { RawActivity } from "~/types/activity";
 
 const STORAGE_KEY_ENABLED = "activity-viewer:localStorageEnabled";
 const STORAGE_KEY_ACTIVITIES = "activity-viewer:activities";
 
-interface StoredActivity {
+interface StoredRawActivity {
   id: string;
   name: string;
-  records: Activity["records"];
-  sourceType?: Activity["sourceType"];
-  offset: number;
-  scale: number;
-  color: string;
-  startTime?: string; // Serialized as ISO string
-  calories?: number;
-  sport?: string;
-  laps?: Array<{
-    startTime: string; // Serialized as ISO string
-    startRecordIndex: number;
-    endRecordIndex: number;
-    totalTimeSeconds?: number;
-    distanceMeters?: number;
+  sourceType: "gpx" | "fit" | "tcx";
+  fileContent?: string; // Stored as string (base64 for binary files, plain text for XML)
+  fileContentIsBase64?: boolean; // Flag to indicate if fileContent is base64 encoded
+  records: RawActivity["records"];
+  metadata: {
+    startTime?: string; // Serialized as ISO string
     calories?: number;
-    averageHeartRateBpm?: number;
-    maximumHeartRateBpm?: number;
-    averageCadence?: number;
-    maximumCadence?: number;
-    averageSpeed?: number;
-    maximumSpeed?: number;
-    intensity?: "Active" | "Resting";
-    triggerMethod?: string;
-  }>;
+    sport?: string;
+    laps?: Array<{
+      startTime: string; // Serialized as ISO string
+      startRecordIndex: number;
+      endRecordIndex: number;
+      totalTimeSeconds?: number;
+      distanceMeters?: number;
+      calories?: number;
+      averageHeartRateBpm?: number;
+      maximumHeartRateBpm?: number;
+      averageCadence?: number;
+      maximumCadence?: number;
+      averageSpeed?: number;
+      maximumSpeed?: number;
+      intensity?: "Active" | "Resting";
+      triggerMethod?: string;
+    }>;
+  };
 }
 
 export function useLocalStoragePersistence() {
-  const activityStore = useActivityStore();
+  const rawActivityStore = useRawActivityStore();
+  const settingsStore = useActivitySettingsStore();
   const isEnabled = ref(false);
   const isInitialized = ref(false);
-  
-  // Initialize loading state synchronously if localStorage is enabled (client-side only)
+
+  // Initialize loading state synchronously if localStorage is enabled and has activities (client-side only)
   // This prevents flash of upload UI when localStorage is enabled
-  const isLoading = ref(
-    typeof window !== "undefined" && localStorage.getItem(STORAGE_KEY_ENABLED) === "true"
-  );
+  const getInitialLoadingState = (): boolean => {
+    if (typeof window === "undefined") return false;
+    const enabled = localStorage.getItem(STORAGE_KEY_ENABLED) === "true";
+    if (!enabled) return false;
+    // Check if there are activities to load
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY_ACTIVITIES);
+      if (!stored) return false;
+      const parsed = JSON.parse(stored) as StoredRawActivity[];
+      return parsed.length > 0;
+    } catch {
+      return false;
+    }
+  };
+  const isLoading = ref(getInitialLoadingState());
 
   const loadEnabledState = (): boolean => {
     if (typeof window === "undefined") return false;
@@ -79,9 +97,25 @@ export function useLocalStoragePersistence() {
     }
   };
 
-  const serializeActivity = (activity: Activity): StoredActivity => {
-    const laps = activity.laps?.map((lap) => ({
-      startTime: lap.startTime instanceof Date ? lap.startTime.toISOString() : lap.startTime.toISOString(),
+  const serializeRawActivity = async (rawActivity: RawActivity): Promise<StoredRawActivity> => {
+    let fileContent: string | undefined;
+    let fileContentIsBase64 = false;
+
+    if (rawActivity.fileContent) {
+      if (typeof rawActivity.fileContent === "string") {
+        fileContent = rawActivity.fileContent;
+      } else if (rawActivity.fileContent instanceof Blob) {
+        // Convert Blob to base64 string
+        const arrayBuffer = await rawActivity.fileContent.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        const binaryString = String.fromCharCode(...uint8Array);
+        fileContent = btoa(binaryString);
+        fileContentIsBase64 = true;
+      }
+    }
+
+    const laps = rawActivity.metadata.laps?.map((lap) => ({
+      startTime: lap.startTime.toISOString(),
       startRecordIndex: lap.startRecordIndex,
       endRecordIndex: lap.endRecordIndex,
       totalTimeSeconds: lap.totalTimeSeconds,
@@ -97,23 +131,49 @@ export function useLocalStoragePersistence() {
       triggerMethod: lap.triggerMethod,
     }));
 
+    // Clean records: remove any processed/derived fields (pace, grade, verticalSpeed) that shouldn't be saved
+    // These are calculated during processing and should not be persisted
+    const cleanedRecords = rawActivity.records.map((record) => {
+      const cleaned = { ...record };
+      delete cleaned.pace;
+      delete cleaned.grade;
+      delete cleaned.verticalSpeed;
+      return cleaned;
+    });
+
     return {
-      id: activity.id,
-      name: activity.name,
-      records: activity.records,
-      sourceType: activity.sourceType,
-      offset: activity.offset,
-      scale: activity.scale,
-      color: activity.color,
-      startTime: activity.startTime?.toISOString(),
-      calories: activity.calories,
-      sport: activity.sport,
-      laps: laps,
+      id: rawActivity.id,
+      name: rawActivity.name,
+      sourceType: rawActivity.sourceType,
+      fileContent,
+      fileContentIsBase64,
+      records: cleanedRecords,
+      metadata: {
+        startTime: rawActivity.metadata.startTime?.toISOString(),
+        calories: rawActivity.metadata.calories,
+        sport: rawActivity.metadata.sport,
+        laps: laps,
+      },
     };
   };
 
-  const deserializeActivity = (stored: StoredActivity): Activity => {
-    const laps = stored.laps?.map((lap) => ({
+  const deserializeRawActivity = (stored: StoredRawActivity): RawActivity => {
+    let fileContent: Blob | string | undefined;
+    if (stored.fileContent) {
+      if (stored.fileContentIsBase64) {
+        // Convert base64 string back to Blob
+        const binaryString = atob(stored.fileContent);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        fileContent = new Blob([bytes]);
+      } else {
+        fileContent = stored.fileContent;
+      }
+    }
+
+    const laps = stored.metadata.laps?.map((lap) => ({
       startTime: new Date(lap.startTime),
       startRecordIndex: lap.startRecordIndex,
       endRecordIndex: lap.endRecordIndex,
@@ -129,39 +189,51 @@ export function useLocalStoragePersistence() {
       intensity: lap.intensity,
       triggerMethod: lap.triggerMethod,
     }));
-    
+
+    // Clean records: remove any processed fields (pace, grade, verticalSpeed) that shouldn't be in raw records
+    // These are derived metrics that should be recalculated during processing
+    const cleanedRecords = stored.records.map((record) => {
+      const cleaned = { ...record };
+      delete cleaned.pace;
+      delete cleaned.grade;
+      delete cleaned.verticalSpeed;
+      return cleaned;
+    });
+
     return {
       id: stored.id,
       name: stored.name,
-      records: stored.records,
       sourceType: stored.sourceType,
-      offset: stored.offset,
-      scale: stored.scale,
-      color: stored.color,
-      startTime: stored.startTime ? new Date(stored.startTime) : undefined,
-      calories: stored.calories,
-      sport: stored.sport,
-      laps: laps,
+      fileContent,
+      records: cleanedRecords,
+      metadata: {
+        startTime: stored.metadata.startTime ? new Date(stored.metadata.startTime) : undefined,
+        calories: stored.metadata.calories,
+        sport: stored.metadata.sport,
+        laps: laps,
+      },
     };
   };
 
   const saveActivities = () => {
     if (typeof window === "undefined" || !isEnabled.value) return;
-    try {
-      const serialized = activityStore.activities.map(serializeActivity);
-      localStorage.setItem(STORAGE_KEY_ACTIVITIES, JSON.stringify(serialized));
-    } catch (error) {
-      console.error("Failed to save activities to localStorage:", error);
-    }
+    // Use setTimeout to handle async serialization without blocking
+    Promise.all(rawActivityStore.rawActivities.map(serializeRawActivity))
+      .then((serialized) => {
+        localStorage.setItem(STORAGE_KEY_ACTIVITIES, JSON.stringify(serialized));
+      })
+      .catch((error) => {
+        console.error("Failed to save activities to localStorage:", error);
+      });
   };
 
-  const loadActivities = (): Activity[] => {
+  const loadActivities = (): RawActivity[] => {
     if (typeof window === "undefined" || !isEnabled.value) return [];
     try {
       const stored = localStorage.getItem(STORAGE_KEY_ACTIVITIES);
       if (!stored) return [];
-      const parsed = JSON.parse(stored) as StoredActivity[];
-      return parsed.map(deserializeActivity);
+      const parsed = JSON.parse(stored) as StoredRawActivity[];
+      return parsed.map(deserializeRawActivity);
     } catch (error) {
       console.error("Failed to load activities from localStorage:", error);
       return [];
@@ -180,38 +252,15 @@ export function useLocalStoragePersistence() {
     if (enabled) {
       try {
         const loadedActivities = loadActivities();
-        if (loadedActivities.length > 0 && activityStore.activities.length === 0) {
-          const restoredActivities: Array<{ activity: Activity; offset: number; scale: number }> = [];
-          
-          loadedActivities.forEach((activity) => {
-            activityStore.addActivity(
-              activity.records,
-              activity.name,
-              activity.startTime,
-              activity.sourceType,
-              activity.calories,
-              activity.sport,
-              activity.laps
-            );
-            const lastIndex = activityStore.activities.length - 1;
-            const addedActivity = activityStore.activities[lastIndex];
-            if (addedActivity) {
-              restoredActivities.push({
-                activity: addedActivity,
-                offset: activity.offset,
-                scale: activity.scale,
-              });
-            }
+        if (loadedActivities.length > 0 && rawActivityStore.rawActivities.length === 0) {
+          // Load activities into rawActivityStore
+          loadedActivities.forEach((rawActivity) => {
+            rawActivityStore.addRawActivity(rawActivity);
           });
-
-          restoredActivities.forEach(({ activity, offset, scale }) => {
-            if (offset !== 0) {
-              activityStore.updateOffset(activity.id, offset);
-            }
-            if (scale !== 1) {
-              activityStore.updateScale(activity.id, scale);
-            }
-          });
+          // Wait for Vue to process the reactive updates and render
+          await nextTick();
+          // Small delay to ensure smooth transition and that activities are fully processed
+          await new Promise((resolve) => setTimeout(resolve, 100));
         }
       } finally {
         isLoading.value = false;
@@ -226,13 +275,13 @@ export function useLocalStoragePersistence() {
     initializeFromStorage();
 
     watch(
-      () => activityStore.activities,
+      () => rawActivityStore.rawActivities,
       () => {
         if (isEnabled.value && isInitialized.value) {
           saveActivities();
         }
       },
-      { deep: true }
+      { deep: true },
     );
   });
 

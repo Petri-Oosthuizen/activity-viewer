@@ -6,6 +6,8 @@ import {
   calculateNormalizedPower,
 } from "~/utils/power-metrics";
 import { calculateGpsSpeed, DEFAULT_GPS_DISTANCE_OPTIONS, type GpsDistanceOptions } from "~/utils/gps-distance";
+import { smoothMovingAverage } from "~/utils/series-transforms";
+import { DEFAULT_GPS_PACE_SMOOTHING_SETTINGS } from "~/utils/chart-settings";
 
 export interface MetricStats {
   count: number;
@@ -32,7 +34,7 @@ export interface ActivityStats {
   additionalMetrics: Record<string, MetricStats>;
 }
 
-function safeMetricStats(records: ActivityRecord[], metric: "hr" | "alt" | "pwr" | "cad" | "speed" | "temp" | "grade" | "vSpeed"): MetricStats {
+function safeMetricStats(records: ActivityRecord[], metric: "hr" | "alt" | "pwr" | "cad" | "speed" | "temp" | "grade" | "verticalSpeed"): MetricStats {
   let count = 0;
   let sum = 0;
   let min: number | null = null;
@@ -116,6 +118,40 @@ function safePaceStats(records: ActivityRecord[]): MetricStats {
 
   const gpsOptions: GpsDistanceOptions = DEFAULT_GPS_DISTANCE_OPTIONS;
 
+  // Collect all pace values and track which ones are GPS-calculated
+  const paceValues: (number | null)[] = new Array(records.length).fill(null);
+  const gpsCalculatedIndices: number[] = [];
+  const speedValues: (number | null)[] = new Array(records.length).fill(null);
+
+  // First pass: calculate speed from GPS if not already present (don't modify input records)
+  for (let i = 1; i < records.length; i++) {
+    const r = records[i];
+    const prev = records[i - 1];
+    if (!r || !prev) continue;
+
+    // Use existing speed if available
+    if (r.speed !== undefined && r.speed !== null && r.speed > 0 && Number.isFinite(r.speed)) {
+      speedValues[i] = r.speed;
+    } else if (
+      r.lat !== undefined &&
+      r.lon !== undefined &&
+      prev.lat !== undefined &&
+      prev.lon !== undefined
+    ) {
+      // Calculate speed from GPS coordinates
+      const speed = calculateGpsSpeed(
+        { lat: prev.lat, lon: prev.lon, t: prev.t, alt: prev.alt },
+        { lat: r.lat, lon: r.lon, t: r.t, alt: r.alt },
+        gpsOptions
+      );
+      if (speed !== null && speed > 0 && Number.isFinite(speed)) {
+        speedValues[i] = speed;
+        gpsCalculatedIndices.push(i);
+      }
+    }
+  }
+
+  // Second pass: calculate pace from speed (now all records should have speed if GPS was available)
   for (let i = 1; i < records.length; i++) {
     const r = records[i];
     const prev = records[i - 1];
@@ -125,27 +161,16 @@ function safePaceStats(records: ActivityRecord[]): MetricStats {
     let segmentDistance = 0;
     let segmentTime = 0;
 
-    // Prefer embedded speed if available (TCX/FIT files)
-    if (r.speed !== undefined && r.speed !== null && r.speed > 0 && Number.isFinite(r.speed)) {
+    // Use speed if available (embedded from TCX/FIT or calculated from GPS)
+    const speed = speedValues[i];
+    if (speed !== null && speed !== undefined && speed > 0 && Number.isFinite(speed)) {
       // Convert speed (m/s) to pace (min/km)
       // pace = (1000 meters / speed_mps) / 60 seconds = 1000 / (speed_mps * 60)
-      paceMinPerKm = 1000 / (r.speed * 60);
+      paceMinPerKm = 1000 / (speed * 60);
       segmentTime = r.t - prev.t;
       segmentDistance = r.d - prev.d;
-    } else if (r.lat !== undefined && r.lon !== undefined && prev.lat !== undefined && prev.lon !== undefined) {
-      // For GPX files: calculate speed directly from GPS coordinates with filtering
-      const speed = calculateGpsSpeed(
-        { lat: prev.lat, lon: prev.lon, t: prev.t, alt: prev.alt },
-        { lat: r.lat, lon: r.lon, t: r.t, alt: r.alt },
-        gpsOptions
-      );
-      if (speed !== null && speed > 0 && Number.isFinite(speed)) {
-        paceMinPerKm = 1000 / (speed * 60);
-        segmentTime = r.t - prev.t;
-        segmentDistance = r.d - prev.d;
-      }
     } else {
-      // Fall back to cumulative distance/time calculation
+      // Fall back to cumulative distance/time calculation if no speed available
       segmentTime = r.t - prev.t;
       segmentDistance = r.d - prev.d;
       if (segmentTime > 0 && segmentDistance > 0) {
@@ -154,14 +179,74 @@ function safePaceStats(records: ActivityRecord[]): MetricStats {
     }
 
     if (paceMinPerKm === null || !Number.isFinite(paceMinPerKm) || paceMinPerKm <= 0) continue;
-    
+
+    paceValues[i] = paceMinPerKm;
+
     count++;
     if (segmentTime > 0 && segmentDistance > 0) {
       totalDistance += segmentDistance;
       totalTime += segmentTime;
     }
-    min = min === null ? paceMinPerKm : Math.min(min, paceMinPerKm);
-    max = max === null ? paceMinPerKm : Math.max(max, paceMinPerKm);
+  }
+
+  // Apply smoothing to GPS-calculated speed values first, then recalculate pace
+  // This reduces noise at the source and makes GPX pace comparable to TCX/FIT files
+  // Only applies when GPS pace smoothing is enabled and pace is calculated from GPS
+  // Note: This only applies when pace has to be calculated from GPS, not when activity contains embedded speed
+  if (gpsCalculatedIndices.length > 0 && DEFAULT_GPS_PACE_SMOOTHING_SETTINGS.enabled) {
+    const smoothedSpeed = smoothMovingAverage(speedValues, DEFAULT_GPS_PACE_SMOOTHING_SETTINGS.windowPoints);
+
+    // Update GPS-calculated speeds with smoothed versions and recalculate pace
+    for (const idx of gpsCalculatedIndices) {
+      const smoothed = smoothedSpeed[idx];
+      if (smoothed !== null && smoothed !== undefined && Number.isFinite(smoothed) && smoothed > 0) {
+        speedValues[idx] = smoothed;
+        // Recalculate pace from smoothed speed
+        const r = records[idx];
+        const prev = records[idx - 1];
+        if (r && prev) {
+          const paceMinPerKm = 1000 / (smoothed * 60);
+          if (Number.isFinite(paceMinPerKm) && paceMinPerKm > 0) {
+            paceValues[idx] = paceMinPerKm;
+          }
+        }
+      }
+    }
+
+    // Apply additional smoothing to GPS-calculated pace values to better match TCX/FIT
+    const smoothedPace = smoothMovingAverage(paceValues, DEFAULT_GPS_PACE_SMOOTHING_SETTINGS.windowPoints);
+    for (const idx of gpsCalculatedIndices) {
+      const smoothed = smoothedPace[idx];
+      if (smoothed !== null && smoothed !== undefined && Number.isFinite(smoothed) && smoothed > 0) {
+        paceValues[idx] = smoothed;
+      }
+    }
+  }
+
+  // Calculate min and max from (potentially smoothed) pace values
+  // For GPS-calculated pace, use percentile-based min/max to be more robust to outliers
+  const validPaceValues: number[] = [];
+  for (let i = 1; i < paceValues.length; i++) {
+    const pace = paceValues[i];
+    if (pace !== null && pace !== undefined && Number.isFinite(pace) && pace > 0) {
+      validPaceValues.push(pace);
+    }
+  }
+
+  if (validPaceValues.length > 0) {
+    if (gpsCalculatedIndices.length > 0 && validPaceValues.length > 10) {
+      // For GPS-calculated pace, use 5th and 95th percentiles to filter extreme outliers
+      // This makes GPX pace stats more comparable to TCX/FIT files
+      const sorted = [...validPaceValues].sort((a, b) => a - b);
+      const p5Index = Math.floor(sorted.length * 0.05);
+      const p95Index = Math.ceil(sorted.length * 0.95) - 1;
+      min = sorted[p5Index] ?? sorted[0] ?? null;
+      max = sorted[p95Index] ?? sorted[sorted.length - 1] ?? null;
+    } else {
+      // For embedded speed (TCX/FIT) or small datasets, use absolute min/max
+      min = Math.min(...validPaceValues);
+      max = Math.max(...validPaceValues);
+    }
   }
 
   // Calculate average pace from total distance/time (more accurate than averaging individual paces)
@@ -236,7 +321,7 @@ export function computeActivityStatsFromRecords(records: ActivityRecord[]): Acti
       speed: safeMetricStats(records, "speed"),
       temp: safeMetricStats(records, "temp"),
       grade: safeMetricStats(records, "grade"),
-      vSpeed: safeMetricStats(records, "vSpeed"),
+      verticalSpeed: safeMetricStats(records, "verticalSpeed"),
     },
     bestSplits: calculateBestSplits(records, distanceMeters),
     powerMetrics: hasPower

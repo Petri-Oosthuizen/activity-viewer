@@ -37,56 +37,19 @@
       class="w-full rounded-sm border border-gray-200 transition-all"
       :style="{ height: mapHeight }"
     ></div>
-
-    <!-- Advanced Settings (below map, consistent with chart) -->
-    <CollapsibleSection class="mt-4 sm:mt-6">
-      <template #title>Advanced Settings</template>
-      <div class="space-y-4 sm:space-y-6">
-        <div class="space-y-3 sm:space-y-4">
-          <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h4 class="m-0 text-sm font-semibold text-gray-800 sm:text-base">GPS Smoothing</h4>
-              <p class="mt-1 text-xs text-gray-500 sm:text-sm">
-                Smooth the GPS track to reduce jitter (affects map rendering and hover snapping).
-              </p>
-            </div>
-            <label class="flex cursor-pointer touch-manipulation items-center gap-2">
-              <input
-                type="checkbox"
-                :checked="chartTransforms.gpsSmoothing.enabled"
-                class="h-5 w-5 cursor-pointer touch-manipulation rounded-sm border-gray-300 text-primary focus:ring-primary sm:h-4 sm:w-4"
-                @change="toggleGpsSmoothing"
-              />
-              <span class="text-xs text-gray-700 sm:text-sm">Enable</span>
-            </label>
-          </div>
-
-          <div class="mt-3">
-            <label class="mb-1 block text-xs font-medium text-gray-700">Window (points)</label>
-            <input
-              type="number"
-              min="1"
-              step="1"
-              class="w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/10 sm:w-auto sm:px-2 sm:py-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-              :value="chartTransforms.gpsSmoothing.windowPoints"
-              :disabled="!chartTransforms.gpsSmoothing.enabled"
-              @input="setGpsSmoothingWindowPoints"
-            />
-          </div>
-        </div>
-      </div>
-    </CollapsibleSection>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, nextTick, computed } from "vue";
-import { useActivityStore } from "~/stores/activity";
+import { storeToRefs } from "pinia";
+import { useActivitySettingsStore } from "~/stores/activitySettings";
+import { useUIStore } from "~/stores/ui";
+import { useActivityList } from "~/composables/useActivityList";
 import type { Activity, ActivityRecord } from "~/types/activity";
 import { buildPointTooltip, buildMultiActivityTooltip } from "~/utils/tooltip-builder";
 import { formatTime, formatDistance } from "~/utils/format";
 import { smoothGpsPoints } from "~/utils/series-transforms";
-import CollapsibleSection from "./CollapsibleSection.vue";
 
 let L: typeof import("leaflet") | null = null;
 
@@ -132,31 +95,19 @@ let markers: any[] = [];
 let hoverMarker: any = null;
 let nearbyActivities: Array<{ activity: Activity; record: ActivityRecord }> = [];
 
-const activityStore = useActivityStore();
+const settingsStore = useActivitySettingsStore();
+const uiStore = useUIStore();
+const { activities: processedActivities } = useActivityList();
 
-const activities = computed(() => activityStore.activities);
-const hoveredPoint = computed(() => activityStore.mapHoveredPoint);
-const chartTransforms = computed(() => activityStore.chartTransforms);
+const { disabledActivities, gpsSmoothing } = storeToRefs(settingsStore);
+const { mapHoveredPoint, chartHoveredPoint } = storeToRefs(uiStore);
 
-const toggleGpsSmoothing = (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  activityStore.setChartTransforms({
-    ...chartTransforms.value,
-    gpsSmoothing: { ...chartTransforms.value.gpsSmoothing, enabled: target.checked },
-  });
-};
+const activities = computed(() => processedActivities.value);
+const hoveredPoint = computed(() => mapHoveredPoint.value);
 
-const setGpsSmoothingWindowPoints = (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  const next = Number.parseInt(target.value, 10);
-  activityStore.setChartTransforms({
-    ...chartTransforms.value,
-    gpsSmoothing: {
-      ...chartTransforms.value.gpsSmoothing,
-      windowPoints: Number.isFinite(next) ? Math.max(1, next) : chartTransforms.value.gpsSmoothing.windowPoints,
-    },
-  });
-};
+const chartTransforms = computed(() => ({
+  gpsSmoothing: gpsSmoothing.value,
+}));
 
 // Flat list of all GPS points from all activities for efficient hover detection
 let allTrackPoints: Array<{
@@ -213,7 +164,7 @@ const hasGpsData = computed(() => {
   // Check each activity
   for (const activity of activities.value) {
     // Skip disabled activities
-    if (activityStore.isActivityDisabled(activity.id)) continue;
+    if (disabledActivities.value.has(activity.id)) continue;
     
     // Check if this activity has any GPS data
     const hasGps = activity.records.some(
@@ -273,7 +224,7 @@ const initMap = async () => {
   });
 
   map.on("mouseout", () => {
-    activityStore.clearMapHoverPoint();
+    uiStore.clearMapHoverPoint();
     nearbyActivities = [];
     updateHoverMarker();
   });
@@ -348,7 +299,7 @@ const handleMapHover = (latlng: any) => {
     if (nearestPoint) {
       const activity = activities.value.find((a) => a.id === nearestPoint.activityId);
       if (activity && activity.records[nearestPoint.recordIndex]) {
-        activityStore.setMapHoverPoint({
+        uiStore.setMapHoverPoint({
           activityId: activity.id,
           recordIndex: nearestPoint.recordIndex,
           lat: nearestPoint.lat,
@@ -357,7 +308,7 @@ const handleMapHover = (latlng: any) => {
       }
     }
   } else {
-    activityStore.clearMapHoverPoint();
+    uiStore.clearMapHoverPoint();
   }
 
   updateHoverMarker();
@@ -381,7 +332,7 @@ const updateMap = () => {
 
   activities.value.forEach((activity) => {
     // Skip disabled activities
-    if (activityStore.isActivityDisabled(activity.id)) return;
+    if (disabledActivities.value.has(activity.id)) return;
 
     const points: any[] = [];
     const validPointsRaw: Array<{ lat: number; lon: number; recordIndex: number }> = [];
@@ -647,7 +598,7 @@ const updateHoverMarker = () => {
   hoverMarker.addTo(map);
 };
 
-watch([activities, () => activityStore.disabledActivities, chartTransforms], async () => {
+watch([activities, () => disabledActivities.value, chartTransforms], async () => {
   await nextTick();
   if (hasGpsData.value) {
     // Ensure map is initialized if it hasn't been yet
@@ -712,7 +663,6 @@ watch(hoveredPoint, () => {
 });
 
 // Watch for chart hover events to show marker and tooltip on map
-const chartHoveredPoint = computed(() => activityStore.chartHoveredPoint);
 watch(chartHoveredPoint, (point) => {
   if (!map) return;
 
@@ -774,8 +724,9 @@ watch(chartHoveredPoint, (point) => {
 
 // Watch for layout changes to trigger map resize (with multiple attempts to ensure it works)
 let layoutResizeTimer: ReturnType<typeof setTimeout> | null = null;
+const { chartMapSideBySide } = storeToRefs(uiStore);
 watch(
-  () => activityStore.chartMapSideBySide,
+  () => chartMapSideBySide.value,
   async () => {
     // Wait for DOM to update
     await nextTick();

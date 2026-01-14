@@ -4,33 +4,52 @@
  */
 
 import { computed } from "vue";
-import { useActivityStore } from "~/stores/activity";
+import { storeToRefs } from "pinia";
+import { useRawActivityStore } from "~/stores/rawActivity";
+import { useActivitySettingsStore } from "~/stores/activitySettings";
+import { useProcessedActivityStore } from "~/stores/processedActivity";
 
 export function useActivityList() {
-  const activityStore = useActivityStore();
+  const rawActivityStore = useRawActivityStore();
+  const settingsStore = useActivitySettingsStore();
+  const processedStore = useProcessedActivityStore();
 
-  const activities = computed(() => activityStore.activities);
+  const { processedActivities } = storeToRefs(processedStore);
+  const { disabledActivities } = storeToRefs(settingsStore);
+
+  const activities = computed(() => processedActivities.value);
   const hasActivities = computed(() => activities.value.length > 0);
   const activeActivities = computed(() =>
-    activities.value.filter((a) => !activityStore.isActivityDisabled(a.id))
+    activities.value.filter((a) => !disabledActivities.value.has(a.id))
   );
 
   const removeActivity = (id: string) => {
-    activityStore.removeActivity(id);
+    rawActivityStore.removeRawActivity(id);
   };
 
   const toggleActivity = (id: string) => {
-    activityStore.toggleActivity(id);
+    settingsStore.toggleActivity(id);
   };
 
   const clearAll = () => {
     if (confirm("Are you sure you want to clear all activities?")) {
-      activityStore.clearAll();
+      rawActivityStore.clearAll();
+      settingsStore.clearFileSpecificSettings();
+      
+      // Clear activities from localStorage (even if not currently loaded)
+      if (typeof window !== "undefined") {
+        try {
+          // Save empty array to ensure localStorage is properly cleared
+          localStorage.setItem("activity-viewer:activities", JSON.stringify([]));
+        } catch (error) {
+          console.error("Failed to clear activities from localStorage:", error);
+        }
+      }
     }
   };
 
   const isActivityDisabled = (id: string) => {
-    return activityStore.isActivityDisabled(id);
+    return disabledActivities.value.has(id);
   };
 
   const getActivityColor = (activityId: string): string => {

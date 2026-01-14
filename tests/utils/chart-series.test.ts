@@ -223,6 +223,59 @@ describe("chart-series", () => {
       const series = generateChartSeries(config);
       expect(series).toHaveLength(1); // Only act-2, no delta
     });
+
+    it("should generate pivot zones series", () => {
+      const config: SeriesConfig = {
+        activities: [mockActivity1, mockActivity2],
+        disabledActivityIds: new Set(),
+        metrics: ["hr"],
+        xAxisType: "time",
+        showDelta: false,
+        deltaMode: "overlay",
+        deltaBaseActivityId: null,
+        deltaCompareActivityId: null,
+        transforms: {
+          ...DEFAULT_CHART_TRANSFORM_SETTINGS,
+          viewMode: "pivotZones",
+          pivotZones: { zoneCount: 3, strategy: "equalRange" },
+        },
+      };
+
+      const series = generateChartSeries(config);
+      expect(series.length).toBeGreaterThan(0);
+      expect(series[0].type).toBe("bar");
+      expect(series[0].data).toBeDefined();
+    });
+
+    it("should return empty array for pivot zones when no pivot data", () => {
+      const emptyActivity: Activity = {
+        id: "empty",
+        name: "Empty",
+        records: [],
+        color: "#000",
+        offset: 0,
+        scale: 1,
+      };
+
+      const config: SeriesConfig = {
+        activities: [emptyActivity],
+        disabledActivityIds: new Set(),
+        metrics: ["hr"],
+        xAxisType: "time",
+        showDelta: false,
+        deltaMode: "overlay",
+        deltaBaseActivityId: null,
+        deltaCompareActivityId: null,
+        transforms: {
+          ...DEFAULT_CHART_TRANSFORM_SETTINGS,
+          viewMode: "pivotZones",
+          pivotZones: { zoneCount: 3, strategy: "equalRange" },
+        },
+      };
+
+      const series = generateChartSeries(config);
+      expect(series).toEqual([]);
+    });
   });
 });
 

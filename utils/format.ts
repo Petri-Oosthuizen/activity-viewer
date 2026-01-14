@@ -121,7 +121,7 @@ export function formatMetricValue(value: number, metricType: string): string {
       return formatTemperature(value);
     case "grade":
       return formatGrade(value);
-    case "vSpeed":
+    case "verticalSpeed":
       return formatVerticalSpeed(value);
     default:
       return value.toFixed(1);

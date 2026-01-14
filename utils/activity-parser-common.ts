@@ -1,6 +1,6 @@
 import type { ActivityRecord, ParseResult } from "~/types/activity";
 import { DEFAULT_GPS_DISTANCE_OPTIONS, filterGpsDistanceDeltaMeters, type GpsDistanceOptions, type GpsPoint } from "~/utils/gps-distance";
-import { calculateDerivedMetrics } from "~/utils/calculate-derived-metrics";
+// Derived metrics are now calculated in the processing pipeline, not during parsing
 
 export interface RawPoint {
   lat: number;
@@ -129,11 +129,11 @@ export function createParseResult(
   }
 
   const records = processPointsToRecords(points, distOpts);
-  const recordsWithDerived = calculateDerivedMetrics(records);
+  // Derived metrics (grade, verticalSpeed, pace) are calculated in the processing pipeline
   const startTime = firstPoint.time || new Date();
 
   return {
-    records: recordsWithDerived,
+    records: records,
     startTime: startTime instanceof Date ? startTime : undefined,
   };
 }

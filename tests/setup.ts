@@ -22,4 +22,46 @@ global.ResizeObserver = vi.fn().mockImplementation(() => ({
   disconnect: vi.fn()
 }))
 
+// Enhance File API mock to include text() and arrayBuffer() methods
+// jsdom's File doesn't have these methods, so we add them via prototype
+if (typeof File !== 'undefined' && typeof Blob !== 'undefined') {
+  const OriginalFile = global.File;
+  
+  // Add text() method to File prototype
+  if (!File.prototype.text) {
+    File.prototype.text = async function (): Promise<string> {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (typeof reader.result === 'string') {
+            resolve(reader.result);
+          } else {
+            reject(new Error('Failed to read file as text'));
+          }
+        };
+        reader.onerror = () => reject(reader.error || new Error('File read error'));
+        reader.readAsText(this);
+      });
+    };
+  }
+
+  // Add arrayBuffer() method to File prototype
+  if (!File.prototype.arrayBuffer) {
+    File.prototype.arrayBuffer = async function (): Promise<ArrayBuffer> {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (reader.result instanceof ArrayBuffer) {
+            resolve(reader.result);
+          } else {
+            reject(new Error('Failed to read file as array buffer'));
+          }
+        };
+        reader.onerror = () => reject(reader.error || new Error('File read error'));
+        reader.readAsArrayBuffer(this);
+      });
+    };
+  }
+}
+
 

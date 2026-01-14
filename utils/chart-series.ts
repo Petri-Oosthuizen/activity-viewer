@@ -61,7 +61,7 @@ const METRIC_LINE_STYLES: Readonly<Record<MetricType, "solid" | "dashed" | "dott
   speed: "solid",
   temp: "dashed",
   grade: "dotted",
-  vSpeed: "dashDot",
+  verticalSpeed: "dashDot",
 } as const;
 
 export function generateBaseSeries(
