@@ -316,4 +316,203 @@ describe("file upload → storage → load → display integration", () => {
     expect(loadedActivity?.metadata.calories).toBe(500);
     expect(loadedActivity?.metadata.sport).toBe("running");
   });
+
+  it("should save second activity to localStorage after first activity is saved", async () => {
+    const gpxContent1 = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1">
+  <trk>
+    <name>First Activity</name>
+    <trkseg>
+      <trkpt lat="37.7749" lon="-122.4194">
+        <ele>10</ele>
+        <time>2024-01-01T12:00:00Z</time>
+      </trkpt>
+      <trkpt lat="37.7750" lon="-122.4195">
+        <ele>12</ele>
+        <time>2024-01-01T12:00:10Z</time>
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>`;
+
+    const gpxContent2 = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1">
+  <trk>
+    <name>Second Activity</name>
+    <trkseg>
+      <trkpt lat="37.7751" lon="-122.4196">
+        <ele>14</ele>
+        <time>2024-01-01T13:00:00Z</time>
+      </trkpt>
+      <trkpt lat="37.7752" lon="-122.4197">
+        <ele>16</ele>
+        <time>2024-01-01T13:00:10Z</time>
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>`;
+
+    const file1 = createGPXFile("first.gpx", gpxContent1);
+    const file2 = createGPXFile("second.gpx", gpxContent2);
+
+    // Mount component to initialize composable and watch handler
+    const TestComponent = defineComponent({
+      setup() {
+        const { setEnabled, loadActivities } = useLocalStoragePersistence();
+        return { setEnabled, loadActivities };
+      },
+      template: "<div></div>",
+    });
+    const wrapper = mount(TestComponent);
+    await nextTick();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    await nextTick();
+
+    const rawStore = useRawActivityStore();
+
+    // 1. Upload first activity
+    const rawActivity1 = await importActivityFile(file1);
+    expect(rawActivity1).toBeDefined();
+    expect(rawActivity1.name).toBe("first.gpx");
+
+    // 2. Enable localStorage before adding first activity
+    wrapper.vm.setEnabled(true);
+    await nextTick();
+
+    // 3. Add first activity to store (watch handler should save automatically)
+    rawStore.addRawActivity(rawActivity1);
+    expect(rawStore.rawActivities).toHaveLength(1);
+
+    // Wait for watch handler to trigger and async save to complete
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await nextTick();
+
+    // Verify first activity is saved to localStorage
+    expect(localStorageMock["activity-viewer:localStorageEnabled"]).toBe("true");
+    let saved = JSON.parse(localStorageMock["activity-viewer:activities"] || "[]");
+    expect(saved).toHaveLength(1);
+    expect(saved[0]?.id).toBe(rawActivity1.id);
+    expect(saved[0]?.name).toBe("first.gpx");
+
+    // 4. Upload second activity
+    const rawActivity2 = await importActivityFile(file2);
+    expect(rawActivity2).toBeDefined();
+    expect(rawActivity2.name).toBe("second.gpx");
+
+    // 5. Add second activity to store (watch handler should save automatically)
+    rawStore.addRawActivity(rawActivity2);
+    expect(rawStore.rawActivities).toHaveLength(2);
+
+    // Wait for watch handler to trigger and async save to complete
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await nextTick();
+
+    // Verify both activities are saved to localStorage
+    saved = JSON.parse(localStorageMock["activity-viewer:activities"] || "[]");
+    expect(saved).toHaveLength(2);
+    
+    const savedIds = saved.map((a: any) => a.id);
+    const savedNames = saved.map((a: any) => a.name);
+    
+    expect(savedIds).toContain(rawActivity1.id);
+    expect(savedIds).toContain(rawActivity2.id);
+    expect(savedNames).toContain("first.gpx");
+    expect(savedNames).toContain("second.gpx");
+
+    // Verify both activities can be loaded from localStorage using the same composable instance
+    const loaded = wrapper.vm.loadActivities();
+    expect(loaded).toHaveLength(2);
+    
+    const loadedIds = loaded.map((a) => a.id);
+    expect(loadedIds).toContain(rawActivity1.id);
+    expect(loadedIds).toContain(rawActivity2.id);
+  });
+
+  it("should load all activities from localStorage on page refresh", async () => {
+    const gpxContent1 = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1">
+  <trk>
+    <name>First Activity</name>
+    <trkseg>
+      <trkpt lat="37.7749" lon="-122.4194">
+        <ele>10</ele>
+        <time>2024-01-01T12:00:00Z</time>
+      </trkpt>
+      <trkpt lat="37.7750" lon="-122.4195">
+        <ele>12</ele>
+        <time>2024-01-01T12:00:10Z</time>
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>`;
+
+    const gpxContent2 = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1">
+  <trk>
+    <name>Second Activity</name>
+    <trkseg>
+      <trkpt lat="37.7751" lon="-122.4196">
+        <ele>14</ele>
+        <time>2024-01-01T13:00:00Z</time>
+      </trkpt>
+      <trkpt lat="37.7752" lon="-122.4197">
+        <ele>16</ele>
+        <time>2024-01-01T13:00:10Z</time>
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>`;
+
+    const file1 = createGPXFile("first.gpx", gpxContent1);
+    const file2 = createGPXFile("second.gpx", gpxContent2);
+
+    // Initial session: upload and save activities
+    const rawActivity1 = await importActivityFile(file1);
+    const rawActivity2 = await importActivityFile(file2);
+
+    const rawStore1 = useRawActivityStore();
+    rawStore1.addRawActivity(rawActivity1);
+    rawStore1.addRawActivity(rawActivity2);
+
+    const { setEnabled, saveActivities } = useLocalStoragePersistence();
+    setEnabled(true);
+    await nextTick();
+    await saveActivities();
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await nextTick();
+
+    // Verify both activities are saved
+    const saved = JSON.parse(localStorageMock["activity-viewer:activities"] || "[]");
+    expect(saved).toHaveLength(2);
+    expect(saved.map((a: any) => a.id)).toContain(rawActivity1.id);
+    expect(saved.map((a: any) => a.id)).toContain(rawActivity2.id);
+
+    // Simulate page refresh: create new Pinia instance and mount component
+    setActivePinia(createPinia());
+    const rawStore2 = useRawActivityStore();
+    expect(rawStore2.rawActivities).toHaveLength(0);
+
+    const TestComponent = defineComponent({
+      setup() {
+        useLocalStoragePersistence();
+        return {};
+      },
+      template: "<div></div>",
+    });
+    mount(TestComponent);
+    await nextTick();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    await nextTick();
+
+    // Verify both activities are loaded from localStorage
+    expect(rawStore2.rawActivities).toHaveLength(2);
+    
+    const loadedIds = rawStore2.rawActivities.map((a) => a.id);
+    expect(loadedIds).toContain(rawActivity1.id);
+    expect(loadedIds).toContain(rawActivity2.id);
+    
+    const loadedNames = rawStore2.rawActivities.map((a) => a.name);
+    expect(loadedNames).toContain("first.gpx");
+    expect(loadedNames).toContain("second.gpx");
+  });
 });

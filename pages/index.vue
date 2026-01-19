@@ -118,7 +118,7 @@
       class="mt-auto border-t border-gray-200 bg-white p-4 text-center text-xs text-gray-500 sm:p-6 sm:text-sm"
     >
       <p class="m-0">
-        Created by Petri
+        Petri
         <span v-if="buildNumber && buildNumber !== 'dev'" class="mx-2">•</span>
         <span v-if="buildNumber && buildNumber !== 'dev'" class="font-mono"
           >Build #{{ buildNumber }}</span
@@ -193,10 +193,6 @@ const structuredData = computed(() => ({
     price: "0",
     priceCurrency: "USD",
   },
-  author: {
-    "@type": "Person",
-    name: "Petri",
-  },
   featureList: [
     "GPX, FIT, and TCX file parsing",
     "Multi-activity comparison",
@@ -223,10 +219,6 @@ useHead({
       name: "keywords",
       content:
         "GPX viewer, FIT file viewer, TCX viewer, activity tracker, GPS visualization, cycling data, running data, heart rate analysis, power meter data, cadence analysis, activity comparison",
-    },
-    {
-      name: "author",
-      content: "Petri",
     },
     {
       name: "robots",
@@ -279,10 +271,6 @@ useHead({
       name: "twitter:description",
       content:
         "Free web-based tool to visualize and compare GPX, FIT, and TCX activity files. View heart rate, power, cadence, altitude, and GPS tracks.",
-    },
-    {
-      name: "twitter:creator",
-      content: "@petri",
     },
   ],
   script: [

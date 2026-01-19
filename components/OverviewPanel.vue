@@ -133,6 +133,23 @@
           <td
             class="sticky left-0 z-10 w-20 border-b border-gray-100 bg-white px-2 py-2.5 font-medium sm:w-24 sm:px-3 md:w-32 lg:w-36"
           >
+            Start Time
+          </td>
+          <td
+            v-for="a in activeActivities"
+            :key="a.id"
+            class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
+          >
+            <div :class="a.startTime ? '' : 'text-gray-400'">
+              {{ a.startTime ? formatDateTime(a.startTime) : "—" }}
+            </div>
+          </td>
+        </tr>
+
+        <tr class="bg-white">
+          <td
+            class="sticky left-0 z-10 w-20 border-b border-gray-100 bg-white px-2 py-2.5 font-medium sm:w-24 sm:px-3 md:w-32 lg:w-36"
+          >
             <span :title="getMetricDescription('Duration')">Duration</span>
           </td>
           <td
@@ -169,6 +186,23 @@
               :title="formatDelta('distanceMeters', a.id) === '—' ? 'Same as baseline' : ''"
             >
               {{ formatDelta("distanceMeters", a.id) }}
+            </div>
+          </td>
+        </tr>
+
+        <tr class="bg-white">
+          <td
+            class="sticky left-0 z-10 w-20 border-b border-gray-100 bg-white px-2 py-2.5 font-medium sm:w-24 sm:px-3 md:w-32 lg:w-36"
+          >
+            Start Time
+          </td>
+          <td
+            v-for="a in activeActivities"
+            :key="a.id"
+            class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
+          >
+            <div :class="a.startTime ? '' : 'text-gray-400'">
+              {{ a.startTime ? formatDateTime(a.startTime) : "—" }}
             </div>
           </td>
         </tr>
@@ -784,6 +818,7 @@ import {
   formatTime,
   formatSpeed,
   formatPower,
+  formatDateTime,
 } from "~/utils/format";
 import type { MetricType } from "~/utils/chart-config";
 import { METRIC_LABELS, METRIC_ORDER } from "~/utils/chart-config";

@@ -313,6 +313,327 @@ describe("series-transforms", () => {
       // Should return same reference (cached)
       expect(data1).toBe(data2);
     });
+
+    it("should convert speed from m/s to km/h", () => {
+      const activity: Activity = {
+        id: "a1",
+        name: "A1",
+        offset: 0,
+        scale: 1,
+        color: "#000",
+        records: [
+          { t: 0, d: 0, speed: 3.33 }, // 3.33 m/s = 11.988 km/h
+          { t: 10, d: 100, speed: 5.0 }, // 5.0 m/s = 18.0 km/h
+          { t: 20, d: 200, speed: 2.78 }, // 2.78 m/s = 10.008 km/h
+        ],
+      };
+
+      const transforms = {
+        ...DEFAULT_CHART_TRANSFORM_SETTINGS,
+        outliers: { mode: "off", maxPercentChange: 200 },
+        smoothing: { mode: "off", windowPoints: 1 },
+        cumulative: { mode: "off" },
+      } as const;
+
+      const data = buildTransformedChartData(activity, "speed", "time", transforms);
+      expect(data.length).toBe(3);
+      expect(data[0][1]).toBeCloseTo(11.988, 1); // 3.33 * 3.6
+      expect(data[1][1]).toBeCloseTo(18.0, 1); // 5.0 * 3.6
+      expect(data[2][1]).toBeCloseTo(10.008, 1); // 2.78 * 3.6
+    });
+
+    it("should handle null speed values", () => {
+      const activity: Activity = {
+        id: "a1-null-speed-test",
+        name: "A1",
+        offset: 0,
+        scale: 1,
+        color: "#000",
+        records: [
+          { t: 0, d: 0, speed: 3.33 },
+          { t: 10, d: 0, speed: null },
+          { t: 20, d: 0, speed: undefined },
+        ],
+      };
+
+      const transforms = {
+        ...DEFAULT_CHART_TRANSFORM_SETTINGS,
+        outliers: { mode: "off", maxPercentChange: 200 },
+        smoothing: { mode: "off", windowPoints: 1 },
+        cumulative: { mode: "off" },
+      } as const;
+
+      const data = buildTransformedChartData(activity, "speed", "time", transforms);
+      expect(data[0][1]).toBeCloseTo(11.988, 1); // 3.33 * 3.6
+      expect(data[1][1]).toBeNull();
+      expect(data[2][1]).toBeNull();
+    });
+
+    it("should apply scaling to converted speed values", () => {
+      const activity: Activity = {
+        id: "a1",
+        name: "A1",
+        offset: 0,
+        scale: 2.0,
+        color: "#000",
+        records: [
+          { t: 0, d: 0, speed: 3.33 }, // 3.33 m/s = 11.988 km/h, scaled = 23.976 km/h
+        ],
+      };
+
+      const transforms = {
+        ...DEFAULT_CHART_TRANSFORM_SETTINGS,
+        outliers: { mode: "off", maxPercentChange: 200 },
+        smoothing: { mode: "off", windowPoints: 1 },
+        cumulative: { mode: "off" },
+      } as const;
+
+      const data = buildTransformedChartData(activity, "speed", "time", transforms);
+      expect(data[0][1]).toBeCloseTo(23.976, 1); // 3.33 * 3.6 * 2.0
+    });
+
+    it("should transform altitude metric", () => {
+      const activity: Activity = {
+        id: "a1-alt-test",
+        name: "A1",
+        offset: 0,
+        scale: 1,
+        color: "#000",
+        records: [
+          { t: 0, d: 0, alt: 100 },
+          { t: 10, d: 100, alt: 150 },
+          { t: 20, d: 200, alt: 200 },
+        ],
+      };
+
+      const transforms = {
+        ...DEFAULT_CHART_TRANSFORM_SETTINGS,
+        outliers: { mode: "off", maxPercentChange: 200 },
+        smoothing: { mode: "off", windowPoints: 1 },
+        cumulative: { mode: "off" },
+      } as const;
+
+      const data = buildTransformedChartData(activity, "alt", "time", transforms);
+      expect(data.length).toBe(3);
+      expect(data[0][1]).toBe(100);
+      expect(data[1][1]).toBe(150);
+      expect(data[2][1]).toBe(200);
+    });
+
+    it("should transform power metric", () => {
+      const activity: Activity = {
+        id: "a1-pwr-test",
+        name: "A1",
+        offset: 0,
+        scale: 1,
+        color: "#000",
+        records: [
+          { t: 0, d: 0, pwr: 200 },
+          { t: 10, d: 100, pwr: 250 },
+          { t: 20, d: 200, pwr: 300 },
+        ],
+      };
+
+      const transforms = {
+        ...DEFAULT_CHART_TRANSFORM_SETTINGS,
+        outliers: { mode: "off", maxPercentChange: 200 },
+        smoothing: { mode: "off", windowPoints: 1 },
+        cumulative: { mode: "off" },
+      } as const;
+
+      const data = buildTransformedChartData(activity, "pwr", "time", transforms);
+      expect(data.length).toBe(3);
+      expect(data[0][1]).toBe(200);
+      expect(data[1][1]).toBe(250);
+      expect(data[2][1]).toBe(300);
+    });
+
+    it("should transform cadence metric", () => {
+      const activity: Activity = {
+        id: "a1-cad-test",
+        name: "A1",
+        offset: 0,
+        scale: 1,
+        color: "#000",
+        records: [
+          { t: 0, d: 0, cad: 80 },
+          { t: 10, d: 100, cad: 90 },
+          { t: 20, d: 200, cad: 100 },
+        ],
+      };
+
+      const transforms = {
+        ...DEFAULT_CHART_TRANSFORM_SETTINGS,
+        outliers: { mode: "off", maxPercentChange: 200 },
+        smoothing: { mode: "off", windowPoints: 1 },
+        cumulative: { mode: "off" },
+      } as const;
+
+      const data = buildTransformedChartData(activity, "cad", "time", transforms);
+      expect(data.length).toBe(3);
+      expect(data[0][1]).toBe(80);
+      expect(data[1][1]).toBe(90);
+      expect(data[2][1]).toBe(100);
+    });
+
+    it("should transform temperature metric", () => {
+      const activity: Activity = {
+        id: "a1-temp-test",
+        name: "A1",
+        offset: 0,
+        scale: 1,
+        color: "#000",
+        records: [
+          { t: 0, d: 0, temp: 20 },
+          { t: 10, d: 100, temp: 22 },
+          { t: 20, d: 200, temp: 25 },
+        ],
+      };
+
+      const transforms = {
+        ...DEFAULT_CHART_TRANSFORM_SETTINGS,
+        outliers: { mode: "off", maxPercentChange: 200 },
+        smoothing: { mode: "off", windowPoints: 1 },
+        cumulative: { mode: "off" },
+      } as const;
+
+      const data = buildTransformedChartData(activity, "temp", "time", transforms);
+      expect(data.length).toBe(3);
+      expect(data[0][1]).toBe(20);
+      expect(data[1][1]).toBe(22);
+      expect(data[2][1]).toBe(25);
+    });
+
+    it("should transform grade metric", () => {
+      const activity: Activity = {
+        id: "a1-grade-test",
+        name: "A1",
+        offset: 0,
+        scale: 1,
+        color: "#000",
+        records: [
+          { t: 0, d: 0, grade: 0 },
+          { t: 10, d: 100, grade: 5 },
+          { t: 20, d: 200, grade: -2 },
+        ],
+      };
+
+      const transforms = {
+        ...DEFAULT_CHART_TRANSFORM_SETTINGS,
+        outliers: { mode: "off", maxPercentChange: 200 },
+        smoothing: { mode: "off", windowPoints: 1 },
+        cumulative: { mode: "off" },
+      } as const;
+
+      const data = buildTransformedChartData(activity, "grade", "time", transforms);
+      expect(data.length).toBe(3);
+      expect(data[0][1]).toBe(0);
+      expect(data[1][1]).toBe(5);
+      expect(data[2][1]).toBe(-2);
+    });
+
+    it("should transform vertical speed metric", () => {
+      const activity: Activity = {
+        id: "a1-vertical-speed-test",
+        name: "A1",
+        offset: 0,
+        scale: 1,
+        color: "#000",
+        records: [
+          { t: 0, d: 0, verticalSpeed: 100 },
+          { t: 10, d: 100, verticalSpeed: 200 },
+          { t: 20, d: 200, verticalSpeed: 150 },
+        ],
+      };
+
+      const transforms = {
+        ...DEFAULT_CHART_TRANSFORM_SETTINGS,
+        outliers: { mode: "off", maxPercentChange: 200 },
+        smoothing: { mode: "off", windowPoints: 1 },
+        cumulative: { mode: "off" },
+      } as const;
+
+      const data = buildTransformedChartData(activity, "verticalSpeed", "time", transforms);
+      expect(data.length).toBe(3);
+      expect(data[0][1]).toBe(100);
+      expect(data[1][1]).toBe(200);
+      expect(data[2][1]).toBe(150);
+    });
+
+    it("should handle null values for all metrics", () => {
+      const activity: Activity = {
+        id: "a1-all-nulls-test",
+        name: "A1",
+        offset: 0,
+        scale: 1,
+        color: "#000",
+        records: [
+          { t: 0, d: 0, hr: 100, alt: 100, pwr: 200, cad: 80, temp: 20, grade: 5, verticalSpeed: 100 },
+          { t: 10, d: 100, hr: null, alt: null, pwr: null, cad: null, temp: null, grade: null, verticalSpeed: null },
+          { t: 20, d: 200, hr: undefined, alt: undefined, pwr: undefined, cad: undefined, temp: undefined, grade: undefined, verticalSpeed: undefined },
+        ],
+      };
+
+      const transforms = {
+        ...DEFAULT_CHART_TRANSFORM_SETTINGS,
+        outliers: { mode: "off", maxPercentChange: 200 },
+        smoothing: { mode: "off", windowPoints: 1 },
+        cumulative: { mode: "off" },
+      } as const;
+
+      const metrics: Array<"hr" | "alt" | "pwr" | "cad" | "temp" | "grade" | "verticalSpeed"> = [
+        "hr",
+        "alt",
+        "pwr",
+        "cad",
+        "temp",
+        "grade",
+        "verticalSpeed",
+      ];
+
+      metrics.forEach((metric) => {
+        const data = buildTransformedChartData(activity, metric, "time", transforms);
+        expect(data[0][1]).not.toBeNull();
+        expect(data[1][1]).toBeNull();
+        expect(data[2][1]).toBeNull();
+      });
+    });
+
+    it("should apply scaling to all metrics", () => {
+      const activity: Activity = {
+        id: "a1-scaling-test",
+        name: "A1",
+        offset: 0,
+        scale: 2.0,
+        color: "#000",
+        records: [
+          { t: 0, d: 0, hr: 100, alt: 100, pwr: 200, cad: 80, temp: 20, grade: 5, verticalSpeed: 100 },
+        ],
+      };
+
+      const transforms = {
+        ...DEFAULT_CHART_TRANSFORM_SETTINGS,
+        outliers: { mode: "off", maxPercentChange: 200 },
+        smoothing: { mode: "off", windowPoints: 1 },
+        cumulative: { mode: "off" },
+      } as const;
+
+      const metrics: Array<"hr" | "alt" | "pwr" | "cad" | "temp" | "grade" | "verticalSpeed"> = [
+        "hr",
+        "alt",
+        "pwr",
+        "cad",
+        "temp",
+        "grade",
+        "verticalSpeed",
+      ];
+
+      metrics.forEach((metric) => {
+        const data = buildTransformedChartData(activity, metric, "time", transforms);
+        const expectedValue = activity.records[0]![metric]! * 2;
+        expect(data[0][1]).toBeCloseTo(expectedValue, 1);
+      });
+    });
   });
 
   describe("buildPivotZones", () => {

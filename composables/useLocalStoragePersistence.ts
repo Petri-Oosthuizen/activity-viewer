@@ -227,17 +227,31 @@ export function useLocalStoragePersistence() {
       });
   };
 
-  const loadActivities = (): RawActivity[] => {
-    if (typeof window === "undefined" || !isEnabled.value) return [];
+  const loadActivitiesFromStorage = (): RawActivity[] => {
+    if (typeof window === "undefined") return [];
     try {
       const stored = localStorage.getItem(STORAGE_KEY_ACTIVITIES);
       if (!stored) return [];
       const parsed = JSON.parse(stored) as StoredRawActivity[];
-      return parsed.map(deserializeRawActivity);
+      const loaded: RawActivity[] = [];
+      for (const storedActivity of parsed) {
+        try {
+          const deserialized = deserializeRawActivity(storedActivity);
+          loaded.push(deserialized);
+        } catch (error) {
+          console.error(`Failed to deserialize activity ${storedActivity.id}:`, error);
+        }
+      }
+      return loaded;
     } catch (error) {
       console.error("Failed to load activities from localStorage:", error);
       return [];
     }
+  };
+
+  const loadActivities = (): RawActivity[] => {
+    if (typeof window === "undefined" || !isEnabled.value) return [];
+    return loadActivitiesFromStorage();
   };
 
   const initializeFromStorage = async () => {
@@ -251,7 +265,7 @@ export function useLocalStoragePersistence() {
 
     if (enabled) {
       try {
-        const loadedActivities = loadActivities();
+        const loadedActivities = loadActivitiesFromStorage();
         if (loadedActivities.length > 0 && rawActivityStore.rawActivities.length === 0) {
           // Load activities into rawActivityStore
           loadedActivities.forEach((rawActivity) => {
