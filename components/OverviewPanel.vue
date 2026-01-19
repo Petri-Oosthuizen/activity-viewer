@@ -1,5 +1,8 @@
 <template>
-  <div class="mb-3 flex flex-col gap-3 sm:mb-4">
+  <CollapsibleSection :default-open="true">
+    <template #title>Overview</template>
+    <template #description>Activity statistics and metrics summary</template>
+    <div class="mb-3 flex flex-col gap-3 sm:mb-4">
     <p class="mt-0 text-xs text-gray-500 sm:text-sm">
       {{ descriptionText }}
     </p>
@@ -190,23 +193,6 @@
           </td>
         </tr>
 
-        <tr class="bg-white">
-          <td
-            class="sticky left-0 z-10 w-20 border-b border-gray-100 bg-white px-2 py-2.5 font-medium sm:w-24 sm:px-3 md:w-32 lg:w-36"
-          >
-            Start Time
-          </td>
-          <td
-            v-for="a in activeActivities"
-            :key="a.id"
-            class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
-          >
-            <div :class="a.startTime ? '' : 'text-gray-400'">
-              {{ a.startTime ? formatDateTime(a.startTime) : "—" }}
-            </div>
-          </td>
-        </tr>
-
         <tr v-if="overviewDisplayMode === 'full' && hasAnySport" class="bg-white">
           <td
             class="sticky left-0 z-10 w-20 border-b border-gray-100 bg-white px-2 py-2.5 font-medium sm:w-24 sm:px-3 md:w-32 lg:w-36"
@@ -348,7 +334,70 @@
           </tr>
         </template>
 
-        <template v-if="overviewDisplayMode === 'light'" v-for="metric in metrics" :key="metric">
+        <template v-if="overviewDisplayMode === 'light' && hasAnyElevation">
+          <tr class="bg-white">
+            <td
+              class="sticky left-0 z-10 w-20 border-b border-gray-100 bg-white px-2 py-2.5 font-medium sm:w-24 sm:px-3 md:w-32 lg:w-36"
+            >
+              <span :title="getMetricDescription('Elevation gain')">Elevation</span>
+            </td>
+            <td
+              v-for="a in activeActivities"
+              :key="a.id"
+              class="border-b border-gray-100 px-2 py-2.5 text-right sm:px-3"
+            >
+              <div class="flex flex-col items-end gap-0.5">
+                <div class="flex items-center gap-2">
+                  <div
+                    :class="
+                      statsById[a.id]?.elevationGainMeters === null ||
+                      statsById[a.id]?.elevationGainMeters === undefined
+                        ? 'text-gray-400'
+                        : ''
+                    "
+                  >
+                    <span class="text-[10px] text-gray-500 sm:text-xs">+</span>
+                    {{
+                      statsById[a.id]?.elevationGainMeters === null ||
+                      statsById[a.id]?.elevationGainMeters === undefined
+                        ? "—"
+                        : `${Math.round(statsById[a.id]!.elevationGainMeters!)} m`
+                    }}
+                  </div>
+                  <div
+                    :class="
+                      statsById[a.id]?.elevationLossMeters === null ||
+                      statsById[a.id]?.elevationLossMeters === undefined
+                        ? 'text-gray-400'
+                        : ''
+                    "
+                  >
+                    <span class="text-[10px] text-gray-500 sm:text-xs">−</span>
+                    {{
+                      statsById[a.id]?.elevationLossMeters === null ||
+                      statsById[a.id]?.elevationLossMeters === undefined
+                        ? "—"
+                        : `${Math.round(statsById[a.id]!.elevationLossMeters!)} m`
+                    }}
+                  </div>
+                </div>
+                <div
+                  v-if="isBaselineActive"
+                  class="mt-0.5 flex items-center gap-2 text-[10px] text-gray-400 sm:text-xs"
+                >
+                  <template v-if="formatNullableDelta('elevationGainMeters', a.id) !== '—'">
+                    <span>{{ formatNullableDelta("elevationGainMeters", a.id) }}</span>
+                  </template>
+                  <template v-if="formatNullableDelta('elevationLossMeters', a.id) !== '—'">
+                    <span>{{ formatNullableDelta("elevationLossMeters", a.id) }}</span>
+                  </template>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </template>
+
+        <template v-for="metric in lightModeMetrics" :key="metric">
           <tr class="bg-white">
             <td
               class="sticky left-0 z-10 w-20 border-b border-gray-100 bg-white px-2 py-2.5 font-medium sm:w-24 sm:px-3 md:w-32 lg:w-36"
@@ -388,7 +437,7 @@
           </tr>
         </template>
 
-        <template v-if="overviewDisplayMode === 'full'" v-for="metric in metrics" :key="metric">
+        <template v-for="metric in fullModeMetrics" :key="metric">
           <tr class="bg-gray-50">
             <td
               colspan="2"
@@ -800,6 +849,7 @@
       </tbody>
     </table>
   </div>
+  </CollapsibleSection>
 </template>
 
 <script setup lang="ts">
@@ -833,6 +883,7 @@ import {
 } from "~/utils/windowing";
 import { DEFAULT_CHART_TRANSFORM_SETTINGS } from "~/utils/chart-settings";
 import { formatXAxisValue } from "~/utils/chart-config";
+import CollapsibleSection from "~/components/CollapsibleSection.vue";
 
 const { activeActivities } = useActivityList();
 const settingsStore = useActivitySettingsStore();
@@ -878,6 +929,9 @@ watch(
 );
 
 const clearChartWindow = () => {
+  // Reset zoom in the chart (same as clicking "Reset Zoom" button)
+  uiStore.resetZoom();
+  // Also update window store to clear the window state
   windowStore.setChartWindow({
     xStartPercent: 0,
     xEndPercent: 100,
@@ -888,7 +942,7 @@ const clearChartWindow = () => {
 
 const metricLabels = METRIC_LABELS;
 
-const lightModeMetrics: readonly MetricType[] = ["alt", "hr", "pwr"] as const;
+const lightModeMetricsList: readonly MetricType[] = ["hr", "pwr"] as const;
 
 const metrics = computed(() => {
   // Use canonical metric order, filter to only available metrics
@@ -902,11 +956,21 @@ const metrics = computed(() => {
   });
 
   if (overviewDisplayMode.value === "light") {
-    // In light mode, show metrics in canonical order but only those in lightModeMetrics
-    return available.filter((metric) => lightModeMetrics.includes(metric));
+    // In light mode, show metrics in canonical order but only those in lightModeMetricsList
+    return available.filter((metric) => lightModeMetricsList.includes(metric));
   }
 
   return available;
+});
+
+const lightModeMetrics = computed(() => {
+  if (overviewDisplayMode.value !== "light") return [];
+  return metrics.value;
+});
+
+const fullModeMetrics = computed(() => {
+  if (overviewDisplayMode.value !== "full") return [];
+  return metrics.value;
 });
 
 const getMetricName = (metric: MetricType): string => {

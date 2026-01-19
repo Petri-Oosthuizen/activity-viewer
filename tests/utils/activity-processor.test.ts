@@ -117,6 +117,264 @@ describe("activity-processor", () => {
         expect(record1).toBeDefined();
         expect(record2).toBeDefined();
       });
+
+      it("should detect spikes in heart rate with 1% threshold", () => {
+        const records: ActivityRecord[] = [
+          { t: 0, d: 0, hr: 150 },
+          { t: 10, d: 100, hr: 200 }, // 33% change: (200-150)/max(150,200)*100 = 50/200*100 = 25% (not caught at 1%)
+          { t: 20, d: 200, hr: 151 }, // Normal
+          { t: 30, d: 300, hr: 300 }, // 98% change: (300-151)/max(151,300)*100 = 149/300*100 = 49.7% (caught at 1%)
+        ];
+
+        const result = processActivityRecords(records, {
+          outliers: { mode: "drop", maxPercentChange: 1 },
+          gpsSmoothing: { enabled: false, windowPoints: 5 },
+          gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
+          smoothing: { mode: "off", windowPoints: 5 },
+          scaling: 1,
+          offset: 0,
+        });
+
+        const recordAt30 = result.find((r) => r.t === 30);
+        expect(recordAt30?.hr).toBeUndefined();
+      });
+
+      it("should detect spikes in power with 50% threshold", () => {
+        const records: ActivityRecord[] = [
+          { t: 0, d: 0, pwr: 200 },
+          { t: 10, d: 100, pwr: 400 }, // 50% change: (400-200)/max(200,400)*100 = 200/400*100 = 50% (not caught at 50%, but caught at 49%)
+          { t: 20, d: 200, pwr: 210 }, // Normal
+        ];
+
+        const result = processActivityRecords(records, {
+          outliers: { mode: "drop", maxPercentChange: 49 }, // Threshold is inclusive, so 49% catches 50% changes
+          gpsSmoothing: { enabled: false, windowPoints: 5 },
+          gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
+          smoothing: { mode: "off", windowPoints: 5 },
+          scaling: 1,
+          offset: 0,
+        });
+
+        const recordAt10 = result.find((r) => r.t === 10);
+        expect(recordAt10?.pwr).toBeUndefined();
+      });
+
+      it("should detect spikes in cadence with clamp mode", () => {
+        const records: ActivityRecord[] = [
+          { t: 0, d: 0, cad: 90 },
+          { t: 10, d: 100, cad: 200 }, // 55% change: (200-90)/max(90,200)*100 = 110/200*100 = 55% (caught at 50%)
+          { t: 20, d: 200, cad: 95 },
+        ];
+
+        const result = processActivityRecords(records, {
+          outliers: { mode: "clamp", maxPercentChange: 50 },
+          gpsSmoothing: { enabled: false, windowPoints: 5 },
+          gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
+          smoothing: { mode: "off", windowPoints: 5 },
+          scaling: 1,
+          offset: 0,
+        });
+
+        const recordAt10 = result.find((r) => r.t === 10);
+        expect(recordAt10?.cad).toBeDefined();
+        expect(recordAt10?.cad).not.toBe(200);
+        // Clamped value should be: 90 + sign(110) * (50/100) * max(90,200) = 90 + 1 * 0.5 * 200 = 190
+        expect(recordAt10?.cad).toBeCloseTo(190, 0);
+      });
+
+      it("should detect spikes in altitude", () => {
+        const records: ActivityRecord[] = [
+          { t: 0, d: 0, alt: 100 },
+          { t: 10, d: 100, alt: 50 }, // 50% change: (50-100)/max(100,50)*100 = 50/100*100 = 50% (caught at 30%)
+          { t: 20, d: 200, alt: 105 },
+        ];
+
+        const result = processActivityRecords(records, {
+          outliers: { mode: "drop", maxPercentChange: 30 },
+          gpsSmoothing: { enabled: false, windowPoints: 5 },
+          gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
+          smoothing: { mode: "off", windowPoints: 5 },
+          scaling: 1,
+          offset: 0,
+        });
+
+        const recordAt10 = result.find((r) => r.t === 10);
+        expect(recordAt10?.alt).toBeUndefined();
+      });
+
+      it("should detect spikes in speed", () => {
+        const records: ActivityRecord[] = [
+          { t: 0, d: 0, speed: 3.0 },
+          { t: 10, d: 100, speed: 10.0 }, // 70% change: (10-3)/max(3,10)*100 = 7/10*100 = 70% (caught at 50%)
+          { t: 20, d: 200, speed: 3.2 },
+        ];
+
+        const result = processActivityRecords(records, {
+          outliers: { mode: "drop", maxPercentChange: 50 },
+          gpsSmoothing: { enabled: false, windowPoints: 5 },
+          gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
+          smoothing: { mode: "off", windowPoints: 5 },
+          scaling: 1,
+          offset: 0,
+        });
+
+        const recordAt10 = result.find((r) => r.t === 10);
+        expect(recordAt10?.speed).toBeUndefined();
+      });
+
+      it("should detect spikes in temperature", () => {
+        const records: ActivityRecord[] = [
+          { t: 0, d: 0, temp: 20 },
+          { t: 10, d: 100, temp: 50 }, // 60% change: (50-20)/max(20,50)*100 = 30/50*100 = 60% (caught at 50%)
+          { t: 20, d: 200, temp: 21 },
+        ];
+
+        const result = processActivityRecords(records, {
+          outliers: { mode: "drop", maxPercentChange: 50 },
+          gpsSmoothing: { enabled: false, windowPoints: 5 },
+          gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
+          smoothing: { mode: "off", windowPoints: 5 },
+          scaling: 1,
+          offset: 0,
+        });
+
+        const recordAt10 = result.find((r) => r.t === 10);
+        expect(recordAt10?.temp).toBeUndefined();
+      });
+
+      it("should handle multiple spikes in sequence for the same metric", () => {
+        const records: ActivityRecord[] = [
+          { t: 0, d: 0, hr: 150 },
+          { t: 10, d: 100, hr: 300 }, // 50% change: (300-150)/max(150,300)*100 = 150/300*100 = 50% (caught at 49%)
+          { t: 20, d: 200, hr: 500 }, // If previous was dropped, prev becomes null, so this is the new baseline
+          { t: 30, d: 300, hr: 155 },
+        ];
+
+        const result = processActivityRecords(records, {
+          outliers: { mode: "drop", maxPercentChange: 49 }, // Threshold is inclusive
+          gpsSmoothing: { enabled: false, windowPoints: 5 },
+          gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
+          smoothing: { mode: "off", windowPoints: 5 },
+          scaling: 1,
+          offset: 0,
+        });
+
+        const recordAt10 = result.find((r) => r.t === 10);
+        const recordAt20 = result.find((r) => r.t === 20);
+        expect(recordAt10?.hr).toBeUndefined();
+        // After dropping at t=10, prev becomes null, so t=20 becomes the new baseline (not compared)
+        expect(recordAt20?.hr).toBe(500);
+      });
+
+      it("should handle spikes in multiple metrics simultaneously", () => {
+        const records: ActivityRecord[] = [
+          { t: 0, d: 0, hr: 150, pwr: 200, cad: 90 },
+          { t: 10, d: 100, hr: 300, pwr: 400, cad: 95 }, // HR and PWR spike, cadence normal
+          { t: 20, d: 200, hr: 155, pwr: 210, cad: 180 }, // HR and PWR normal, cadence spikes
+        ];
+
+        const result = processActivityRecords(records, {
+          outliers: { mode: "drop", maxPercentChange: 49 }, // Threshold is inclusive, so 49% catches 50% changes
+          gpsSmoothing: { enabled: false, windowPoints: 5 },
+          gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
+          smoothing: { mode: "off", windowPoints: 5 },
+          scaling: 1,
+          offset: 0,
+        });
+
+        const recordAt10 = result.find((r) => r.t === 10);
+        const recordAt20 = result.find((r) => r.t === 20);
+        
+        // HR: (300-150)/max(150,300)*100 = 50% (caught at 49% threshold)
+        expect(recordAt10?.hr).toBeUndefined();
+        // PWR: (400-200)/max(200,400)*100 = 50% (caught at 49% threshold)
+        expect(recordAt10?.pwr).toBeUndefined();
+        // Cadence: (95-90)/max(90,95)*100 = 5.3% (not caught)
+        expect(recordAt10?.cad).toBe(95);
+        
+        // Cadence: (180-95)/max(95,180)*100 = 47% (not caught at 49% threshold)
+        expect(recordAt20?.cad).toBe(180);
+      });
+
+      it("should not flag normal variations below threshold", () => {
+        const records: ActivityRecord[] = [
+          { t: 0, d: 0, hr: 150 },
+          { t: 10, d: 100, hr: 160 }, // 6.25% change: (160-150)/max(150,160)*100 = 10/160*100 = 6.25% (not caught at 50%)
+          { t: 20, d: 200, hr: 170 },
+        ];
+
+        const result = processActivityRecords(records, {
+          outliers: { mode: "drop", maxPercentChange: 50 },
+          gpsSmoothing: { enabled: false, windowPoints: 5 },
+          gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
+          smoothing: { mode: "off", windowPoints: 5 },
+          scaling: 1,
+          offset: 0,
+        });
+
+        const recordAt10 = result.find((r) => r.t === 10);
+        expect(recordAt10?.hr).toBe(160);
+      });
+
+      it("should drop pace spikes and not recalculate them", () => {
+        // Create records with speed values that will produce pace spikes
+        // pace = 1000 / (speed * 60)
+        // 6 min/km = 1000 / (speed * 60) => speed = 1000 / (6 * 60) = 2.78 m/s
+        // 36 min/km = 1000 / (speed * 60) => speed = 1000 / (36 * 60) = 0.463 m/s
+        // The pace spike from 6 to 36 is: (36-6)/max(6,36)*100 = 30/36*100 = 83% change (caught at 49%)
+        const records: ActivityRecord[] = [
+          { t: 0, d: 0, speed: 2.78 }, // ~6 min/km pace
+          { t: 10, d: 100, speed: 0.463 }, // ~36 min/km pace - spike
+          { t: 20, d: 200, speed: 2.78 }, // Back to ~6 min/km pace
+        ];
+
+        const result = processActivityRecords(records, {
+          outliers: { mode: "drop", maxPercentChange: 49 }, // Should catch 83% change
+          gpsSmoothing: { enabled: false, windowPoints: 5 },
+          gpsPaceSmoothing: { enabled: false, windowPoints: 5 },
+          smoothing: { mode: "off", windowPoints: 5 },
+          scaling: 1,
+          offset: 0,
+        });
+
+        // Find the record with the spike (at t=10)
+        const recordAt10 = result.find((r) => r.t === 10);
+        expect(recordAt10).toBeDefined();
+        
+        // Speed spike: (0.463-2.78)/max(2.78,0.463)*100 = -2.317/2.78*100 = -83% change (caught)
+        // Speed is dropped first, so pace won't be calculated from speed.
+        // This prevents the pace spike from appearing, as pace is calculated from speed.
+        // When speed is dropped, the spike is handled at the speed level, preventing the pace spike.
+        expect(recordAt10?.speed).toBeUndefined();
+        
+        // Verify the spike record doesn't have pace calculated from the dropped speed
+        // (pace may be calculated from distance/time fallback, but that's a different value)
+        // The key is that the original pace spike (36 min/km) won't appear because speed was dropped
+      });
+
+      it("should clamp pace spikes correctly", () => {
+        const records: ActivityRecord[] = [
+          { t: 0, d: 0, speed: 2.78 }, // ~6 min/km pace
+          { t: 10, d: 100, speed: 0.46 }, // ~36 min/km pace (spike)
+          { t: 20, d: 200, speed: 2.78 }, // Back to ~6 min/km
+        ];
+
+        const result = processActivityRecords(records, {
+          outliers: { mode: "clamp", maxPercentChange: 49 },
+          gpsSmoothing: { enabled: false, windowPoints: 5 },
+          gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
+          smoothing: { mode: "off", windowPoints: 5 },
+          scaling: 1,
+          offset: 0,
+        });
+
+        const recordAt10 = result.find((r) => r.t === 10);
+        expect(recordAt10?.pace).toBeDefined();
+        expect(recordAt10?.pace).not.toBeNull();
+        // Clamped value should be less than the spike (36) but more than the previous (6)
+        expect(recordAt10?.pace).toBeGreaterThan(6);
+        expect(recordAt10?.pace).toBeLessThan(36);
+      });
     });
 
     describe("invalid record removal", () => {

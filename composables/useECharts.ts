@@ -13,6 +13,23 @@ export function useECharts(container: Ref<HTMLDivElement | null>, option: Ref<EC
 
   const initChart = () => {
     if (!container.value) return;
+    
+    // Ensure container has dimensions before initializing
+    const rect = container.value.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) {
+      // Wait for next frame if container has no dimensions
+      requestAnimationFrame(() => {
+        if (container.value && !chartInstance.value) {
+          const checkRect = container.value.getBoundingClientRect();
+          if (checkRect.width > 0 && checkRect.height > 0) {
+            chartInstance.value = echarts.init(container.value);
+            updateChart();
+          }
+        }
+      });
+      return;
+    }
+    
     chartInstance.value = echarts.init(container.value);
     updateChart();
   };

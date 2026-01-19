@@ -64,7 +64,7 @@
       <div class="space-y-3 sm:space-y-4">
         <h4 class="m-0 text-sm font-semibold text-gray-800 sm:text-base">Outlier Handling</h4>
         <p class="text-xs text-gray-500 sm:text-sm">
-          Flags sudden spikes based on percent change vs previous valid point.
+          Detects sudden spikes in sensor metrics (HR, power, cadence, altitude, speed, temperature, pace). GPS coordinates are handled separately.
         </p>
 
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -85,19 +85,51 @@
           <input
             type="number"
             min="0"
-            step="10"
+            step="1"
             class="focus:border-primary focus:ring-primary/10 w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:ring-2 focus:outline-hidden disabled:cursor-not-allowed disabled:opacity-50 sm:px-2 sm:py-1.5"
             :value="outlierSettings.maxPercentChange"
             :disabled="outlierSettings.mode === 'off'"
             @input="setOutlierMaxPercentChange"
           />
           <div class="mt-1 text-[10px] text-gray-500 sm:text-xs">
-            Example: 200 = allow up to ±200% jumps.
+            Maximum allowed change between consecutive points. Lower values catch smaller spikes.
           </div>
         </div>
       </div>
 
-      <!-- 3. GPS Smoothing -->
+      <!-- 3. Data Smoothing -->
+      <div class="space-y-3 sm:space-y-4">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <h4 class="m-0 text-sm font-semibold text-gray-800 sm:text-base">Data Smoothing</h4>
+          <select
+            :value="smoothing.mode"
+            class="focus:border-primary focus:ring-primary/10 w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:ring-2 focus:outline-hidden sm:w-36 sm:px-2 sm:py-1.5"
+            @change="setSmoothingMode"
+          >
+            <option value="off">Off</option>
+            <option value="movingAverage">Moving average</option>
+            <option value="ema">EMA</option>
+          </select>
+        </div>
+        <p class="text-xs text-gray-500 sm:text-sm">
+          Smooths sensor values (HR, power, cadence, altitude, speed, temperature, pace) to reduce noise.
+        </p>
+
+        <div>
+          <label class="mb-1 block text-xs font-medium text-gray-700">Window (points)</label>
+          <input
+            type="number"
+            min="1"
+            step="1"
+            class="focus:border-primary focus:ring-primary/10 w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:ring-2 focus:outline-hidden disabled:cursor-not-allowed disabled:opacity-50 sm:px-2 sm:py-1.5"
+            :value="smoothing.windowPoints"
+            :disabled="smoothing.mode === 'off'"
+            @input="setSmoothingWindowPoints"
+          />
+        </div>
+      </div>
+
+      <!-- 4. GPS Smoothing -->
       <div class="space-y-3 sm:space-y-4">
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h4 class="m-0 text-sm font-semibold text-gray-800 sm:text-base">GPS Smoothing</h4>
@@ -111,7 +143,7 @@
             <span class="text-xs text-gray-700 sm:text-sm">Enable</span>
           </label>
         </div>
-        <p class="text-xs text-gray-500 sm:text-sm">Smooths GPS coordinates to reduce jitter.</p>
+        <p class="text-xs text-gray-500 sm:text-sm">Smooths GPS coordinates (latitude/longitude) to reduce jitter.</p>
 
         <div>
           <label class="mb-1 block text-xs font-medium text-gray-700">Window (points)</label>
@@ -127,7 +159,7 @@
         </div>
       </div>
 
-      <!-- 3.5. GPS Pace Smoothing -->
+      <!-- 4.5. GPS Pace Smoothing -->
       <div v-if="hasGpxFiles" class="space-y-3 sm:space-y-4">
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h4 class="m-0 text-sm font-semibold text-gray-800 sm:text-base">GPS Pace Smoothing</h4>
@@ -159,39 +191,7 @@
         </div>
       </div>
 
-      <!-- 4. Data Smoothing -->
-      <div class="space-y-3 sm:space-y-4">
-        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <h4 class="m-0 text-sm font-semibold text-gray-800 sm:text-base">Data Smoothing</h4>
-          <select
-            :value="smoothing.mode"
-            class="focus:border-primary focus:ring-primary/10 w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:ring-2 focus:outline-hidden sm:w-36 sm:px-2 sm:py-1.5"
-            @change="setSmoothingMode"
-          >
-            <option value="off">Off</option>
-            <option value="movingAverage">Moving average</option>
-            <option value="ema">EMA</option>
-          </select>
-        </div>
-        <p class="text-xs text-gray-500 sm:text-sm">
-          Smooths sensor values (HR, power, cadence, etc.) to reduce noise.
-        </p>
-
-        <div>
-          <label class="mb-1 block text-xs font-medium text-gray-700">Window (points)</label>
-          <input
-            type="number"
-            min="1"
-            step="1"
-            class="focus:border-primary focus:ring-primary/10 w-full rounded-sm border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:ring-2 focus:outline-hidden disabled:cursor-not-allowed disabled:opacity-50 sm:px-2 sm:py-1.5"
-            :value="smoothing.windowPoints"
-            :disabled="smoothing.mode === 'off'"
-            @input="setSmoothingWindowPoints"
-          />
-        </div>
-      </div>
-
-      <!-- 5. Alignment (Scaling & Time Offset) -->
+      <!-- 6. Alignment (Scaling & Time Offset) -->
       <div v-if="activities.length > 0" class="space-y-3 sm:space-y-4">
         <h4 class="m-0 text-sm font-semibold text-gray-800 sm:text-base">Alignment</h4>
         <p class="text-xs text-gray-500 sm:text-sm">

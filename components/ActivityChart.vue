@@ -290,7 +290,7 @@ const hasChartData = computed(() => chartSeriesStore.chartSeries.length > 0);
 const chartTransforms = computed(() => ({
   viewMode: viewMode.value,
   outliers: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.outliers },
-  smoothing: transformationSettings.value.smoothing,
+  smoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.smoothing },
   gpsSmoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.gpsSmoothing },
   paceSmoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.paceSmoothing },
   cumulative: transformationSettings.value.cumulative,
@@ -372,10 +372,13 @@ let chartHoverCleanup: (() => void) | null = null;
 let chartZoomCleanup: (() => void) | null = null;
 const autoFitYEnabled = ref(true);
 
-// Watch activities to reload chart when activities are added/removed
+// Watch activities to reload chart when activities are added/removed or processed records change
 watch(
   () => processedActivities.value,
   async () => {
+    // Clear cache when processed activities change (e.g., when outlier settings change)
+    const { clearChartDataCache } = await import("~/utils/series-transforms");
+    clearChartDataCache();
     await nextTick();
     if (chartInstance.value) {
       const option = chartOptionECharts.value;
@@ -385,6 +388,7 @@ watch(
       });
     }
   },
+  { deep: true },
 );
 
 watch(
@@ -573,7 +577,10 @@ const panXAxisWindow = (direction: -1 | 1) => {
   const currentEnd = slider?.end ?? 100;
   const range = Math.max(1, currentEnd - currentStart);
 
-  const step = Math.min(20, Math.max(1, range * 0.15));
+  // Pan step should be proportional to zoom level - smaller steps when more zoomed in
+  // Use 10% of visible range, with a minimum of 0.5% and maximum of 10% of total range
+  // This ensures smooth, controlled panning at all zoom levels
+  const step = Math.min(10, Math.max(0.5, range * 0.1));
   const newStart = Math.max(0, Math.min(100 - range, currentStart + direction * step));
   const newEnd = Math.min(100, newStart + range);
 
@@ -1025,6 +1032,30 @@ const handleTouchEnd = () => {
 
 onMounted(async () => {
   await nextTick();
+  
+  // Ensure container has dimensions before initializing chart
+  if (chartContainer.value) {
+    const rect = chartContainer.value.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) {
+      // Wait for container to have dimensions
+      await new Promise<void>((resolve) => {
+        const checkDimensions = () => {
+          if (chartContainer.value) {
+            const checkRect = chartContainer.value.getBoundingClientRect();
+            if (checkRect.width > 0 && checkRect.height > 0) {
+              resolve();
+            } else {
+              requestAnimationFrame(checkDimensions);
+            }
+          } else {
+            resolve();
+          }
+        };
+        requestAnimationFrame(checkDimensions);
+      });
+    }
+  }
+  
   initChart();
   window.addEventListener("resize", handleResize);
 

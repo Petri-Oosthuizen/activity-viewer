@@ -90,7 +90,9 @@ export function calculatePace(
   // Note: Only applies when pace is calculated from GPS coordinates (GPX files).
   // Activities with embedded speed (TCX/FIT files) are not smoothed as they already have
   // device-smoothed speed values.
-  if (gpsCalculatedIndices.length > 0 && gpsPaceSmoothing.enabled) {
+  // Skip records where pace is explicitly null (dropped by outlier handling)
+  const validIndices = gpsCalculatedIndices.filter((idx) => result[idx]?.pace !== null);
+  if (validIndices.length > 0 && gpsPaceSmoothing.enabled) {
     const speedValues: (number | null)[] = result.map((r) => r.speed ?? null);
     const smoothedSpeed = smoothMovingAverage(speedValues, gpsPaceSmoothing.windowPoints);
 
@@ -99,10 +101,12 @@ export function calculatePace(
       const smoothed = smoothedSpeed[idx];
       if (smoothed !== null && smoothed !== undefined && Number.isFinite(smoothed) && smoothed > 0) {
         result[idx]!.speed = smoothed;
-        // Recalculate pace from smoothed speed
-        const paceMinPerKm = 1000 / (smoothed * 60);
-        if (Number.isFinite(paceMinPerKm) && paceMinPerKm > 0) {
-          result[idx]!.pace = paceMinPerKm;
+        // Recalculate pace from smoothed speed (only if pace wasn't dropped)
+        if (result[idx]!.pace !== null) {
+          const paceMinPerKm = 1000 / (smoothed * 60);
+          if (Number.isFinite(paceMinPerKm) && paceMinPerKm > 0) {
+            result[idx]!.pace = paceMinPerKm;
+          }
         }
       }
     }
@@ -112,7 +116,8 @@ export function calculatePace(
     const smoothedPace = smoothMovingAverage(paceValues, gpsPaceSmoothing.windowPoints);
     for (const idx of gpsCalculatedIndices) {
       const smoothed = smoothedPace[idx];
-      if (smoothed !== null && smoothed !== undefined && Number.isFinite(smoothed) && smoothed > 0) {
+      // Only update if pace wasn't dropped and we have a valid smoothed value
+      if (result[idx]!.pace !== null && smoothed !== null && smoothed !== undefined && Number.isFinite(smoothed) && smoothed > 0) {
         result[idx]!.pace = smoothed;
       }
     }

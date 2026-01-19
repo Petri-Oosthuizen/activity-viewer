@@ -6,8 +6,31 @@ import { calculateGpsSpeed, DEFAULT_GPS_DISTANCE_OPTIONS } from "~/utils/gps-dis
 
 type NullableNumber = number | null;
 
+/**
+ * Cache for transformed chart data points.
+ * Key: cache key string (activity id, metric, xAxis type, offset, scale, start time, cumulative mode)
+ * Value: array of [x, y] chart data points
+ * 
+ * This cache improves performance by avoiding redundant transformations when the same
+ * activity/metric combination is requested multiple times. The cache is cleared when
+ * processed activities change (e.g., when outlier settings change).
+ */
 const chartDataCache = new Map<string, ChartDataPoint[]>();
+
+/**
+ * Cache for pivot zones calculations.
+ * Key: cache key string (activity ids, metric, zone strategy and count)
+ * Value: pivot zones result or null if calculation failed
+ * 
+ * This cache improves performance for pivot zones view by avoiding redundant
+ * calculations when the same activities/metric/zone configuration is requested.
+ */
 const pivotZonesCache = new Map<string, PivotZonesMultiResult | null>();
+
+export function clearChartDataCache() {
+  chartDataCache.clear();
+  pivotZonesCache.clear();
+}
 
 function calculateAverageTimeInterval(records: ActivityRecord[]): number {
   if (records.length < 2) return 1;
