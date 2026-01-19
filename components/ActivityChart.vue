@@ -1025,6 +1025,30 @@ const handleTouchEnd = () => {
 
 onMounted(async () => {
   await nextTick();
+  
+  // Ensure container has dimensions before initializing chart
+  if (chartContainer.value) {
+    const rect = chartContainer.value.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) {
+      // Wait for container to have dimensions
+      await new Promise<void>((resolve) => {
+        const checkDimensions = () => {
+          if (chartContainer.value) {
+            const checkRect = chartContainer.value.getBoundingClientRect();
+            if (checkRect.width > 0 && checkRect.height > 0) {
+              resolve();
+            } else {
+              requestAnimationFrame(checkDimensions);
+            }
+          } else {
+            resolve();
+          }
+        };
+        requestAnimationFrame(checkDimensions);
+      });
+    }
+  }
+  
   initChart();
   window.addEventListener("resize", handleResize);
 

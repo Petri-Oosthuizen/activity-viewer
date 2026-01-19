@@ -90,6 +90,7 @@ const decreaseHeight = () => {
 
 const mapContainer = ref<HTMLDivElement | null>(null);
 let map: any = null;
+let isInitializingMap = false;
 let layers: any[] = [];
 let markers: any[] = [];
 let hoverMarker: any = null;
@@ -194,24 +195,26 @@ function calculateBearing(lat1: number, lon1: number, lat2: number, lon2: number
 }
 
 const initMap = async () => {
-  if (!mapContainer.value || map || !process.client) return;
+  if (!mapContainer.value || map || isInitializingMap || !process.client) return;
 
-  if (!L) {
-    L = await import("leaflet");
-    await import("leaflet/dist/leaflet.css");
-    
-    // Fix Leaflet default icon issue
-    delete (L.Icon.Default.prototype as any)._getIconUrl;
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
-      iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
-      shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+  isInitializingMap = true;
+  try {
+    if (!L) {
+      L = await import("leaflet");
+      await import("leaflet/dist/leaflet.css");
+      
+      // Fix Leaflet default icon issue
+      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+        iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+      });
+    }
+
+    map = L.map(mapContainer.value, {
+      zoomControl: true,
     });
-  }
-
-  map = L.map(mapContainer.value, {
-    zoomControl: true,
-  });
 
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -223,13 +226,16 @@ const initMap = async () => {
     handleMapHover(e.latlng);
   });
 
-  map.on("mouseout", () => {
-    uiStore.clearMapHoverPoint();
-    nearbyActivities = [];
-    updateHoverMarker();
-  });
+    map.on("mouseout", () => {
+      uiStore.clearMapHoverPoint();
+      nearbyActivities = [];
+      updateHoverMarker();
+    });
 
-  updateMap();
+    updateMap();
+  } finally {
+    isInitializingMap = false;
+  }
 };
 
 const handleMapHover = (latlng: any) => {
