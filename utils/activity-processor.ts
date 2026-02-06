@@ -24,26 +24,25 @@ type NullableNumber = number | null;
 
 /**
  * Apply outlier handling to metric values in records
+ * Optimized: processes records in-place without intermediate arrays
  */
 function applyOutlierHandlingToRecords(
   records: ActivityRecord[],
   settings: OutlierSettings,
   metricFields: Array<keyof ActivityRecord>,
-): ActivityRecord[] {
-  if (settings.mode === "off" || records.length === 0) return records;
+): void {
+  if (settings.mode === "off" || records.length === 0) return;
 
   const maxPercent = Math.max(0, settings.maxPercentChange);
-  const result: ActivityRecord[] = records.map((r) => ({ ...r }));
 
   for (const metricField of metricFields) {
-    const values: NullableNumber[] = result.map((r) => {
-      const val = r[metricField];
-      return typeof val === "number" && Number.isFinite(val) ? val : null;
-    });
-
     let prev: number | null = null;
-    for (let i = 0; i < values.length; i++) {
-      const current = values[i];
+
+    for (let i = 0; i < records.length; i++) {
+      const record = records[i]!;
+      const val = record[metricField];
+      const current = typeof val === "number" && Number.isFinite(val) ? val : null;
+
       if (current === null || current === undefined) {
         prev = null;
         continue;
@@ -64,7 +63,7 @@ function applyOutlierHandlingToRecords(
       }
 
       if (settings.mode === "drop") {
-        values[i] = null;
+        delete record[metricField];
         prev = null;
         continue;
       }
@@ -72,22 +71,10 @@ function applyOutlierHandlingToRecords(
       // clamp
       const allowedDelta = (maxPercent / 100) * denom;
       const clamped: number = prev + Math.sign(delta) * allowedDelta;
-      values[i] = clamped;
+      (record as any)[metricField] = clamped;
       prev = clamped;
     }
-
-    // Apply values back to records
-    for (let i = 0; i < result.length; i++) {
-      const val = values[i];
-      if (val === null) {
-        delete result[i]![metricField];
-      } else {
-        (result[i] as any)[metricField] = val;
-      }
-    }
   }
-
-  return result;
 }
 
 /**
@@ -113,58 +100,61 @@ function removeInvalidRecords(records: ActivityRecord[]): ActivityRecord[] {
 
 /**
  * Apply GPS smoothing to records
+ * Optimized: smooths in-place without intermediate data structures
  */
 function applyGpsSmoothingToRecords(
   records: ActivityRecord[],
   settings: GpsSmoothingSettings,
-): ActivityRecord[] {
-  if (!settings.enabled || records.length === 0) return records;
+): void {
+  if (!settings.enabled || records.length === 0) return;
 
-  const gpsPoints = records
-    .map((r, i) => ({ lat: r.lat, lon: r.lon, index: i }))
-    .filter((p): p is { lat: number; lon: number; index: number } => 
-      p.lat !== undefined && p.lon !== undefined && Number.isFinite(p.lat) && Number.isFinite(p.lon)
-    );
+  // Extract GPS points with their indices
+  const gpsIndices: number[] = [];
+  const gpsPoints: Array<{ lat: number; lon: number }> = [];
 
-  if (gpsPoints.length === 0) return records;
-
-  const smoothedPoints = smoothGpsPoints(
-    gpsPoints.map((p) => ({ lat: p.lat, lon: p.lon })),
-    settings.windowPoints,
-  );
-
-  const result = records.map((r) => ({ ...r }));
-  const pointMap = new Map<number, { lat: number; lon: number }>();
-  
-  for (let i = 0; i < gpsPoints.length; i++) {
-    pointMap.set(gpsPoints[i]!.index, smoothedPoints[i]!);
+  for (let i = 0; i < records.length; i++) {
+    const r = records[i]!;
+    if (
+      r.lat !== undefined && r.lon !== undefined &&
+      Number.isFinite(r.lat) && Number.isFinite(r.lon)
+    ) {
+      gpsIndices.push(i);
+      gpsPoints.push({ lat: r.lat, lon: r.lon });
+    }
   }
 
-  for (const [index, point] of pointMap) {
-    result[index]!.lat = point.lat;
-    result[index]!.lon = point.lon;
-  }
+  if (gpsPoints.length === 0) return;
 
-  return result;
+  const smoothedPoints = smoothGpsPoints(gpsPoints, settings.windowPoints);
+
+  // Apply smoothed coordinates back to records
+  for (let i = 0; i < gpsIndices.length; i++) {
+    const idx = gpsIndices[i]!;
+    const point = smoothedPoints[i]!;
+    records[idx]!.lat = point.lat;
+    records[idx]!.lon = point.lon;
+  }
 }
 
 /**
  * Apply smoothing to metric values in records
+ * Optimized: still uses intermediate array for smoothing algorithm but avoids unnecessary copies
  */
 function applySmoothingToRecords(
   records: ActivityRecord[],
   settings: SmoothingSettings,
   metricFields: Array<keyof ActivityRecord>,
-): ActivityRecord[] {
-  if (settings.mode === "off" || records.length === 0) return records;
-
-  const result: ActivityRecord[] = records.map((r) => ({ ...r }));
+): void {
+  if (settings.mode === "off" || records.length === 0) return;
 
   for (const metricField of metricFields) {
-    const values: NullableNumber[] = result.map((r) => {
-      const val = r[metricField];
-      return typeof val === "number" && Number.isFinite(val) ? val : null;
-    });
+    const values: NullableNumber[] = new Array(records.length);
+
+    // Extract values
+    for (let i = 0; i < records.length; i++) {
+      const val = records[i]![metricField];
+      values[i] = typeof val === "number" && Number.isFinite(val) ? val : null;
+    }
 
     let smoothed: NullableNumber[];
     if (settings.mode === "movingAverage") {
@@ -176,56 +166,57 @@ function applySmoothingToRecords(
     }
 
     // Apply smoothed values back to records
-    for (let i = 0; i < result.length; i++) {
+    for (let i = 0; i < records.length; i++) {
       const val = smoothed[i];
       if (val === null) {
-        delete result[i]![metricField];
+        delete records[i]![metricField];
       } else {
-        (result[i] as any)[metricField] = val;
+        (records[i] as any)[metricField] = val;
       }
     }
   }
-
-  return result;
 }
 
 /**
  * Apply scaling to metric values
+ * Optimized: processes in-place
  */
 function applyScalingToRecords(
   records: ActivityRecord[],
   scale: number,
   metricFields: Array<keyof ActivityRecord>,
-): ActivityRecord[] {
-  if (scale === 1 || !Number.isFinite(scale) || records.length === 0) return records;
+): void {
+  if (scale === 1 || !Number.isFinite(scale) || records.length === 0) return;
 
-  return records.map((record) => {
-    const newRecord = { ...record };
+  for (let i = 0; i < records.length; i++) {
+    const record = records[i]!;
     for (const metricField of metricFields) {
       const val = record[metricField];
       if (typeof val === "number" && Number.isFinite(val)) {
-        (newRecord as any)[metricField] = val * scale;
+        (record as any)[metricField] = val * scale;
       }
     }
-    return newRecord;
-  });
+  }
 }
 
 /**
  * Apply time offset to records
+ * Optimized: processes in-place
  */
-function applyOffsetToRecords(records: ActivityRecord[], offset: number): ActivityRecord[] {
-  if (offset === 0 || !Number.isFinite(offset) || records.length === 0) return records;
+function applyOffsetToRecords(records: ActivityRecord[], offset: number): void {
+  if (offset === 0 || !Number.isFinite(offset) || records.length === 0) return;
 
-  return records.map((record) => ({
-    ...record,
-    t: Math.max(0, record.t + offset),
-  }));
+  for (let i = 0; i < records.length; i++) {
+    const record = records[i]!;
+    record.t = Math.max(0, record.t + offset);
+  }
 }
 
 /**
  * Process activity records through the full pipeline
- * 
+ *
+ * Optimized: Clone records once at entry, then mutate in-place through all steps
+ *
  * Note: GPS distance filtering happens during parsing (in activity-parser-common.ts)
  * and is controlled by gpsDistanceOptions, so it's not explicitly called here.
  */
@@ -242,42 +233,45 @@ export function processActivityRecords(
 ): ActivityRecord[] {
   if (records.length === 0) return records;
 
+  // Clone records once at entry point to avoid mutating input
+  const processed = records.map((r) => ({ ...r }));
+
   // Metric fields that should be processed (excluding pace, which is calculated separately)
   const metricFields: Array<keyof ActivityRecord> = ["hr", "pwr", "cad", "alt", "speed", "temp"];
 
-  // 1. Outlier handling (clean bad metric values)
-  let processed = applyOutlierHandlingToRecords(records, settings.outliers, metricFields);
+  // 1. Outlier handling (clean bad metric values) - mutates in-place
+  applyOutlierHandlingToRecords(processed, settings.outliers, metricFields);
 
   // 2. GPS distance filtering - happens during parsing, not here
   // (controlled by gpsDistanceOptions in parsing phase)
 
-  // 3. Remove invalid records
-  processed = removeInvalidRecords(processed);
+  // 3. Remove invalid records (returns new array, so reassign)
+  const validRecords = removeInvalidRecords(processed);
 
-  // 4. GPS smoothing (smooth GPS coordinates)
-  processed = applyGpsSmoothingToRecords(processed, settings.gpsSmoothing);
+  // 4. GPS smoothing (smooth GPS coordinates) - mutates in-place
+  applyGpsSmoothingToRecords(validRecords, settings.gpsSmoothing);
 
   // 5. Calculate pace (from smoothed GPS coordinates, before metric smoothing)
   // Note: GPS pace smoothing only applies when pace is calculated from GPS coordinates,
   // not when the activity contains embedded speed (TCX/FIT files)
-  processed = calculatePace(processed, settings.gpsPaceSmoothing);
+  const withPace = calculatePace(validRecords, settings.gpsPaceSmoothing);
 
-  // 5.5. Apply outlier handling to pace (to catch GPS spikes that result in pace spikes)
-  processed = applyOutlierHandlingToRecords(processed, settings.outliers, ["pace"]);
+  // 5.5. Apply outlier handling to pace (to catch GPS spikes that result in pace spikes) - mutates in-place
+  applyOutlierHandlingToRecords(withPace, settings.outliers, ["pace"]);
 
-  // 6. Apply smoothing to metric values (affects totals, distance calculations, etc.)
+  // 6. Apply smoothing to metric values (affects totals, distance calculations, etc.) - mutates in-place
   // Include pace in smoothing so it gets smoothed along with other metrics
   const metricFieldsWithPace: Array<keyof ActivityRecord> = [...metricFields, "pace"];
-  processed = applySmoothingToRecords(processed, settings.smoothing, metricFieldsWithPace);
+  applySmoothingToRecords(withPace, settings.smoothing, metricFieldsWithPace);
 
-  // 7. Apply scaling (Y-axis scaling)
-  processed = applyScalingToRecords(processed, settings.scaling, metricFieldsWithPace);
+  // 7. Apply scaling (Y-axis scaling) - mutates in-place
+  applyScalingToRecords(withPace, settings.scaling, metricFieldsWithPace);
 
-  // 8. Calculate other derived metrics (grade, verticalSpeed)
-  processed = calculateDerivedMetrics(processed);
+  // 8. Calculate other derived metrics (grade, verticalSpeed) (returns new array)
+  const withDerived = calculateDerivedMetrics(withPace);
 
-  // 9. Apply offset (time alignment) - LAST
-  processed = applyOffsetToRecords(processed, settings.offset);
+  // 9. Apply offset (time alignment) - LAST - mutates in-place
+  applyOffsetToRecords(withDerived, settings.offset);
 
-  return processed;
+  return withDerived;
 }

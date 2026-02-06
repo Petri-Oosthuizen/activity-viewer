@@ -4,7 +4,7 @@
  */
 
 import { defineStore } from "pinia";
-import { computed, ref, watch } from "vue";
+import { computed } from "vue";
 import { storeToRefs } from "pinia";
 import { refDebounced } from "@vueuse/core";
 import type { Activity } from "~/types/activity";
@@ -27,44 +27,23 @@ export const useProcessedActivityStore = defineStore("processedActivity", () => 
     activityScales,
   } = storeToRefs(settingsStore);
 
-  const settingsKey = ref({
+  // Optimized: Keep Maps as Maps to avoid Array.from() overhead
+  const settingsKey = computed(() => ({
     outliers: outlierSettings.value,
     gpsSmoothing: gpsSmoothing.value,
     gpsPaceSmoothing: gpsPaceSmoothing.value,
     smoothing: smoothing.value,
-    offsets: Array.from(activityOffsets.value.entries()),
-    scales: Array.from(activityScales.value.entries()),
-  });
+    offsets: activityOffsets.value,
+    scales: activityScales.value,
+  }));
 
-  watch(
-    [
-      () => outlierSettings.value,
-      () => gpsSmoothing.value,
-      () => gpsPaceSmoothing.value,
-      () => smoothing.value,
-      () => activityOffsets.value,
-      () => activityScales.value,
-    ],
-    () => {
-      settingsKey.value = {
-        outliers: outlierSettings.value,
-        gpsSmoothing: gpsSmoothing.value,
-        gpsPaceSmoothing: gpsPaceSmoothing.value,
-        smoothing: smoothing.value,
-        offsets: Array.from(activityOffsets.value.entries()),
-        scales: Array.from(activityScales.value.entries()),
-      };
-    },
-    { deep: true }
-  );
-
-  const debouncedSettingsKey = refDebounced(settingsKey, 300);
+  const debouncedSettingsKey = refDebounced(settingsKey, 150);
 
   const processedActivities = computed<Activity[]>(() => {
     const currentSettings = debouncedSettingsKey.value;
     return rawActivities.value.map((rawActivity, index) => {
-      const offset = currentSettings.offsets.find(([id]) => id === rawActivity.id)?.[1] ?? 0;
-      const scale = currentSettings.scales.find(([id]) => id === rawActivity.id)?.[1] ?? 1;
+      const offset = currentSettings.offsets.get(rawActivity.id) ?? 0;
+      const scale = currentSettings.scales.get(rawActivity.id) ?? 1;
       const color = getActivityColorByIndex(index);
 
       const processedRecords = processActivityRecords(rawActivity.records, {
