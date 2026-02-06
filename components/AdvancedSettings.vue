@@ -3,6 +3,18 @@
     <template #title>Settings</template>
     <template #description>Processing, smoothing, and scaling options</template>
     <div class="space-y-4 sm:space-y-6">
+      <!-- Reset to Defaults Button -->
+      <div class="flex justify-end">
+        <button
+          type="button"
+          class="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors active:bg-gray-100 sm:hover:bg-gray-50"
+          @click="handleResetToDefaults"
+          aria-label="Reset all settings to defaults"
+        >
+          Reset to Defaults
+        </button>
+      </div>
+
       <!-- Processing Pipeline Settings (in order) -->
 
       <!-- 1. GPS Distance Filtering (happens during parsing) -->
@@ -411,6 +423,7 @@ import { useProcessedActivityStore } from "~/stores/processedActivity";
 import { useChartOptionsStore } from "~/stores/chartOptions";
 import { useActivitySettingsStore } from "~/stores/activitySettings";
 import { useChartSeriesStore } from "~/stores/chartSeries";
+import { useSettingsPersistence } from "~/composables/useSettingsPersistence";
 import AxisTypeSelector from "./AxisTypeSelector.vue";
 import TimeOffsetControl from "./TimeOffsetControl.vue";
 import CollapsibleSection from "./CollapsibleSection.vue";
@@ -425,6 +438,7 @@ const processedStore = useProcessedActivityStore();
 const chartOptionsStore = useChartOptionsStore();
 const settingsStore = useActivitySettingsStore();
 const chartSeriesStore = useChartSeriesStore();
+const { resetToDefaults } = useSettingsPersistence();
 
 const { processedActivities } = storeToRefs(processedStore);
 const { viewMode, xAxisType, metricSelectionMode } = storeToRefs(chartOptionsStore);
@@ -623,5 +637,11 @@ function setPivotZoneCount(event: Event) {
         : transformationSettings.value.pivotZones.zoneCount,
     },
   });
+}
+
+function handleResetToDefaults() {
+  if (confirm("Are you sure you want to reset all settings to their default values?")) {
+    resetToDefaults();
+  }
 }
 </script>

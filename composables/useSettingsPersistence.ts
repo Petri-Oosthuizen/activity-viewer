@@ -9,41 +9,9 @@ import { useActivitySettingsStore } from "~/stores/activitySettings";
 import { useChartOptionsStore } from "~/stores/chartOptions";
 import { useChartSeriesStore } from "~/stores/chartSeries";
 import { useUIStore } from "~/stores/ui";
-import type { OutlierSettings, GpsSmoothingSettings, GpsPaceSmoothingSettings, SmoothingSettings, CumulativeSettings, PivotZonesSettings } from "~/utils/chart-settings";
-import { DEFAULT_CHART_TRANSFORM_SETTINGS } from "~/utils/chart-settings";
-import { DEFAULT_GPS_DISTANCE_OPTIONS, type GpsDistanceOptions } from "~/utils/gps-distance";
-import type { DeltaSettings } from "~/stores/activitySettings";
-import type { MetricType, XAxisType } from "~/utils/chart-config";
-import type { ChartViewMode } from "~/utils/chart-settings";
+import { DEFAULT_SETTINGS, cloneSettings, type AppSettings } from "~/utils/default-settings";
 
 const STORAGE_KEY_SETTINGS = "activity-viewer:settings";
-
-interface StoredSettings {
-  activitySettings: {
-    outlierSettings: OutlierSettings;
-    gpsDistanceOptions: GpsDistanceOptions;
-    gpsSmoothing: GpsSmoothingSettings;
-    gpsPaceSmoothing: GpsPaceSmoothingSettings;
-    deltaSettings: DeltaSettings;
-  };
-  chartOptions: {
-    selectedMetrics: MetricType[];
-    xAxisType: XAxisType;
-    viewMode: ChartViewMode;
-    metricSelectionMode: "single" | "multi";
-  };
-  chartSeries: {
-    transformationSettings: {
-      cumulative: CumulativeSettings;
-      pivotZones: PivotZonesSettings;
-    };
-  };
-  ui: {
-    overviewDisplayMode: "light" | "full";
-    overviewBaselineEnabled: boolean;
-    overviewBaselineActivityId: string | null;
-  };
-}
 
 export function useSettingsPersistence() {
   const settingsStore = useActivitySettingsStore();
@@ -54,6 +22,7 @@ export function useSettingsPersistence() {
   const {
     outlierSettings,
     gpsDistanceOptions,
+    smoothing,
     gpsSmoothing,
     gpsPaceSmoothing,
     deltaSettings,
@@ -77,25 +46,24 @@ export function useSettingsPersistence() {
   const saveSettings = () => {
     if (typeof window === "undefined") return;
     try {
-      const stored: StoredSettings = {
+      // Use the type-safe clone function to ensure all properties are included
+      const currentSettings: AppSettings = {
         activitySettings: {
-          outlierSettings: { ...outlierSettings.value },
-          gpsDistanceOptions: { ...gpsDistanceOptions.value },
-          gpsSmoothing: { ...gpsSmoothing.value },
-          gpsPaceSmoothing: { ...gpsPaceSmoothing.value },
-          deltaSettings: { ...deltaSettings.value },
+          outlierSettings: outlierSettings.value,
+          gpsDistanceOptions: gpsDistanceOptions.value,
+          smoothing: smoothing.value,
+          gpsSmoothing: gpsSmoothing.value,
+          gpsPaceSmoothing: gpsPaceSmoothing.value,
+          deltaSettings: deltaSettings.value,
         },
         chartOptions: {
-          selectedMetrics: [...selectedMetrics.value],
+          selectedMetrics: selectedMetrics.value,
           xAxisType: xAxisType.value,
           viewMode: viewMode.value,
           metricSelectionMode: metricSelectionMode.value,
         },
         chartSeries: {
-          transformationSettings: {
-            cumulative: { ...transformationSettings.value.cumulative },
-            pivotZones: { ...transformationSettings.value.pivotZones },
-          },
+          transformationSettings: transformationSettings.value,
         },
         ui: {
           overviewDisplayMode: overviewDisplayMode.value,
@@ -103,6 +71,9 @@ export function useSettingsPersistence() {
           overviewBaselineActivityId: overviewBaselineActivityId.value,
         },
       };
+
+      // Clone to ensure we have a clean copy for storage
+      const stored = cloneSettings(currentSettings);
       localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(stored));
     } catch (error) {
       console.error("Failed to save settings to localStorage:", error);
@@ -114,7 +85,7 @@ export function useSettingsPersistence() {
     try {
       const stored = localStorage.getItem(STORAGE_KEY_SETTINGS);
       if (!stored) return;
-      const parsed = JSON.parse(stored) as StoredSettings;
+      const parsed = JSON.parse(stored) as AppSettings;
 
       // Load activity settings
       if (parsed.activitySettings) {
@@ -123,6 +94,9 @@ export function useSettingsPersistence() {
         }
         if (parsed.activitySettings.gpsDistanceOptions) {
           settingsStore.setGpsDistanceOptions(parsed.activitySettings.gpsDistanceOptions);
+        }
+        if (parsed.activitySettings.smoothing) {
+          settingsStore.setSmoothing(parsed.activitySettings.smoothing);
         }
         if (parsed.activitySettings.gpsSmoothing) {
           settingsStore.setGpsSmoothing(parsed.activitySettings.gpsSmoothing);
@@ -179,6 +153,39 @@ export function useSettingsPersistence() {
     settingsStore.clearFileSpecificSettings();
   };
 
+  const resetToDefaults = () => {
+    // Reset all settings to default values
+    const defaults = DEFAULT_SETTINGS;
+
+    // Reset activity settings
+    settingsStore.setOutlierSettings(defaults.activitySettings.outlierSettings);
+    settingsStore.setGpsDistanceOptions(defaults.activitySettings.gpsDistanceOptions);
+    settingsStore.setSmoothing(defaults.activitySettings.smoothing);
+    settingsStore.setGpsSmoothing(defaults.activitySettings.gpsSmoothing);
+    settingsStore.setGpsPaceSmoothing(defaults.activitySettings.gpsPaceSmoothing);
+    settingsStore.setDeltaSettings(defaults.activitySettings.deltaSettings);
+
+    // Reset chart options
+    chartOptionsStore.setSelectedMetrics(defaults.chartOptions.selectedMetrics);
+    chartOptionsStore.setXAxisType(defaults.chartOptions.xAxisType);
+    chartOptionsStore.setViewMode(defaults.chartOptions.viewMode);
+    chartOptionsStore.setMetricSelectionMode(defaults.chartOptions.metricSelectionMode);
+
+    // Reset chart series settings
+    chartSeriesStore.setTransformationSettings(defaults.chartSeries.transformationSettings);
+
+    // Reset UI settings
+    uiStore.setOverviewDisplayMode(defaults.ui.overviewDisplayMode);
+    uiStore.setOverviewBaselineEnabled(defaults.ui.overviewBaselineEnabled);
+    uiStore.setOverviewBaselineActivityId(defaults.ui.overviewBaselineActivityId);
+
+    // Clear file-specific settings
+    settingsStore.clearFileSpecificSettings();
+
+    // Save to localStorage
+    saveSettings();
+  };
+
   onMounted(() => {
     loadSettings();
 
@@ -187,6 +194,7 @@ export function useSettingsPersistence() {
       [
         outlierSettings,
         gpsDistanceOptions,
+        smoothing,
         gpsSmoothing,
         gpsPaceSmoothing,
         deltaSettings,
@@ -210,5 +218,6 @@ export function useSettingsPersistence() {
     saveSettings,
     loadSettings,
     clearFileSpecificSettings,
+    resetToDefaults,
   };
 }
