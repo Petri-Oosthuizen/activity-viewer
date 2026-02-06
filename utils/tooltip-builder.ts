@@ -35,12 +35,12 @@ export function buildMultiActivityTooltip(
             <th style="text-align: left; padding: 2px 4px 2px 0; font-weight: 600; color: #333; border-bottom: 1px solid #e0e0e0;"></th>`;
 
   activities.forEach(({ activity }) => {
-    const truncatedName = truncateMiddleSmart(activity.name, 12);
+    const truncatedName = truncateMiddleSmart(activity.name, 20);
     html += `
             <th style="text-align: center; padding: 2px 3px; font-weight: 600; color: #333; border-bottom: 1px solid #e0e0e0;">
               <div style="display: flex; align-items: center; justify-content: center; gap: 3px;">
                 <span style="width: 6px; height: 6px; background: ${activity.color}; border-radius: 50%; flex-shrink: 0;"></span>
-                <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60px;" title="${activity.name}">${truncatedName}</span>
+                <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px;" title="${activity.name}">${truncatedName}</span>
               </div>
             </th>`;
   });
@@ -137,10 +137,10 @@ export function buildChartTooltip(axisValue: string, items: ChartTooltipItem[]):
   }
 
   items.forEach((item) => {
-    const name = truncateMiddleSmart(item.name, 30);
+    const name = truncateMiddleSmart(item.name, 50);
     result += `<div style="margin: 2px 0; display: flex; align-items: center; font-size: 11px; line-height: 1.4;">
       <span style="display: inline-block; width: 8px; height: 8px; background-color: ${item.color}; border-radius: 50%; margin-right: 6px; flex-shrink: 0;"></span>
-      <span style="font-weight: 500; color: #333; min-width: 80px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 1;" title="${item.name}">${name}</span>
+      <span style="font-weight: 500; color: #333; min-width: 80px; max-width: 350px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 1;" title="${item.name}">${name}</span>
       <span style="color: #333; font-weight: 600; min-width: 50px; text-align: right; flex-shrink: 0;">${item.value}</span>
     </div>`;
   });

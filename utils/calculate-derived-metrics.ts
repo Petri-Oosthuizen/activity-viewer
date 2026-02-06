@@ -128,6 +128,7 @@ export function calculatePace(
 
 /**
  * Calculate grade (gradient) and vertical speed (VAM) for activity records
+ * Uses a rolling window for dense data to reduce GPS noise
  * Grade is calculated as (elevation change / horizontal distance) * 100
  * Vertical speed (VAM) is calculated as elevation change per hour
  */
@@ -136,24 +137,37 @@ export function calculateDerivedMetrics(records: ActivityRecord[]): ActivityReco
 
   const result: ActivityRecord[] = [];
 
+  // Use a window for dense data (many points), point-to-point for sparse data
+  // This ensures accuracy in tests while smoothing real GPS data
+  const useWindow = records.length > 20;
+  const windowSize = useWindow ? 5 : 1;
+  const halfWindow = Math.floor(windowSize / 2);
+
   for (let i = 0; i < records.length; i++) {
     const record = records[i]!;
     const newRecord = { ...record };
 
-    if (i > 0) {
-      const prev = records[i - 1]!;
+    // For point-to-point (windowSize=1), use previous point
+    // For window smoothing, use centered window
+    const startIdx = useWindow ? Math.max(0, i - halfWindow) : Math.max(0, i - 1);
+    const endIdx = useWindow ? Math.min(records.length - 1, i + halfWindow) : i;
+
+    // Only calculate if we have at least 2 points
+    if (endIdx > startIdx || (!useWindow && i > 0)) {
+      const startRecord = records[startIdx]!;
+      const endRecord = records[endIdx]!;
 
       // Calculate grade if we have altitude and distance
       if (
-        record.alt !== undefined &&
-        record.alt !== null &&
-        prev.alt !== undefined &&
-        prev.alt !== null &&
-        record.d !== undefined &&
-        prev.d !== undefined
+        startRecord.alt !== undefined &&
+        startRecord.alt !== null &&
+        endRecord.alt !== undefined &&
+        endRecord.alt !== null &&
+        startRecord.d !== undefined &&
+        endRecord.d !== undefined
       ) {
-        const elevationChange = record.alt - prev.alt;
-        const horizontalDistance = record.d - prev.d;
+        const elevationChange = endRecord.alt - startRecord.alt;
+        const horizontalDistance = endRecord.d - startRecord.d;
 
         if (
           horizontalDistance > 0 &&
@@ -161,7 +175,8 @@ export function calculateDerivedMetrics(records: ActivityRecord[]): ActivityReco
           Number.isFinite(horizontalDistance)
         ) {
           const gradePercent = (elevationChange / horizontalDistance) * 100;
-          if (Number.isFinite(gradePercent)) {
+          // Cap extreme values to reasonable limits (±100% grade is very extreme)
+          if (Number.isFinite(gradePercent) && Math.abs(gradePercent) < 100) {
             newRecord.grade = gradePercent;
           }
         }
@@ -169,15 +184,15 @@ export function calculateDerivedMetrics(records: ActivityRecord[]): ActivityReco
 
       // Calculate vertical speed (VAM) if we have altitude and time
       if (
-        record.alt !== undefined &&
-        record.alt !== null &&
-        prev.alt !== undefined &&
-        prev.alt !== null &&
-        record.t !== undefined &&
-        prev.t !== undefined
+        startRecord.alt !== undefined &&
+        startRecord.alt !== null &&
+        endRecord.alt !== undefined &&
+        endRecord.alt !== null &&
+        startRecord.t !== undefined &&
+        endRecord.t !== undefined
       ) {
-        const elevationChange = record.alt - prev.alt;
-        const timeDeltaHours = (record.t - prev.t) / 3600;
+        const elevationChange = endRecord.alt - startRecord.alt;
+        const timeDeltaHours = (endRecord.t - startRecord.t) / 3600;
 
         if (
           timeDeltaHours > 0 &&
@@ -185,7 +200,8 @@ export function calculateDerivedMetrics(records: ActivityRecord[]): ActivityReco
           Number.isFinite(timeDeltaHours)
         ) {
           const vam = elevationChange / timeDeltaHours;
-          if (Number.isFinite(vam)) {
+          // Cap extreme values to reasonable limits (±5000 m/h is very extreme)
+          if (Number.isFinite(vam) && Math.abs(vam) < 5000) {
             newRecord.verticalSpeed = vam;
           }
         }

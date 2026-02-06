@@ -6,7 +6,6 @@
 import { defineStore } from "pinia";
 import { computed, shallowRef } from "vue";
 import { storeToRefs } from "pinia";
-import type { Activity } from "~/types/activity";
 import { useWindowActivityStore } from "./windowActivity";
 import { useChartOptionsStore } from "./chartOptions";
 import { useActivitySettingsStore } from "./activitySettings";
@@ -27,7 +26,6 @@ import type {
 } from "~/utils/chart-settings";
 import { DEFAULT_CHART_TRANSFORM_SETTINGS } from "~/utils/chart-settings";
 import type { MetricType } from "~/utils/chart-config";
-import { METRIC_LABELS } from "~/utils/chart-config";
 import type { DeltaMode } from "~/utils/chart-config";
 
 export const useChartSeriesStore = defineStore("chartSeries", () => {

@@ -1,51 +1,44 @@
-import { ref, onUnmounted, watch, type Ref } from "vue";
+import { onUnmounted, type Ref, shallowRef } from "vue";
 import * as echarts from "echarts";
-import type { EChartsOption } from "echarts";
 
 type EChartsInstance = ReturnType<typeof echarts.init>;
 
 /**
- * Composable for managing ECharts instance lifecycle
- * Handles initialization, updates, resizing, and cleanup
+ * Minimal ECharts composable - ONLY handles chart lifecycle
+ * Does NOT manage options - caller is responsible for all setOption calls
+ *
+ * CRITICAL: Uses shallowRef instead of ref to avoid Vue's deep reactivity
+ * which breaks ECharts internal state management
  */
-export function useECharts(container: Ref<HTMLDivElement | null>, option: Ref<EChartsOption>) {
-  const chartInstance = ref<EChartsInstance | null>(null);
+export function useECharts(container: Ref<HTMLDivElement | null>) {
+  const chartInstance = shallowRef<EChartsInstance | null>(null);
 
-  const initChart = () => {
-    if (!container.value) return;
-    
-    // Ensure container has dimensions before initializing
-    const rect = container.value.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) {
-      // Wait for next frame if container has no dimensions
-      requestAnimationFrame(() => {
-        if (container.value && !chartInstance.value) {
-          const checkRect = container.value.getBoundingClientRect();
-          if (checkRect.width > 0 && checkRect.height > 0) {
-            chartInstance.value = echarts.init(container.value);
-            updateChart();
+  const initChart = (): Promise<void> => {
+    return new Promise((resolve) => {
+      if (!container.value) {
+        resolve();
+        return;
+      }
+
+      // Ensure container has dimensions before initializing
+      const rect = container.value.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) {
+        // Wait for next frame if container has no dimensions
+        requestAnimationFrame(() => {
+          if (container.value && !chartInstance.value) {
+            const checkRect = container.value.getBoundingClientRect();
+            if (checkRect.width > 0 && checkRect.height > 0) {
+              chartInstance.value = echarts.init(container.value);
+            }
           }
-        }
-      });
-      return;
-    }
-    
-    chartInstance.value = echarts.init(container.value);
-    updateChart();
-  };
+          resolve();
+        });
+        return;
+      }
 
-  const updateChart = (replaceSeries = false) => {
-    if (!chartInstance.value) return;
-    // Always merge to preserve tooltip and other configurations
-    // When series structure changes, use replaceMerge to only replace series
-    if (replaceSeries) {
-      chartInstance.value.setOption(option.value, { 
-        notMerge: false,
-        replaceMerge: ['series']
-      });
-    } else {
-      chartInstance.value.setOption(option.value, { notMerge: false });
-    }
+      chartInstance.value = echarts.init(container.value);
+      resolve();
+    });
   };
 
   const resizeChart = () => {
@@ -53,15 +46,6 @@ export function useECharts(container: Ref<HTMLDivElement | null>, option: Ref<EC
       chartInstance.value.resize();
     }
   };
-
-  // Auto-update chart when options change
-  watch(
-    option,
-    () => {
-      updateChart();
-    },
-    { deep: true },
-  );
 
   // Handle window resize with debouncing
   let resizeTimer: ReturnType<typeof setTimeout> | null = null;
@@ -76,7 +60,6 @@ export function useECharts(container: Ref<HTMLDivElement | null>, option: Ref<EC
   };
 
   onUnmounted(() => {
-    // Cleanup: remove listeners and dispose chart instance
     window.removeEventListener("resize", handleResize);
     if (resizeTimer) {
       clearTimeout(resizeTimer);
@@ -90,7 +73,6 @@ export function useECharts(container: Ref<HTMLDivElement | null>, option: Ref<EC
   return {
     chartInstance,
     initChart,
-    updateChart,
     resizeChart,
     handleResize,
   };

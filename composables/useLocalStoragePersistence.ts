@@ -8,7 +8,6 @@
 
 import { ref, computed, watch, onMounted, nextTick } from "vue";
 import { useRawActivityStore } from "~/stores/rawActivity";
-import { useActivitySettingsStore } from "~/stores/activitySettings";
 import type { RawActivity } from "~/types/activity";
 
 const STORAGE_KEY_ENABLED = "activity-viewer:localStorageEnabled";
@@ -46,7 +45,6 @@ interface StoredRawActivity {
 
 export function useLocalStoragePersistence() {
   const rawActivityStore = useRawActivityStore();
-  const settingsStore = useActivitySettingsStore();
   const isEnabled = ref(false);
   const isInitialized = ref(false);
 

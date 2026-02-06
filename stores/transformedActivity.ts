@@ -8,7 +8,6 @@ import { computed } from "vue";
 import { storeToRefs } from "pinia";
 import type { Activity } from "~/types/activity";
 import { useProcessedActivityStore } from "./processedActivity";
-import type { TransformationSettings } from "~/types/processing";
 
 export const useTransformedActivityStore = defineStore("transformedActivity", () => {
   const processedStore = useProcessedActivityStore();

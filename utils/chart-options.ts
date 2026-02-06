@@ -4,7 +4,7 @@
  */
 
 import type { MetricType, XAxisType, DeltaMode } from "./chart-config";
-import { METRIC_LABELS, formatXAxisValue } from "./chart-config";
+import { formatXAxisValue } from "./chart-config";
 import { buildChartTooltip, type ChartTooltipItem } from "./tooltip-builder";
 
 export function formatAxisNumber(value: unknown): string {
@@ -17,21 +17,19 @@ export function formatAxisNumber(value: unknown): string {
 /**
  * Build tooltip configuration for ECharts
  */
-export function buildTooltipConfig(
-  xAxisType: XAxisType,
-  formatTooltipFn: (params: any) => string
-) {
+export function buildTooltipConfig(xAxisType: XAxisType, formatTooltipFn: (params: any) => string) {
   return {
     show: true,
     trigger: "axis" as const,
     confine: false,
-    maxWidth: 300,
+    maxWidth: 500,
     enterable: false,
     renderMode: "html" as const,
     backgroundColor: "rgba(255, 255, 255, 0.95)",
     borderColor: "#e0e0e0",
     borderWidth: 1,
     padding: [8, 12],
+    extraCssText: "z-index: 99999; pointer-events: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.15);",
     textStyle: {
       color: "#333",
       fontSize: 12,
@@ -48,7 +46,7 @@ export function buildTooltipConfig(
       },
       triggerTooltip: true,
       show: true,
-      snap: true,
+      snap: false, // Don't snap to points - show tooltip for all series at x-position
     },
     formatter: (params: any) => {
       try {
@@ -94,7 +92,7 @@ export function buildDataZoomConfig(metricCount: number, yAxisCount: number) {
       // Disable drag-to-pan; use toolbar pan controls instead.
       moveOnMouseMove: false,
       moveOnTouchMove: false,
-      preventDefaultMouseMove: false,
+      preventDefaultMouseMove: true,
       zoomOnMouseWheel: true,
       moveOnMouseWheel: false,
       throttle: 0,
@@ -132,7 +130,7 @@ export function buildYAxisConfig(
   showDelta: boolean,
   deltaMode: DeltaMode,
   selectedMetric: MetricType,
-  hasActivities: boolean
+  hasActivities: boolean,
 ) {
   // Delta-only mode: single axis for delta (no scaling)
   if (showDelta && deltaMode === "delta-only" && hasActivities) {
@@ -204,10 +202,7 @@ export function buildGridConfig(hasMultipleYAxes: boolean) {
 /**
  * Format tooltip params into HTML
  */
-export function formatTooltipParams(
-  params: any,
-  xAxisType: XAxisType
-): string {
+export function formatTooltipParams(params: any, xAxisType: XAxisType): string {
   if (!params) return "";
 
   const paramsArray = Array.isArray(params) ? params : [params];
@@ -227,9 +222,7 @@ export function formatTooltipParams(
   if (hoveredX === undefined || hoveredX === null) return "";
 
   const axisValue =
-    typeof hoveredX === "number"
-      ? formatXAxisValue(hoveredX, xAxisType)
-      : String(hoveredX);
+    typeof hoveredX === "number" ? formatXAxisValue(hoveredX, xAxisType) : String(hoveredX);
 
   // Display values from all series that ECharts passed to us
   const tooltipItems: ChartTooltipItem[] = [];
@@ -249,4 +242,3 @@ export function formatTooltipParams(
 
   return buildChartTooltip(axisValue, tooltipItems);
 }
-

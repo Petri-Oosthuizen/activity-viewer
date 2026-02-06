@@ -363,7 +363,7 @@ describe("OverviewPanel", () => {
 
       const text = wrapper.text();
       expect(text).toContain("Heart Rate");
-      expect(text).toContain("Altitude");
+      expect(text).toContain("Elevation");
     });
 
     it("should display additional metrics in full mode", async () => {

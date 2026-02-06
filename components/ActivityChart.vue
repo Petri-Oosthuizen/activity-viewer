@@ -6,7 +6,7 @@
 
     <!-- Chart Container -->
     <div v-if="hasChartData" class="mt-2 w-full flex-1 overflow-visible sm:mt-3">
-      <div class="flex items-center">
+      <div class="flex items-center overflow-visible">
         <!-- Y Axis Label (left side, rotated 180 degrees) -->
         <div
           v-if="yAxisLabel"
@@ -16,7 +16,7 @@
           <span class="text-sm text-gray-700">{{ yAxisLabel }}</span>
         </div>
         <!-- Chart -->
-        <div class="relative flex-1">
+        <div class="relative flex-1 overflow-visible">
           <div
             ref="chartContainer"
             class="h-full min-h-[400px] w-full touch-manipulation sm:min-h-[500px]"
@@ -246,8 +246,6 @@ import { DEFAULT_CHART_TRANSFORM_SETTINGS } from "~/utils/chart-settings";
 
 import { useECharts } from "~/composables/useECharts";
 import MetricSelector from "./MetricSelector.vue";
-import FileNameDisplay from "./FileNameDisplay.vue";
-import type { ChartViewMode } from "~/utils/chart-settings";
 
 const chartContainer = ref<HTMLDivElement | null>(null);
 
@@ -262,16 +260,12 @@ const { chartOption, transformationSettings } = storeToRefs(chartSeriesStore);
 const { selectedMetrics, xAxisType, viewMode, metricSelectionMode, availableMetrics } =
   storeToRefs(chartOptionsStore);
 const { disabledActivities, deltaSettings } = storeToRefs(settingsStore);
-const { chartWindow } = storeToRefs(windowStore);
 const { mapHoveredPoint, resetZoomTrigger, zoomInTrigger, zoomOutTrigger, chartMapSideBySide } =
   storeToRefs(uiStore);
 
 const chartOptionECharts = computed(() => chartOption.value as EChartsOption);
 
-const { chartInstance, initChart, updateChart, handleResize } = useECharts(
-  chartContainer,
-  chartOptionECharts,
-);
+const { chartInstance, initChart, handleResize } = useECharts(chartContainer);
 
 // Computed properties for settings
 const activities = computed(() =>
@@ -337,10 +331,6 @@ const yAxisLabel = computed(() => {
   return null;
 });
 
-const activeActivitiesForLegend = computed(() =>
-  activities.value.filter((a) => !disabledActivities.value.has(a.id)),
-);
-
 // Settings handlers
 const setMetric = (metric: MetricType) => {
   chartOptionsStore.setSelectedMetrics([metric]);
@@ -394,7 +384,13 @@ watch(
 watch(
   () => xAxisType.value,
   () => {
-    updateChart();
+    if (chartInstance.value) {
+      const option = chartOptionECharts.value;
+      chartInstance.value.setOption(option, {
+        notMerge: false,
+        replaceMerge: ["xAxis", "series"],
+      });
+    }
   },
 );
 
@@ -408,7 +404,7 @@ watch(
       // Set the full option to ensure tooltip is preserved
       chartInstance.value.setOption(option, {
         notMerge: false,
-        replaceMerge: ["series"],
+        replaceMerge: ["series", "tooltip"],
       });
     }
   },
@@ -425,7 +421,7 @@ watch(
       // Use replaceMerge to replace series and yAxis while preserving tooltip and other config
       chartInstance.value.setOption(option, {
         notMerge: false,
-        replaceMerge: ["series", "yAxis", "legend", "xAxis"],
+        replaceMerge: ["series", "yAxis", "legend", "xAxis", "tooltip"],
       });
       await nextTick();
       // Auto-fit Y-axis to the new metric's data range
@@ -534,7 +530,7 @@ watch(
       const option = chartOptionECharts.value;
       chartInstance.value.setOption(option, {
         notMerge: false,
-        replaceMerge: ["series", "yAxis", "legend", "xAxis", "dataZoom"],
+        replaceMerge: ["series", "yAxis", "legend", "xAxis", "dataZoom", "tooltip"],
       });
       await nextTick();
     }
@@ -951,14 +947,22 @@ watch(
     if (chartInstance.value) {
       chartInstance.value.resize();
       // Also reload the chart to ensure it updates properly
-      updateChart();
+      const option = chartOptionECharts.value;
+      chartInstance.value.setOption(option, {
+        notMerge: false,
+        replaceMerge: ["series"],
+      });
     }
 
     // Single delayed resize and reload to catch any late layout changes
     layoutResizeTimer = setTimeout(() => {
       if (chartInstance.value) {
         chartInstance.value.resize();
-        updateChart();
+        const option = chartOptionECharts.value;
+        chartInstance.value.setOption(option, {
+          notMerge: false,
+          replaceMerge: ["series"],
+        });
       }
       layoutResizeTimer = null;
     }, 50);
@@ -1055,8 +1059,15 @@ onMounted(async () => {
       });
     }
   }
-  
-  initChart();
+
+  await initChart();
+
+  // Set initial chart option after initialization
+  if (chartInstance.value) {
+    const option = chartOptionECharts.value;
+    chartInstance.value.setOption(option, { notMerge: false });
+  }
+
   window.addEventListener("resize", handleResize);
 
   // Enhanced touch support for mobile devices
