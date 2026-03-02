@@ -242,7 +242,6 @@ import {
   findNearestIndexLinear,
   getActivityXValues,
 } from "~/utils/activity-xvalues";
-import { DEFAULT_CHART_TRANSFORM_SETTINGS } from "~/utils/chart-settings";
 
 import { useECharts } from "~/composables/useECharts";
 import MetricSelector from "./MetricSelector.vue";
@@ -283,11 +282,6 @@ const hasChartData = computed(() => chartSeriesStore.chartSeries.length > 0);
 
 const chartTransforms = computed(() => ({
   viewMode: viewMode.value,
-  outliers: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.outliers },
-  smoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.smoothing },
-  gpsSmoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.gpsSmoothing },
-  paceSmoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.paceSmoothing },
-  cumulative: transformationSettings.value.cumulative,
   pivotZones: transformationSettings.value.pivotZones,
 }));
 

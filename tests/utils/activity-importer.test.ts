@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { readFileSync } from "fs";
 import { join } from "path";
 import { importActivityFile, importActivityFiles } from "~/utils/activity-importer";
@@ -66,6 +66,43 @@ describe("activity-importer", () => {
         if (typeof result.fileContent === "string") {
           expect(result.fileContent).toContain("<TrainingCenterDatabase");
         }
+      });
+
+      it("should import TCX files without GPS positions when time/distance data exists", async () => {
+        const tcxContent = `<?xml version="1.0" encoding="UTF-8"?>
+<TrainingCenterDatabase>
+  <Activities>
+    <Activity Sport="Running">
+      <Id>2024-01-01T12:00:00Z</Id>
+      <Lap StartTime="2024-01-01T12:00:00Z">
+        <Track>
+          <Trackpoint>
+            <Time>2024-01-01T12:00:00Z</Time>
+            <DistanceMeters>100</DistanceMeters>
+            <HeartRateBpm><Value>150</Value></HeartRateBpm>
+          </Trackpoint>
+          <Trackpoint>
+            <Time>2024-01-01T12:00:10Z</Time>
+            <DistanceMeters>180</DistanceMeters>
+            <Cadence>90</Cadence>
+          </Trackpoint>
+        </Track>
+      </Lap>
+    </Activity>
+  </Activities>
+</TrainingCenterDatabase>`;
+
+        const file = new File([tcxContent], "indoor-run.tcx", {
+          type: "application/vnd.garmin.tcx+xml",
+        });
+
+        const result = await importActivityFile(file);
+
+        expect(result.sourceType).toBe("tcx");
+        expect(result.records).toHaveLength(2);
+        expect(result.records[0]).toMatchObject({ t: 0, d: 0, hr: 150 });
+        expect(result.records[0]?.lat).toBeUndefined();
+        expect(result.records[1]).toMatchObject({ t: 10, d: 80, cad: 90 });
       });
     });
 
@@ -225,6 +262,7 @@ describe("activity-importer", () => {
     });
 
     it("should continue processing after error and return successful imports", async () => {
+      vi.spyOn(console, "warn").mockImplementation(() => {});
       const gpxContent = readFileSync(join(sampleDataDir, "bronberrik.gpx"), "utf-8");
 
       const files = [
@@ -242,6 +280,7 @@ describe("activity-importer", () => {
     });
 
     it("should return empty array when all files fail", async () => {
+      vi.spyOn(console, "warn").mockImplementation(() => {});
       const files = [
         new File(["invalid"], "test1.gpx"),
         new File(["invalid"], "test2.tcx"),

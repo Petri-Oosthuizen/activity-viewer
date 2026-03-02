@@ -41,6 +41,7 @@ function extractTCXLaps(doc: Document, recordsCount: number): Lap[] | undefined 
     if (!startTimeAttr) continue;
 
     const lapStartTime = new Date(startTimeAttr);
+    if (!Number.isFinite(lapStartTime.getTime())) continue;
     
     const trackpoints = lapEl.querySelectorAll("Trackpoint");
     const lapPointCount = trackpoints.length;

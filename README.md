@@ -68,6 +68,7 @@ Everything is processed **locally in your browser**. Files are not uploaded to a
 - Remove individual activities or clear all
 - Consistent activity colors
 - Optional local storage persistence (raw files saved in browser, persist across page refreshes, allows reprocessing with different settings)
+- Graceful handling when browser storage is too small for large activity sets (persistence is turned off with a user-facing message, but the current session keeps working)
 
 ### Performance
 
@@ -86,7 +87,9 @@ npm run dev
 
 ```bash
 npm run lint
+npm run type-check
 npm run test
+npm run test:coverage
 ```
 
 ### Build / static export
@@ -98,13 +101,19 @@ npm run generate
 
 ### Architecture
 
-The application uses a modular store-based architecture with a clear data pipeline:
+The application is a Nuxt 4 single-page app with a modular, store-driven data pipeline:
+
+- `pages/index.vue` is the only route and acts as a thin composition surface
+- Pinia stores hold the application state and derived data pipeline
+- Parsing and metric computation live in `utils/`
+- ECharts renders the chart and Leaflet renders the map
+- Browser `localStorage` persists both app settings and, optionally, raw uploaded activities
 
 #### Data Pipeline
 
 1. **Import** → Raw files are parsed and stored with original file content
-2. **Process** → Data cleaning, smoothing, scaling, and derived metric calculation
-3. **Transform** → Metric-specific transformations (smoothing, cumulative)
+2. **Process** → Data cleaning, GPS smoothing, pace calculation, metric smoothing, scaling, and derived metric calculation
+3. **Transform** → Store boundary for chart-specific transforms; currently most metric transforms are applied during chart-series generation
 4. **Window** → Data trimming based on visible chart window
 5. **Chart/Map** → Final rendering with ECharts and Leaflet
 
@@ -115,10 +124,11 @@ The application uses 7 specialized Pinia stores:
 - **`rawActivity`**: Stores raw file content and initially parsed records (pre-processing)
 - **`activitySettings`**: Manages all user settings (outliers, GPS smoothing, scaling, offsets, comparison settings)
 - **`processedActivity`**: Applies processing pipeline (outliers, GPS smoothing, scaling, derived metrics, offsets)
-- **`transformedActivity`**: Applies chart transformations (currently passes through, transformations happen during chart rendering)
+- **`transformedActivity`**: Reserved transformation boundary (currently pass-through; chart-specific transforms happen later)
 - **`windowActivity`**: Applies windowing/trimming based on visible chart range
 - **`chartOptions`**: Manages chart display configuration (metric selection, view mode, X-axis type)
-- **`chartSeries`**: Converts internal data model to ECharts-compatible format
+- **`chartSeries`**: Applies chart transforms such as cumulative/pivot-zone behavior and converts data to ECharts-compatible format
+- **`ui`**: Holds UI-only state such as hover sync, zoom triggers, layout mode, and overview display settings
 
 #### Processing Pipeline Order
 
@@ -128,9 +138,12 @@ The processing pipeline follows a strict order:
 2. **GPS distance filtering** (happens during parsing)
 3. **Remove invalid records** (missing required fields, invalid GPS)
 4. **GPS smoothing** (smooth GPS coordinates)
-5. **Apply scaling** (Y-axis scaling per activity)
-6. **Calculate derived metrics** (grade, vertical speed, pace)
-7. **Apply offset** (time alignment) - LAST
+5. **Calculate pace** (using smoothed GPS data when needed)
+6. **Apply pace outlier handling**
+7. **Apply metric smoothing** (including pace)
+8. **Apply scaling** (Y-axis scaling per activity)
+9. **Calculate derived metrics** (grade, vertical speed)
+10. **Apply offset** (time alignment) - LAST
 
 #### Field Mapping System
 
@@ -147,6 +160,26 @@ A flexible field mapping system standardizes metric names from different file fo
 - **Reactivity**: Uses Vue 3 `computed` and `shallowRef` for optimal performance
 - **Raw File Storage**: Raw files are saved to localStorage, not processed data, allowing reprocessing with different settings
 - **Type Safety**: Full TypeScript coverage with strict types
+
+### Persistence model
+
+- **Settings persistence** is always on and stores chart/view/processing preferences in `localStorage`
+- **Activity persistence** is optional and stores uploaded raw activities in `localStorage`
+- Activity persistence may be disabled automatically if the current activity set exceeds browser storage limits
+- File-specific view state such as offsets, scales, disabled activities, and delta selections is cleared when activities are cleared
+
+### Project layout
+
+```text
+components/   UI building blocks for upload, chart, map, overview, and settings
+composables/  Persistence helpers and shared UI logic
+stores/       Pinia stores for pipeline stages and UI state
+utils/        Parsers, metrics, chart builders, formatting, and transforms
+types/        Shared TypeScript types for activities and processing
+tests/        Unit, store, composable, and integration coverage
+public/demo/  Demo sample files and parser reference data
+server/routes/ Small server endpoints such as sitemap generation
+```
 
 ## License
 

@@ -3,14 +3,14 @@
  * Maps FIT-specific field names to unified ActivityRecord field names
  */
 
-import type { FieldMapper, FieldMapping, FieldMappingContext } from "./types";
+import type { FieldMapper, FieldMapping } from "./types";
 
 /**
  * Base FIT field mapper
  * Handles standard FIT fields and common variations
  */
 export class FitFieldMapper implements FieldMapper {
-  mapField(sourceFieldName: string, value: number, context?: FieldMappingContext): FieldMapping | null {
+  mapField(sourceFieldName: string, value: number): FieldMapping | null {
     const normalized = sourceFieldName.toLowerCase().replace(/[_-]/g, "");
 
     // Heart rate mappings

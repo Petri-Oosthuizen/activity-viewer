@@ -3,8 +3,8 @@ import { DEFAULT_GPS_DISTANCE_OPTIONS, filterGpsDistanceDeltaMeters, type GpsDis
 // Derived metrics are now calculated in the processing pipeline, not during parsing
 
 export interface RawPoint {
-  lat: number;
-  lon: number;
+  lat?: number;
+  lon?: number;
   alt?: number;
   time?: Date;
   hr?: number;
@@ -20,9 +20,9 @@ function calculateElapsedTime(
   point: RawPoint,
   index: number,
   points: RawPoint[],
-  startTime: Date,
+  startTime?: Date,
 ): number {
-  if (point.time) {
+  if (point.time && startTime) {
     return (point.time.getTime() - startTime.getTime()) / 1000;
   }
 
@@ -37,7 +37,10 @@ function calculateElapsedTime(
           estimatedInterval = (prevPoint.time.getTime() - prevPrevPoint.time.getTime()) / 1000;
         }
       }
-      return (prevTime.getTime() - startTime.getTime()) / 1000 + estimatedInterval;
+      if (startTime) {
+        return (prevTime.getTime() - startTime.getTime()) / 1000 + estimatedInterval;
+      }
+      return index;
     }
   }
 
@@ -55,11 +58,7 @@ function processPointsToRecords(
   const records: ActivityRecord[] = [];
   let cumulativeDistance = 0;
   let startDistance: number | null = null;
-  const firstPoint = points[0];
-  if (!firstPoint) {
-    return [];
-  }
-  const startTime = firstPoint.time || new Date();
+  const startTime = points.find((point) => point.time)?.time;
 
   for (let i = 0; i < points.length; i++) {
     const point = points[i];
@@ -74,9 +73,17 @@ function processPointsToRecords(
         startDistance = point.distanceMeters;
       }
       cumulativeDistance = point.distanceMeters - startDistance;
-    } else if (i > 0) {
+    } else if (
+      i > 0 &&
+      point.lat !== undefined &&
+      point.lon !== undefined
+    ) {
       const prevPoint = points[i - 1];
-      if (prevPoint) {
+      if (
+        prevPoint &&
+        prevPoint.lat !== undefined &&
+        prevPoint.lon !== undefined
+      ) {
         const prevElapsed = records[records.length - 1]?.t ?? Math.max(0, elapsedTime - 1);
         const prevGps: GpsPoint = {
           lat: prevPoint.lat,
@@ -130,10 +137,10 @@ export function createParseResult(
 
   const records = processPointsToRecords(points, distOpts);
   // Derived metrics (grade, verticalSpeed, pace) are calculated in the processing pipeline
-  const startTime = firstPoint.time || new Date();
+  const startTime = points.find((point) => point.time)?.time;
 
   return {
     records: records,
-    startTime: startTime instanceof Date ? startTime : undefined,
+    startTime,
   };
 }

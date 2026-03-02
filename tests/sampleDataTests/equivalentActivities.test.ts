@@ -16,6 +16,9 @@ interface ParsedActivity {
   stats: ReturnType<typeof computeActivityStatsFromRecords>;
 }
 
+const skippedFiles: string[] = [];
+const skippedMetricComparisons: string[] = [];
+
 function readSampleFile(filename: string): string {
   return readFileSync(filename, "utf-8");
 }
@@ -90,7 +93,7 @@ async function loadActivitiesFromFolder(folderPath: string): Promise<ParsedActiv
         stats,
       });
     } catch (error) {
-      console.warn(`Skipping ${file.filepath}: ${error}`);
+      skippedFiles.push(`${file.filepath}: ${String(error)}`);
     }
   }
 
@@ -147,9 +150,9 @@ function compareStats(
       // Use very lenient tolerance for max values, or skip if difference is too large
       const maxTolerance = metric === "alt" ? 1000 : metric === "pace" ? 5.0 : metric === "pwr" ? 100 : 10;
       if (maxDiff > maxTolerance) {
-        // Skip max check for metrics with very large differences between formats
-        // This can happen due to different sampling rates or data precision
-        console.warn(`Skipping max check for ${metric}: difference ${maxDiff} exceeds tolerance ${maxTolerance}`);
+        skippedMetricComparisons.push(
+          `${a.name} vs ${b.name} ${metric} max diff ${maxDiff} > ${maxTolerance}`,
+        );
       } else {
         expect(maxDiff).toBeLessThanOrEqual(maxTolerance);
       }
@@ -245,6 +248,16 @@ if (activityFolders.length === 0) {
 
       it("should have matching sport types across formats", () => {
         compareSportTypes(activities);
+      });
+
+      it("should only skip known sample-data limitations", () => {
+        for (const skipped of skippedFiles) {
+          expect(skipped).toContain("File to small to be a FIT file");
+        }
+
+        for (const skipped of skippedMetricComparisons) {
+          expect(skipped).toContain("pace");
+        }
       });
     });
   }

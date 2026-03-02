@@ -3,14 +3,14 @@
  * Maps TCX field names to unified ActivityRecord field names
  */
 
-import type { FieldMapper, FieldMapping, FieldMappingContext } from "./types";
+import type { FieldMapper, FieldMapping } from "./types";
 
 /**
  * TCX field mapper
  * Handles TCX standard fields and extension fields
  */
 export class TcxFieldMapper implements FieldMapper {
-  mapField(sourceFieldName: string, value: number, context?: FieldMappingContext): FieldMapping | null {
+  mapField(sourceFieldName: string, value: number): FieldMapping | null {
     const normalized = sourceFieldName.toLowerCase().replace(/[_-]/g, "");
 
     // Heart rate mappings (TCX uses HeartRateBpm/Value)

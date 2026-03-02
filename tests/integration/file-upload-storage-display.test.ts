@@ -12,7 +12,10 @@ import { useRawActivityStore } from "~/stores/rawActivity";
 import { useProcessedActivityStore } from "~/stores/processedActivity";
 import { useWindowActivityStore } from "~/stores/windowActivity";
 import { useChartSeriesStore } from "~/stores/chartSeries";
-import { useLocalStoragePersistence } from "~/composables/useLocalStoragePersistence";
+import {
+  resetLocalStoragePersistenceStateForTests,
+  useLocalStoragePersistence,
+} from "~/composables/useLocalStoragePersistence";
 import { importActivityFile } from "~/utils/activity-importer";
 import type { RawActivity } from "~/types/activity";
 
@@ -24,6 +27,7 @@ describe("file upload → storage → load → display integration", () => {
 
   beforeEach(() => {
     setActivePinia(createPinia());
+    resetLocalStoragePersistenceStateForTests();
     localStorageMock = {};
 
     localStorageGetItemSpy = vi.spyOn(Storage.prototype, "getItem").mockImplementation((key: string) => {
@@ -84,7 +88,7 @@ describe("file upload → storage → load → display integration", () => {
 
     // 3. Enable localStorage and save
     const { setEnabled, saveActivities } = useLocalStoragePersistence();
-    setEnabled(true);
+    await setEnabled(true);
     await nextTick();
     await saveActivities();
     await nextTick();
@@ -182,7 +186,7 @@ describe("file upload → storage → load → display integration", () => {
 
     // Save to localStorage
     const { setEnabled, saveActivities } = useLocalStoragePersistence();
-    setEnabled(true);
+    await setEnabled(true);
     await nextTick();
     await saveActivities();
     await nextTick();
@@ -299,7 +303,7 @@ describe("file upload → storage → load → display integration", () => {
 
     // Save and load
     const { setEnabled, saveActivities, loadActivities } = useLocalStoragePersistence();
-    setEnabled(true);
+    await setEnabled(true);
     await nextTick();
     await saveActivities();
     await nextTick();
@@ -376,7 +380,7 @@ describe("file upload → storage → load → display integration", () => {
     expect(rawActivity1.name).toBe("first.gpx");
 
     // 2. Enable localStorage before adding first activity
-    wrapper.vm.setEnabled(true);
+    await wrapper.vm.setEnabled(true);
     await nextTick();
 
     // 3. Add first activity to store (watch handler should save automatically)
@@ -475,7 +479,7 @@ describe("file upload → storage → load → display integration", () => {
     rawStore1.addRawActivity(rawActivity2);
 
     const { setEnabled, saveActivities } = useLocalStoragePersistence();
-    setEnabled(true);
+    await setEnabled(true);
     await nextTick();
     await saveActivities();
     await new Promise((resolve) => setTimeout(resolve, 300));

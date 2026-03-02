@@ -143,6 +143,20 @@ describe("activity-stats", () => {
   });
 
   describe("pace calculation", () => {
+    it("prefers already-derived pace values from the processing pipeline", () => {
+      const records: ActivityRecord[] = [
+        { t: 0, d: 0 },
+        { t: 60, d: 400, pace: 2.5 },
+        { t: 120, d: 800, pace: 2.4 },
+      ];
+
+      const stats = computeActivityStatsFromRecords(records);
+      expect(stats.metrics.pace.count).toBe(2);
+      expect(stats.metrics.pace.min).toBe(2.4);
+      expect(stats.metrics.pace.max).toBe(2.5);
+      expect(stats.metrics.pace.avg).toBeCloseTo(2.5, 6);
+    });
+
     it("computes pace correctly for consistent speed", () => {
       const records: ActivityRecord[] = [
         { t: 0, d: 0 },

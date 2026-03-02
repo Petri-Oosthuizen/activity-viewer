@@ -428,7 +428,6 @@ import AxisTypeSelector from "./AxisTypeSelector.vue";
 import TimeOffsetControl from "./TimeOffsetControl.vue";
 import CollapsibleSection from "./CollapsibleSection.vue";
 import type {
-  ChartViewMode,
   CumulativeMode,
   OutlierHandling,
   SmoothingMode,
@@ -448,8 +447,6 @@ const {
   gpsSmoothing,
   gpsPaceSmoothing,
   smoothing,
-  activityOffsets,
-  activityScales,
   deltaSettings,
   disabledActivities,
 } = storeToRefs(settingsStore);
@@ -621,20 +618,6 @@ function setCumulativeMode(event: Event) {
     cumulative: {
       ...transformationSettings.value.cumulative,
       mode: target.value as CumulativeMode,
-    },
-  });
-}
-
-function setPivotZoneCount(event: Event) {
-  const target = event.target as HTMLInputElement;
-  const next = Number.parseInt(target.value, 10);
-  chartSeriesStore.setTransformationSettings({
-    ...transformationSettings.value,
-    pivotZones: {
-      ...transformationSettings.value.pivotZones,
-      zoneCount: Number.isFinite(next)
-        ? Math.max(1, next)
-        : transformationSettings.value.pivotZones.zoneCount,
     },
   });
 }

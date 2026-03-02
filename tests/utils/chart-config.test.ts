@@ -42,6 +42,18 @@ describe("chart-config utilities", () => {
       expect(activityHasMetric(mockActivity, "pwr")).toBe(false);
       expect(activityHasMetric(mockActivity, "cad")).toBe(false);
     });
+
+    it("should use derived pace values after processing", () => {
+      const activityWithPace: Activity = {
+        ...mockActivity,
+        records: [
+          { t: 0, d: 0 },
+          { t: 10, d: 100, pace: 1.67 },
+        ],
+      };
+
+      expect(activityHasMetric(activityWithPace, "pace")).toBe(true);
+    });
   });
 
   describe("countRecordsWithMetric", () => {
@@ -49,6 +61,19 @@ describe("chart-config utilities", () => {
       expect(countRecordsWithMetric(mockActivity, "hr")).toBe(2);
       expect(countRecordsWithMetric(mockActivity, "alt")).toBe(2);
       expect(countRecordsWithMetric(mockActivity, "pwr")).toBe(0);
+    });
+
+    it("should count derived pace records directly", () => {
+      const activityWithPace: Activity = {
+        ...mockActivity,
+        records: [
+          { t: 0, d: 0 },
+          { t: 10, d: 100, pace: 1.67 },
+          { t: 20, d: 200, pace: 1.72 },
+        ],
+      };
+
+      expect(countRecordsWithMetric(activityWithPace, "pace")).toBe(2);
     });
   });
 
@@ -66,6 +91,20 @@ describe("chart-config utilities", () => {
       const metrics = getAvailableMetrics(activities);
       expect(metrics).toContain("hr");
       expect(metrics).toContain("alt");
+    });
+
+    it("should detect pace from derived records instead of raw deltas", () => {
+      const activities: Activity[] = [
+        {
+          ...mockActivity,
+          records: [
+            { t: 0, d: 0 },
+            { t: 10, d: 0, pace: 1.8 },
+          ],
+        },
+      ];
+
+      expect(getAvailableMetrics(activities)).toContain("pace");
     });
   });
 
@@ -434,4 +473,3 @@ describe("chart-config utilities", () => {
     });
   });
 });
-

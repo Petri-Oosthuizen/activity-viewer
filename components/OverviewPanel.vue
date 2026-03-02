@@ -85,7 +85,7 @@
             type="checkbox"
             :checked="overviewBaselineEnabled"
             class="text-primary focus:ring-primary h-4 w-4 cursor-pointer rounded-sm border-gray-300"
-            @change="(e) => uiStore.setOverviewBaselineEnabled((e.target as HTMLInputElement).checked)"
+            @change="handleBaselineEnabledChange"
           />
           <span class="text-[10px] font-medium text-gray-600 sm:text-xs"
             >Enable Baseline Comparison</span
@@ -95,7 +95,7 @@
           v-if="overviewBaselineEnabled"
           :value="overviewBaselineActivityId || ''"
           class="baseline-select focus:border-primary focus:ring-primary/10 w-full rounded-sm border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:ring-2 focus:outline-hidden sm:w-auto sm:min-w-[180px] sm:px-3 sm:text-sm"
-          @change="(e) => uiStore.setOverviewBaselineActivityId((e.target as HTMLSelectElement).value || null)"
+          @change="handleBaselineActivityChange"
         >
           <option v-for="a in activeActivities" :key="a.id" :value="a.id">
             {{ a.name }}
@@ -853,12 +853,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useActivityList } from "~/composables/useActivityList";
-import { useActivitySettingsStore } from "~/stores/activitySettings";
 import { useChartOptionsStore } from "~/stores/chartOptions";
-import { useChartSeriesStore } from "~/stores/chartSeries";
 import { useWindowActivityStore } from "~/stores/windowActivity";
 import { useUIStore } from "~/stores/ui";
 import { computeActivityStatsFromRecords, computeActivityStats } from "~/utils/activity-stats";
@@ -867,7 +865,6 @@ import {
   formatMetricValue,
   formatTime,
   formatSpeed,
-  formatPower,
   formatDateTime,
 } from "~/utils/format";
 import type { MetricType } from "~/utils/chart-config";
@@ -881,18 +878,15 @@ import {
   isPercentWindowActive,
   percentWindowToXRange,
 } from "~/utils/windowing";
-import { DEFAULT_CHART_TRANSFORM_SETTINGS } from "~/utils/chart-settings";
 import { formatXAxisValue } from "~/utils/chart-config";
 import CollapsibleSection from "~/components/CollapsibleSection.vue";
+import FileNameDisplay from "~/components/FileNameDisplay.vue";
 
 const { activeActivities } = useActivityList();
-const settingsStore = useActivitySettingsStore();
 const chartOptionsStore = useChartOptionsStore();
-const chartSeriesStore = useChartSeriesStore();
 const windowStore = useWindowActivityStore();
 const uiStore = useUIStore();
 
-const { disabledActivities } = storeToRefs(settingsStore);
 const { xAxisType, viewMode } = storeToRefs(chartOptionsStore);
 const { chartWindow } = storeToRefs(windowStore);
 const {
@@ -939,6 +933,16 @@ const clearChartWindow = () => {
     yEndPercent: 100,
   });
 };
+
+function handleBaselineEnabledChange(event: Event) {
+  const target = event.target as HTMLInputElement;
+  uiStore.setOverviewBaselineEnabled(target.checked);
+}
+
+function handleBaselineActivityChange(event: Event) {
+  const target = event.target as HTMLSelectElement;
+  uiStore.setOverviewBaselineActivityId(target.value || null);
+}
 
 const metricLabels = METRIC_LABELS;
 
@@ -989,23 +993,13 @@ const getMetricUnit = (metric: MetricType): string => {
   return match ? match[1]! : "";
 };
 
-const chartTransforms = computed(() => ({
-  viewMode: viewMode.value,
-  outliers: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.outliers },
-  smoothing: chartSeriesStore.transformationSettings.smoothing,
-  gpsSmoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.gpsSmoothing },
-  paceSmoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.paceSmoothing },
-  cumulative: chartSeriesStore.transformationSettings.cumulative,
-  pivotZones: chartSeriesStore.transformationSettings.pivotZones,
-}));
-
 const statsById = computed(() => {
   const map: Record<string, ReturnType<typeof computeActivityStats>> = {};
   const acts = activeActivities.value;
-  const viewMode = chartTransforms.value.viewMode;
+  const currentViewMode = viewMode.value;
 
   // For pivot view we don't have an X window; keep full-activity stats.
-  if (viewMode !== "timeseries") {
+  if (currentViewMode !== "timeseries") {
     for (const a of acts) {
       map[a.id] = computeActivityStats(a);
     }

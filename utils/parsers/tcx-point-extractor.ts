@@ -1,5 +1,11 @@
 import type { RawPoint } from "../activity-parser-common";
 
+function parseValidDate(value: string | null | undefined): Date | undefined {
+  if (!value) return undefined;
+  const parsed = new Date(value);
+  return Number.isFinite(parsed.getTime()) ? parsed : undefined;
+}
+
 export function extractTCXPoints(doc: Document): RawPoint[] {
   const parseError = doc.querySelector("parsererror");
   if (parseError) {
@@ -28,29 +34,22 @@ export function extractTCXPoints(doc: Document): RawPoint[] {
 
 function parseTCXPoint(trackpoint: Element): RawPoint | null {
   const position = trackpoint.querySelector("Position");
-  if (!position) {
-    return null;
-  }
+  const latText = position?.querySelector("LatitudeDegrees")?.textContent;
+  const lonText = position?.querySelector("LongitudeDegrees")?.textContent;
 
-  const latText = position.querySelector("LatitudeDegrees")?.textContent;
-  const lonText = position.querySelector("LongitudeDegrees")?.textContent;
-
-  if (!latText || !lonText) {
-    return null;
-  }
-
-  const lat = parseFloat(latText);
-  const lon = parseFloat(lonText);
-
-  if (isNaN(lat) || isNaN(lon)) {
-    return null;
-  }
+  const lat = latText ? parseFloat(latText) : undefined;
+  const lon = lonText ? parseFloat(lonText) : undefined;
+  const hasValidPosition =
+    lat !== undefined &&
+    lon !== undefined &&
+    Number.isFinite(lat) &&
+    Number.isFinite(lon);
 
   const altText = trackpoint.querySelector("AltitudeMeters")?.textContent;
   const alt = altText ? parseFloat(altText) : undefined;
 
   const timeText = trackpoint.querySelector("Time")?.textContent;
-  const time = timeText ? new Date(timeText) : undefined;
+  const time = parseValidDate(timeText);
 
   const distanceText = trackpoint.querySelector("DistanceMeters")?.textContent;
   const distanceMeters = distanceText ? parseFloat(distanceText) : undefined;
@@ -137,9 +136,25 @@ function parseTCXPoint(trackpoint: Element): RawPoint | null {
     }
   }
 
+  const hasUsableData =
+    hasValidPosition ||
+    time !== undefined ||
+    (distanceMeters !== undefined && !isNaN(distanceMeters)) ||
+    alt !== undefined ||
+    hr !== undefined ||
+    cad !== undefined ||
+    pwr !== undefined ||
+    speed !== undefined ||
+    temp !== undefined ||
+    Object.keys(additionalFields).length > 0;
+
+  if (!hasUsableData) {
+    return null;
+  }
+
   return {
-    lat,
-    lon,
+    lat: hasValidPosition ? lat : undefined,
+    lon: hasValidPosition ? lon : undefined,
     alt,
     time,
     hr,

@@ -73,6 +73,4 @@ export interface RawActivity {
     sport?: string;
     laps?: Lap[];
   };
-  additionalFields?: Record<string, number>; // Fields we don't support yet (standardized names)
 }
-

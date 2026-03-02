@@ -83,6 +83,28 @@
         Save files locally in browser (persist across page refreshes)
       </label>
     </div>
+    <div
+      v-if="!isProcessing && (saveError || localStorageEnabled)"
+      class="mt-4 rounded-md border px-3 py-2 text-sm"
+      :class="
+        saveError
+          ? 'border-red-200 bg-red-50 text-red-700'
+          : isStorageNearLimit
+            ? 'border-amber-200 bg-amber-50 text-amber-800'
+            : 'border-blue-200 bg-blue-50 text-blue-700'
+      "
+    >
+      <p class="m-0">
+        {{
+          saveError ??
+          `Local browser save is enabled. Current cached file data: ${storageUsageLabel}.`
+        }}
+      </p>
+      <p v-if="localStorageEnabled && !saveError" class="mt-1 text-xs opacity-80">
+        Large activity files may exceed browser storage limits. If that happens, local save will be
+        turned off automatically and your current session will continue normally.
+      </p>
+    </div>
     <div v-if="isProcessing" class="text-primary mt-4 flex items-center justify-center gap-2">
       <span
         class="border-t-primary h-4 w-4 animate-spin rounded-full border-2 border-gray-200"
@@ -96,7 +118,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { storeToRefs } from "pinia";
 import { useRawActivityStore } from "~/stores/rawActivity";
 import { useActivitySettingsStore } from "~/stores/activitySettings";
@@ -123,12 +145,22 @@ const { gpsDistanceOptions } = storeToRefs(settingsStore);
 
 const {
   isEnabled: localStorageEnabled,
+  saveError,
+  estimatedStorageBytes,
+  isStorageNearLimit,
   setEnabled: setLocalStorageEnabled,
 } = useLocalStoragePersistence();
 
-const handleLocalStorageToggle = (event: Event) => {
+const storageUsageLabel = computed(() => {
+  const bytes = estimatedStorageBytes.value;
+  if (bytes <= 0) return "less than 1 KB";
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+});
+
+const handleLocalStorageToggle = async (event: Event) => {
   const target = event.target as HTMLInputElement;
-  setLocalStorageEnabled(target.checked);
+  await setLocalStorageEnabled(target.checked);
 };
 
 const triggerFileInput = () => {

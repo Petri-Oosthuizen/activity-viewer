@@ -2,7 +2,10 @@ import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { setActivePinia, createPinia } from "pinia";
 import { mount } from "@vue/test-utils";
 import { defineComponent, nextTick } from "vue";
-import { useLocalStoragePersistence } from "~/composables/useLocalStoragePersistence";
+import {
+  resetLocalStoragePersistenceStateForTests,
+  useLocalStoragePersistence,
+} from "~/composables/useLocalStoragePersistence";
 import { useRawActivityStore } from "~/stores/rawActivity";
 import type { RawActivity } from "~/types/activity";
 
@@ -14,6 +17,7 @@ describe("useLocalStoragePersistence", () => {
 
   beforeEach(() => {
     setActivePinia(createPinia());
+    resetLocalStoragePersistenceStateForTests();
     localStorageMock = {};
 
     localStorageGetItemSpy = vi.spyOn(Storage.prototype, "getItem").mockImplementation((key: string) => {
@@ -123,7 +127,7 @@ describe("useLocalStoragePersistence", () => {
       const wrapper = mount(TestComponent);
       await nextTick();
 
-      wrapper.vm.setEnabled(true);
+      await wrapper.vm.setEnabled(true);
       await nextTick();
 
       expect(wrapper.vm.isEnabled).toBe(true);
@@ -145,7 +149,7 @@ describe("useLocalStoragePersistence", () => {
       const wrapper = mount(TestComponent);
       await nextTick();
 
-      wrapper.vm.setEnabled(false);
+      await wrapper.vm.setEnabled(false);
       await nextTick();
 
       expect(wrapper.vm.isEnabled).toBe(false);
@@ -171,7 +175,7 @@ describe("useLocalStoragePersistence", () => {
       const wrapper = mount(TestComponent);
       await nextTick();
 
-      wrapper.vm.setEnabled(true);
+      await wrapper.vm.setEnabled(true);
       await nextTick();
       await wrapper.vm.saveActivities();
       await nextTick();
@@ -301,7 +305,7 @@ describe("useLocalStoragePersistence", () => {
       // Create a Blob using File for better test compatibility
       const blob = new File(["binary content"], "test.fit", { type: "application/octet-stream" });
       const activity: RawActivity = {
-        id: "test-1",
+        id: "blob-test-1",
         name: "Test",
         sourceType: "fit",
         fileContent: blob,
@@ -321,9 +325,10 @@ describe("useLocalStoragePersistence", () => {
       await nextTick();
 
       const rawStore = useRawActivityStore();
+      rawStore.clearAll();
       rawStore.addRawActivity(activity);
 
-      wrapper.vm.setEnabled(true);
+      await wrapper.vm.setEnabled(true);
       await nextTick();
       await wrapper.vm.saveActivities();
       // Wait for async serialization
@@ -339,7 +344,7 @@ describe("useLocalStoragePersistence", () => {
 
     it("should serialize activity with string fileContent", async () => {
       const activity: RawActivity = {
-        id: "test-1",
+        id: "xml-test-1",
         name: "Test",
         sourceType: "gpx",
         fileContent: "xml content",
@@ -359,9 +364,10 @@ describe("useLocalStoragePersistence", () => {
       await nextTick();
 
       const rawStore = useRawActivityStore();
+      rawStore.clearAll();
       rawStore.addRawActivity(activity);
 
-      wrapper.vm.setEnabled(true);
+      await wrapper.vm.setEnabled(true);
       await nextTick();
       await wrapper.vm.saveActivities();
       // Wait for async serialization
@@ -370,6 +376,7 @@ describe("useLocalStoragePersistence", () => {
 
       const saved = JSON.parse(localStorageMock["activity-viewer:activities"] || "[]");
       expect(saved).toHaveLength(1);
+      expect(saved[0]?.id).toBe("xml-test-1");
       expect(saved[0]?.fileContentIsBase64).toBeFalsy();
       expect(saved[0]?.fileContent).toBe("xml content");
     });
@@ -411,7 +418,7 @@ describe("useLocalStoragePersistence", () => {
       const rawStore = useRawActivityStore();
       rawStore.addRawActivity(activity);
 
-      wrapper.vm.setEnabled(true);
+      await wrapper.vm.setEnabled(true);
       await nextTick();
       await wrapper.vm.saveActivities();
       // Wait for async serialization
@@ -552,7 +559,7 @@ describe("useLocalStoragePersistence", () => {
         setup() {
           const { setEnabled } = useLocalStoragePersistence();
           // Enable before mount completes to ensure it's ready
-          setEnabled(true);
+          void setEnabled(true);
           return {};
         },
         template: "<div></div>",
@@ -597,6 +604,39 @@ describe("useLocalStoragePersistence", () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
       await nextTick();
 
+      expect(localStorageMock["activity-viewer:activities"]).toBeUndefined();
+    });
+  });
+
+  describe("quota handling", () => {
+    it("should disable activity persistence and expose an error when storage quota is exceeded", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      localStorageSetItemSpy.mockImplementation((key: string, value: string) => {
+        if (key === "activity-viewer:activities") {
+          throw new DOMException("Quota exceeded", "QuotaExceededError");
+        }
+        localStorageMock[key] = value;
+      });
+
+      const rawStore = useRawActivityStore();
+      rawStore.addRawActivity(createRawActivity("large-1", "Large Activity"));
+
+      const TestComponent = defineComponent({
+        setup() {
+          return useLocalStoragePersistence();
+        },
+        template: "<div></div>",
+      });
+
+      const wrapper = mount(TestComponent);
+      await nextTick();
+
+      await wrapper.vm.setEnabled(true);
+      await nextTick();
+
+      expect(wrapper.vm.isEnabled).toBe(false);
+      expect(wrapper.vm.saveError).toContain("Local browser save was turned off");
+      expect(localStorageMock["activity-viewer:localStorageEnabled"]).toBeUndefined();
       expect(localStorageMock["activity-viewer:activities"]).toBeUndefined();
     });
   });

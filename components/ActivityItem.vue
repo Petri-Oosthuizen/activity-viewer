@@ -57,8 +57,11 @@
           </svg>
         </button>
       </div>
-      <div class="ml-[52px] text-[10px] text-gray-500 sm:ml-[44px] sm:text-xs" :class="{ 'opacity-60': isDisabled }">
-        {{ activity.records.length }} data point{{ activity.records.length !== 1 ? "s" : "" }}
+      <div
+        class="ml-[52px] flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-gray-500 sm:ml-[44px] sm:text-xs"
+        :class="{ 'opacity-60': isDisabled }"
+      >
+        <span>{{ metadataParts.join(" · ") }}</span>
       </div>
     </div>
   </div>
@@ -83,4 +86,32 @@ const emit = defineEmits<{
 }>();
 
 const isDisabled = computed(() => isActivityDisabled(props.activity.id));
+const hasGpsTrack = computed(() =>
+  props.activity.records.some((record) => record.lat !== undefined && record.lon !== undefined),
+);
+const capabilities = computed(() => {
+  const records = props.activity.records;
+  const summary: string[] = [];
+
+  if (records.some((record) => record.hr !== undefined)) summary.push("HR");
+  if (records.some((record) => record.pwr !== undefined)) summary.push("Power");
+  if (records.some((record) => record.cad !== undefined)) summary.push("Cadence");
+  if (records.some((record) => record.alt !== undefined)) summary.push("Elevation");
+  if (props.activity.laps?.length) summary.push(`${props.activity.laps.length} lap${props.activity.laps.length === 1 ? "" : "s"}`);
+
+  return summary;
+});
+const metadataParts = computed(() => {
+  const parts = [
+    `${props.activity.records.length} data point${props.activity.records.length !== 1 ? "s" : ""}`,
+    props.activity.sourceType?.toUpperCase() ?? "FILE",
+    hasGpsTrack.value ? "GPS track" : "No GPS track",
+  ];
+
+  if (capabilities.value.length > 0) {
+    parts.push(...capabilities.value);
+  }
+
+  return parts;
+});
 </script>

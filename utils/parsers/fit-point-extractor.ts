@@ -147,9 +147,6 @@ export async function extractFITPoints(arrayBuffer: ArrayBuffer): Promise<{ poin
             recordAny["positionLon"];
 
           const normalized = normalizeFitPosition(positionLat, positionLon);
-          if (!normalized) {
-            continue;
-          }
 
           const speed = record.speed ?? recordAny.speed ?? recordAny.velocity;
           const temp = record.temperature ?? recordAny.temperature ?? recordAny.temp;
@@ -198,8 +195,8 @@ export async function extractFITPoints(arrayBuffer: ArrayBuffer): Promise<{ poin
           }
 
           const point: RawPoint = {
-            lat: normalized.lat,
-            lon: normalized.lon,
+            lat: normalized?.lat,
+            lon: normalized?.lon,
             alt: record.altitude,
             time: new Date(timestampMs),
             hr: record.heart_rate,
@@ -210,6 +207,23 @@ export async function extractFITPoints(arrayBuffer: ArrayBuffer): Promise<{ poin
             temp: temp !== undefined && temp !== null && Number.isFinite(temp) ? temp : undefined,
             additionalFields: Object.keys(additionalFields).length > 0 ? additionalFields : undefined,
           };
+
+          const hasUsableData =
+            point.time !== undefined ||
+            point.lat !== undefined ||
+            point.lon !== undefined ||
+            point.alt !== undefined ||
+            point.hr !== undefined ||
+            point.pwr !== undefined ||
+            point.cad !== undefined ||
+            point.distanceMeters !== undefined ||
+            point.speed !== undefined ||
+            point.temp !== undefined ||
+            point.additionalFields !== undefined;
+
+          if (!hasUsableData) {
+            continue;
+          }
 
           points.push(point);
         }

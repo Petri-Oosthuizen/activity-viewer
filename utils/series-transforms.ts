@@ -32,23 +32,6 @@ export function clearChartDataCache() {
   pivotZonesCache.clear();
 }
 
-function calculateAverageTimeInterval(records: ActivityRecord[]): number {
-  if (records.length < 2) return 1;
-  let totalInterval = 0;
-  let count = 0;
-  for (let i = 1; i < records.length; i++) {
-    const prev = records[i - 1];
-    const curr = records[i];
-    if (!prev || !curr) continue;
-    const dt = curr.t - prev.t;
-    if (dt > 0 && Number.isFinite(dt)) {
-      totalInterval += dt;
-      count++;
-    }
-  }
-  return count > 0 ? totalInterval / count : 1;
-}
-
 function chartCacheKey(
   activity: Activity,
   metric: MetricType,
@@ -366,21 +349,6 @@ export function buildPivotZones(
   transforms: ChartTransformSettings,
 ): PivotZoneResult | null {
   const zoneCount = Math.max(1, Math.floor(transforms.pivotZones.zoneCount));
-
-  let smoothingSettings: ChartTransformSettings["smoothing"];
-  if (metric === "pace" && transforms.paceSmoothing.enabled) {
-    const avgInterval = calculateAverageTimeInterval(activity.records);
-    const windowPoints = Math.max(
-      1,
-      Math.round(transforms.paceSmoothing.windowSeconds / avgInterval),
-    );
-    smoothingSettings = {
-      mode: "movingAverage",
-      windowPoints,
-    };
-  } else {
-    smoothingSettings = transforms.smoothing;
-  }
 
   // We pivot by elapsed time between points.
   // Note: Smoothing and outlier handling are now applied during data processing,

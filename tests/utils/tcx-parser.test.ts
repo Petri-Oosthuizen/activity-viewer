@@ -38,5 +38,36 @@ describe("parseTCX", () => {
     expect(result.records[0].d).toBeCloseTo(0, 6);
     expect(result.records[1].d).toBeCloseTo(500, 6);
   });
-});
 
+  it("keeps non-GPS TCX trackpoints when time or distance data exists", () => {
+    const tcx = `<?xml version="1.0" encoding="UTF-8"?>
+<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">
+  <Activities>
+    <Activity Sport="Running">
+      <Id>2024-01-01T00:00:00Z</Id>
+      <Lap StartTime="2024-01-01T00:00:00Z">
+        <Track>
+          <Trackpoint>
+            <Time>2024-01-01T00:00:00Z</Time>
+            <DistanceMeters>100</DistanceMeters>
+            <HeartRateBpm><Value>140</Value></HeartRateBpm>
+          </Trackpoint>
+          <Trackpoint>
+            <Time>2024-01-01T00:00:10Z</Time>
+            <DistanceMeters>160</DistanceMeters>
+            <Cadence>88</Cadence>
+          </Trackpoint>
+        </Track>
+      </Lap>
+    </Activity>
+  </Activities>
+</TrainingCenterDatabase>`;
+
+    const result = parseTCX(tcx);
+
+    expect(result.records).toHaveLength(2);
+    expect(result.records[0]).toMatchObject({ t: 0, d: 0, hr: 140 });
+    expect(result.records[0]?.lat).toBeUndefined();
+    expect(result.records[1]).toMatchObject({ t: 10, d: 60, cad: 88 });
+  });
+});

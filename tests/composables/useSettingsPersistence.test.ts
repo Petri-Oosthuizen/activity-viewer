@@ -2,7 +2,10 @@ import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { setActivePinia, createPinia } from "pinia";
 import { mount } from "@vue/test-utils";
 import { defineComponent, nextTick } from "vue";
-import { useSettingsPersistence } from "~/composables/useSettingsPersistence";
+import {
+  resetSettingsPersistenceStateForTests,
+  useSettingsPersistence,
+} from "~/composables/useSettingsPersistence";
 import { useActivitySettingsStore } from "~/stores/activitySettings";
 import { useChartOptionsStore } from "~/stores/chartOptions";
 import { useChartSeriesStore } from "~/stores/chartSeries";
@@ -17,6 +20,7 @@ describe("useSettingsPersistence", () => {
 
   beforeEach(() => {
     setActivePinia(createPinia());
+    resetSettingsPersistenceStateForTests();
     localStorageMock = {};
 
     localStorageGetItemSpy = vi.spyOn(Storage.prototype, "getItem").mockImplementation((key: string) => {
@@ -190,5 +194,25 @@ describe("useSettingsPersistence", () => {
 
     expect(settingsStore.outlierSettings.mode).toBe(DEFAULT_CHART_TRANSFORM_SETTINGS.outliers.mode);
     expect(chartOptionsStore.selectedMetrics).toBeDefined();
+  });
+
+  it("should not duplicate watchers across multiple mounts", async () => {
+    const TestComponent = defineComponent({
+      setup() {
+        useSettingsPersistence();
+        return {};
+      },
+      template: "<div></div>",
+    });
+
+    mount(TestComponent);
+    mount(TestComponent);
+    await nextTick();
+
+    const settingsStore = useActivitySettingsStore();
+    settingsStore.setOutlierSettings({ mode: "drop", maxPercentChange: 175 });
+    await nextTick();
+
+    expect(localStorageSetItemSpy).toHaveBeenCalledTimes(1);
   });
 });

@@ -110,6 +110,24 @@ function safeElevationLossMeters(records: ActivityRecord[]): number | null {
 }
 
 function safePaceStats(records: ActivityRecord[]): MetricStats {
+  const derivedPaceValues = records
+    .map((record) => record.pace)
+    .filter((pace): pace is number => pace !== undefined && pace !== null && Number.isFinite(pace) && pace > 0);
+
+  if (derivedPaceValues.length > 0) {
+    const totalDistance = safeDistanceMeters(records);
+    const totalTime = safeDurationSeconds(records);
+    return {
+      count: derivedPaceValues.length,
+      min: Math.min(...derivedPaceValues),
+      max: Math.max(...derivedPaceValues),
+      avg:
+        totalTime > 0 && totalDistance > 0
+          ? (totalTime / 60) / (totalDistance / 1000)
+          : null,
+    };
+  }
+
   let count = 0;
   let min: number | null = null;
   let max: number | null = null;
@@ -346,4 +364,3 @@ export function computeActivityStats(activity: Activity): ActivityStats {
     calories: activity.calories ?? null,
   };
 }
-

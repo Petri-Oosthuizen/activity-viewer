@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import {
   buildTooltipConfig,
   buildDataZoomConfig,
@@ -10,6 +10,10 @@ import {
 import type { XAxisType, MetricType } from "~/utils/chart-config";
 
 describe("chart-options", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   describe("buildTooltipConfig", () => {
     it("should build tooltip configuration", () => {
       const formatFn = () => "test";
@@ -30,6 +34,7 @@ describe("chart-options", () => {
     });
 
     it("should handle formatter errors gracefully", () => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
       const formatFn = () => {
         throw new Error("Test error");
       };
@@ -282,4 +287,3 @@ describe("chart-options", () => {
     });
   });
 });
-

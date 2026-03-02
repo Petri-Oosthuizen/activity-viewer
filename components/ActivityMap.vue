@@ -38,6 +38,18 @@
       :style="{ height: mapHeight }"
     ></div>
   </div>
+  <div
+    v-else
+    class="flex min-h-[220px] w-full items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 p-6 text-center"
+  >
+    <div class="max-w-md space-y-2">
+      <h3 class="m-0 text-base font-semibold text-gray-800">GPS Map</h3>
+      <p class="m-0 text-sm text-gray-600">
+        None of the active activities include GPS track points, so the map is hidden. Charts and
+        summary metrics still work for indoor or sensor-only files.
+      </p>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -848,4 +860,3 @@ onUnmounted(() => {
   border-right-color: white !important;
 }
 </style>
-

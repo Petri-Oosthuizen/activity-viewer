@@ -1,5 +1,11 @@
 import type { RawPoint } from "../activity-parser-common";
 
+function parseValidDate(value: string | null | undefined): Date | undefined {
+  if (!value) return undefined;
+  const parsed = new Date(value);
+  return Number.isFinite(parsed.getTime()) ? parsed : undefined;
+}
+
 export function extractGPXPoints(doc: Document): RawPoint[] {
   const parseError = doc.querySelector("parsererror");
   if (parseError) {
@@ -38,7 +44,7 @@ function parseGPXPoint(trkpt: Element): RawPoint | null {
   const ele = eleText ? parseFloat(eleText) : undefined;
 
   const timeText = trkpt.querySelector("time")?.textContent;
-  const time = timeText ? new Date(timeText) : undefined;
+  const time = parseValidDate(timeText);
 
   const extensions = trkpt.querySelector("extensions");
   let hr: number | undefined;

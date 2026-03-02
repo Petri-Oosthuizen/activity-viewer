@@ -74,15 +74,7 @@ export const DELTA_COLOR = "#ff6b6b";
  */
 export function activityHasMetric(activity: Activity, metric: MetricType): boolean {
   if (metric === "pace") {
-    if (activity.records.length <= 1) return false;
-    return activity.records.some((r, i) => {
-      if (i === 0) return false;
-      const prev = activity.records[i - 1];
-      if (!prev) return false;
-      const dt = r.t - prev.t;
-      const dd = r.d - prev.d;
-      return dt > 0 && dd > 0;
-    });
+    return activity.records.some((record) => record.pace !== null && record.pace !== undefined);
   }
   if (metric === "grade" || metric === "verticalSpeed") {
     return activity.records.some((r) => r[metric] !== null && r[metric] !== undefined);
@@ -95,16 +87,8 @@ export function activityHasMetric(activity: Activity, metric: MetricType): boole
  */
 export function countRecordsWithMetric(activity: Activity, metric: MetricType): number {
   if (metric === "pace") {
-    let count = 0;
-    for (let i = 1; i < activity.records.length; i++) {
-      const r = activity.records[i];
-      const prev = activity.records[i - 1];
-      if (!r || !prev) continue;
-      const dt = r.t - prev.t;
-      const dd = r.d - prev.d;
-      if (dt > 0 && dd > 0) count++;
-    }
-    return count;
+    return activity.records.filter((record) => record.pace !== null && record.pace !== undefined)
+      .length;
   }
   return activity.records.filter(
     (record) => record[metric] !== null && record[metric] !== undefined,
@@ -129,17 +113,7 @@ export function getAvailableMetrics(activities: Activity[]): MetricType[] {
       if (record.grade !== undefined && record.grade !== null) metrics.add("grade");
       if (record.verticalSpeed !== undefined && record.verticalSpeed !== null)
         metrics.add("verticalSpeed");
-    }
-    if (activity.records.length > 1) {
-      const hasValidPace = activity.records.some((r, i) => {
-        if (i === 0) return false;
-        const prev = activity.records[i - 1];
-        if (!prev) return false;
-        const dt = r.t - prev.t;
-        const dd = r.d - prev.d;
-        return dt > 0 && dd > 0;
-      });
-      if (hasValidPace) metrics.add("pace");
+      if (record.pace !== undefined && record.pace !== null) metrics.add("pace");
     }
   }
   // Stable ordering, with altitude first when present.

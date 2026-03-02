@@ -3,14 +3,14 @@
  * Maps GPX extension field names to unified ActivityRecord field names
  */
 
-import type { FieldMapper, FieldMapping, FieldMappingContext } from "./types";
+import type { FieldMapper, FieldMapping } from "./types";
 
 /**
  * GPX field mapper
  * Handles GPX extension fields and standard GPX attributes
  */
 export class GpxFieldMapper implements FieldMapper {
-  mapField(sourceFieldName: string, value: number, context?: FieldMappingContext): FieldMapping | null {
+  mapField(sourceFieldName: string, value: number): FieldMapping | null {
     const normalized = sourceFieldName.toLowerCase().replace(/[_-]/g, "");
 
     // Heart rate mappings (GPX extensions)
