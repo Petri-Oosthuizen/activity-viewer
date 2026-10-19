@@ -163,9 +163,7 @@
       <AxisTypeSelector
         v-if="chartTransforms.viewMode === 'timeseries'"
         :value="xAxisType"
-        :align-starts="alignStarts"
         @update:value="chartOptionsStore.setXAxisType"
-        @update:align-starts="settingsStore.setAlignStarts"
       />
     </div>
 
@@ -266,7 +264,7 @@ const { activities: processedActivities } = useActivityList();
 const { chartOption, transformationSettings } = storeToRefs(chartSeriesStore);
 const { selectedMetrics, xAxisType, viewMode, metricSelectionMode, availableMetrics } =
   storeToRefs(chartOptionsStore);
-const { disabledActivities, deltaSettings, alignStarts } = storeToRefs(settingsStore);
+const { disabledActivities, deltaSettings } = storeToRefs(settingsStore);
 const { mapHoveredPoint, resetZoomTrigger, zoomInTrigger, zoomOutTrigger, chartMapSideBySide } =
   storeToRefs(uiStore);
 

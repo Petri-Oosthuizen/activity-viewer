@@ -5,6 +5,7 @@ import { nextTick } from "vue";
 import AlignmentPanel from "~/components/AlignmentPanel.vue";
 import { useRawActivityStore } from "~/stores/rawActivity";
 import { useActivitySettingsStore } from "~/stores/activitySettings";
+import { useChartOptionsStore } from "~/stores/chartOptions";
 import type { ActivityRecord, RawActivity } from "~/types/activity";
 
 const ORIGIN_LAT = 51.5;
@@ -111,4 +112,27 @@ describe("AlignmentPanel", () => {
     expect(settingsStore.activityOffsets.get("b")).toBe(0);
   });
 
+
+  it("toggles align by start time and switches to the local time axis", async () => {
+    const rawStore = useRawActivityStore();
+    const settingsStore = useActivitySettingsStore();
+    const chartOptionsStore = useChartOptionsStore();
+    rawStore.addRawActivity(rawActivity({ id: "a", records: buildTrack({}) }));
+    rawStore.addRawActivity(rawActivity({ id: "b", records: buildTrack({}) }));
+    settingsStore.setAlignStarts(false);
+    chartOptionsStore.setXAxisType("distance");
+
+    const wrapper = mount(AlignmentPanel, { global: { plugins: [pinia] } });
+    const button = findButton(wrapper, "Align by start time");
+    expect(button.attributes("aria-pressed")).toBe("false");
+
+    await button.trigger("click");
+    expect(settingsStore.alignStarts).toBe(true);
+    expect(chartOptionsStore.xAxisType).toBe("localTime");
+    expect(button.attributes("aria-pressed")).toBe("true");
+
+    await button.trigger("click");
+    expect(settingsStore.alignStarts).toBe(false);
+    expect(chartOptionsStore.xAxisType).toBe("localTime");
+  });
 });

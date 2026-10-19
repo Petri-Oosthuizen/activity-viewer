@@ -5,6 +5,16 @@
       <div class="flex flex-wrap gap-2">
         <button
           type="button"
+          class="rounded-sm border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors active:bg-gray-100 sm:py-1.5 sm:hover:bg-gray-50"
+          :class="alignStarts ? 'bg-gray-100' : 'bg-white'"
+          :aria-pressed="alignStarts"
+          title="Start every activity at the same clock time on the local time axis"
+          @click="toggleAlignStarts"
+        >
+          <span v-if="alignStarts" aria-hidden="true">✓ </span>Align by start time
+        </button>
+        <button
+          type="button"
           class="rounded-sm border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors active:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 sm:py-1.5 sm:hover:bg-gray-50"
           :disabled="!canAlignByGps"
           @click="alignByGps"
@@ -20,7 +30,6 @@
         </button>
       </div>
     </div>
-
 
     <p v-if="statusText" class="mt-0 mb-3 text-xs text-amber-700 sm:text-sm">
       {{ statusText }}
@@ -55,13 +64,21 @@
 <script setup lang="ts">
 import { storeToRefs } from "pinia";
 import { useActivitySettingsStore } from "~/stores/activitySettings";
+import { useChartOptionsStore } from "~/stores/chartOptions";
 import { useActivityList } from "~/composables/useActivityList";
 import { useActivityAlignment } from "~/composables/useActivityAlignment";
 import FileNameDisplay from "./FileNameDisplay.vue";
 import TimeOffsetControl from "./TimeOffsetControl.vue";
 
 const settingsStore = useActivitySettingsStore();
-const { activityOffsets } = storeToRefs(settingsStore);
+const chartOptionsStore = useChartOptionsStore();
+const { activityOffsets, alignStarts } = storeToRefs(settingsStore);
 const { activities } = useActivityList();
 const { canAlignByGps, statusText, alignByGps, resetOffsets } = useActivityAlignment();
+
+function toggleAlignStarts() {
+  const next = !alignStarts.value;
+  settingsStore.setAlignStarts(next);
+  if (next) chartOptionsStore.setXAxisType("localTime");
+}
 </script>

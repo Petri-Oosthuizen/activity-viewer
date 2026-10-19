@@ -17,19 +17,6 @@
         {{ option.label }}
       </button>
     </div>
-    <label
-      v-if="value === 'localTime'"
-      class="mt-2 flex w-fit cursor-pointer items-center gap-2 text-xs text-gray-700 sm:text-sm"
-      title="Start every activity at the earliest start time"
-    >
-      <input
-        type="checkbox"
-        class="text-primary focus:ring-primary h-4 w-4 cursor-pointer rounded-sm border-gray-300"
-        :checked="alignStarts"
-        @change="onAlignStartsChange"
-      />
-      Align start times
-    </label>
   </div>
 </template>
 
@@ -38,7 +25,6 @@ import type { XAxisType } from "~/utils/chart-config";
 
 interface Props {
   value: XAxisType;
-  alignStarts: boolean;
 }
 
 interface AxisOption {
@@ -55,12 +41,7 @@ const AXIS_OPTIONS: readonly AxisOption[] = [
 
 defineProps<Props>();
 
-const emit = defineEmits<{
+defineEmits<{
   "update:value": [value: XAxisType];
-  "update:alignStarts": [value: boolean];
 }>();
-
-function onAlignStartsChange(event: Event) {
-  emit("update:alignStarts", (event.target as HTMLInputElement).checked);
-}
 </script>
