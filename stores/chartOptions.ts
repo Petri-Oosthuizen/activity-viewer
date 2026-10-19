@@ -11,6 +11,13 @@ import { getAvailableMetrics } from "~/utils/chart-config";
 import { useProcessedActivityStore } from "./processedActivity";
 import { storeToRefs } from "pinia";
 
+export interface PersistedChartOptions {
+  selectedMetrics: MetricType[];
+  xAxisType: XAxisType;
+  viewMode: ChartViewMode;
+  metricSelectionMode: "single" | "multi";
+}
+
 export const useChartOptionsStore = defineStore("chartOptions", () => {
   const processedStore = useProcessedActivityStore();
   const { processedActivities } = storeToRefs(processedStore);
@@ -74,6 +81,22 @@ export const useChartOptionsStore = defineStore("chartOptions", () => {
     xAxisType.value = type;
   }
 
+  function exportSettings(): PersistedChartOptions {
+    return {
+      selectedMetrics: [...selectedMetrics.value],
+      xAxisType: xAxisType.value,
+      viewMode: viewMode.value,
+      metricSelectionMode: metricSelectionMode.value,
+    };
+  }
+
+  function importSettings(settings: Partial<PersistedChartOptions>) {
+    if (settings.selectedMetrics) setSelectedMetrics(settings.selectedMetrics);
+    if (settings.xAxisType) setXAxisType(settings.xAxisType);
+    if (settings.viewMode) setViewMode(settings.viewMode);
+    if (settings.metricSelectionMode) setMetricSelectionMode(settings.metricSelectionMode);
+  }
+
   return {
     selectedMetrics,
     xAxisType,
@@ -85,5 +108,7 @@ export const useChartOptionsStore = defineStore("chartOptions", () => {
     setMetricSelectionMode,
     setViewMode,
     setXAxisType,
+    exportSettings,
+    importSettings,
   };
 });

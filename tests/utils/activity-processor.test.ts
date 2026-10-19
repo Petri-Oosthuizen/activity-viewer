@@ -552,6 +552,7 @@ describe("activity-processor", () => {
         const result = processActivityRecords(records, {
           outliers: { mode: "off", maxPercentChange: 200 },
           gpsSmoothing: { enabled: true, windowPoints: 3 },
+          gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "off", windowPoints: 5 },
           scaling: 1,
           offset: 0,
@@ -686,6 +687,7 @@ describe("activity-processor", () => {
         const result = processActivityRecords(records, {
           outliers: { mode: "off", maxPercentChange: 200 },
           gpsSmoothing: { enabled: false, windowPoints: 5 },
+          gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "off", windowPoints: 5 },
           scaling: 1,
           offset: 5,
@@ -708,6 +710,7 @@ describe("activity-processor", () => {
         const result = processActivityRecords(records, {
           outliers: { mode: "off", maxPercentChange: 200 },
           gpsSmoothing: { enabled: false, windowPoints: 5 },
+          gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "off", windowPoints: 5 },
           scaling: 1,
           offset: -10,

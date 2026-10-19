@@ -64,13 +64,13 @@ const METRIC_LINE_STYLES: Readonly<Record<MetricType, "solid" | "dashed" | "dott
   verticalSpeed: "dashDot",
 } as const;
 
-export function generateBaseSeries(
-  activities: Activity[],
-  disabledActivityIds: Set<string>,
-  metrics: MetricType[],
-  xAxisType: XAxisType,
-  transforms: ChartTransformSettings,
-): EChartsSeries[] {
+export function generateBaseSeries({
+  activities,
+  disabledActivityIds,
+  metrics,
+  xAxisType,
+  transforms,
+}: Pick<SeriesConfig, "activities" | "disabledActivityIds" | "metrics" | "xAxisType" | "transforms">): EChartsSeries[] {
   const series: EChartsSeries[] = [];
   const activeActivities = activities.filter((a) => !disabledActivityIds.has(a.id));
   const useMetricLineStyles = metrics.length > 1;
@@ -89,7 +89,7 @@ export function generateBaseSeries(
         name: `${activity.name} - ${METRIC_LABELS[metric]}`,
         type: "line",
         data,
-        smooth: transforms.smoothing.mode !== "off",
+        smooth: false,
         large: true,
         largeThreshold: 2000,
         itemStyle: { color: activity.color },
@@ -178,13 +178,13 @@ export function generateChartSeries(config: SeriesConfig): EChartsSeries[] {
   }
 
   // Generate base series
-  const series = generateBaseSeries(
+  const series = generateBaseSeries({
     activities,
     disabledActivityIds,
     metrics,
     xAxisType,
     transforms,
-  );
+  });
 
   // Add delta series if enabled
   if (showDelta && series.length >= 2) {

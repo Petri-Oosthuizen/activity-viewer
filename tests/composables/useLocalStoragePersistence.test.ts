@@ -549,7 +549,7 @@ describe("useLocalStoragePersistence", () => {
       expect(loaded?.metadata.calories).toBe(500);
       expect(loaded?.metadata.sport).toBe("running");
       expect(loaded?.metadata.laps).toHaveLength(1);
-      expect(loaded?.metadata.laps[0]?.startTime).toBeInstanceOf(Date);
+      expect(loaded?.metadata.laps![0]?.startTime).toBeInstanceOf(Date);
     });
   });
 

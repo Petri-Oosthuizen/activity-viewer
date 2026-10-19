@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { setActivePinia, createPinia } from "pinia";
 import { useActivitySettingsStore } from "~/stores/activitySettings";
-import { DEFAULT_CHART_TRANSFORM_SETTINGS } from "~/utils/chart-settings";
+import { DEFAULT_GPS_SMOOTHING_SETTINGS, DEFAULT_OUTLIER_SETTINGS } from "~/utils/chart-settings";
 import { DEFAULT_GPS_DISTANCE_OPTIONS } from "~/utils/gps-distance";
 
 describe("useActivitySettingsStore", () => {
@@ -13,7 +13,7 @@ describe("useActivitySettingsStore", () => {
     it("should have default outlier settings", () => {
       const store = useActivitySettingsStore();
 
-      expect(store.outlierSettings).toEqual(DEFAULT_CHART_TRANSFORM_SETTINGS.outliers);
+      expect(store.outlierSettings).toEqual(DEFAULT_OUTLIER_SETTINGS);
     });
 
     it("should set outlier settings", () => {
@@ -58,7 +58,7 @@ describe("useActivitySettingsStore", () => {
     it("should have default GPS smoothing settings", () => {
       const store = useActivitySettingsStore();
 
-      expect(store.gpsSmoothing).toEqual(DEFAULT_CHART_TRANSFORM_SETTINGS.gpsSmoothing);
+      expect(store.gpsSmoothing).toEqual(DEFAULT_GPS_SMOOTHING_SETTINGS);
     });
 
     it("should set GPS smoothing settings", () => {
@@ -213,9 +213,9 @@ describe("useActivitySettingsStore", () => {
 
       store.clearAll();
 
-      expect(store.outlierSettings).toEqual(DEFAULT_CHART_TRANSFORM_SETTINGS.outliers);
+      expect(store.outlierSettings).toEqual(DEFAULT_OUTLIER_SETTINGS);
       expect(store.gpsDistanceOptions).toEqual(DEFAULT_GPS_DISTANCE_OPTIONS);
-      expect(store.gpsSmoothing).toEqual(DEFAULT_CHART_TRANSFORM_SETTINGS.gpsSmoothing);
+      expect(store.gpsSmoothing).toEqual(DEFAULT_GPS_SMOOTHING_SETTINGS);
       expect(store.activityOffsets.size).toBe(0);
       expect(store.activityScales.size).toBe(0);
       expect(store.disabledActivities.size).toBe(0);

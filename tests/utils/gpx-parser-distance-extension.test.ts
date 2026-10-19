@@ -32,8 +32,8 @@ describe("parseGPX with distance extensions", () => {
     const result = parseGPX(gpx);
 
     expect(result.records).toHaveLength(2);
-    expect(result.records[0].d).toBeCloseTo(0, 6);
-    expect(result.records[1].d).toBeCloseTo(500, 6);
+    expect(result.records[0]!.d).toBeCloseTo(0, 6);
+    expect(result.records[1]!.d).toBeCloseTo(500, 6);
   });
 
   it("should use distance from extensions when present (outside TrackPointExtension)", () => {
@@ -62,8 +62,8 @@ describe("parseGPX with distance extensions", () => {
     const result = parseGPX(gpx);
 
     expect(result.records).toHaveLength(2);
-    expect(result.records[0].d).toBeCloseTo(0, 6);
-    expect(result.records[1].d).toBeCloseTo(500, 6);
+    expect(result.records[0]!.d).toBeCloseTo(0, 6);
+    expect(result.records[1]!.d).toBeCloseTo(500, 6);
   });
 
   it("should prefer TrackPointExtension distance over direct extensions distance", () => {
@@ -88,7 +88,7 @@ describe("parseGPX with distance extensions", () => {
     const result = parseGPX(gpx);
 
     expect(result.records).toHaveLength(1);
-    expect(result.records[0].d).toBeCloseTo(0, 6);
+    expect(result.records[0]!.d).toBeCloseTo(0, 6);
   });
 
   it("should fall back to GPS-calculated distance when no distance extension present", () => {
@@ -111,7 +111,7 @@ describe("parseGPX with distance extensions", () => {
     const result = parseGPX(gpx);
 
     expect(result.records).toHaveLength(2);
-    expect(result.records[0].d).toBeCloseTo(0, 6);
-    expect(result.records[1].d).toBeGreaterThan(0);
+    expect(result.records[0]!.d).toBeCloseTo(0, 6);
+    expect(result.records[1]!.d).toBeGreaterThan(0);
   });
 });

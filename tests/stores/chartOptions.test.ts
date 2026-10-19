@@ -3,19 +3,19 @@ import { setActivePinia, createPinia } from "pinia";
 import { useChartOptionsStore } from "~/stores/chartOptions";
 import { useProcessedActivityStore } from "~/stores/processedActivity";
 import { useRawActivityStore } from "~/stores/rawActivity";
-import type { RawActivity } from "~/types/activity";
+import type { ActivityRecord, RawActivity } from "~/types/activity";
 
 describe("useChartOptionsStore", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
   });
 
-  const createRawActivity = (id: string, name: string, records: Array<{ t: number; d: number; hr?: number; alt?: number }>): RawActivity => ({
+  const createRawActivity = (id: string, name: string, records: ActivityRecord[]): RawActivity => ({
     id,
     name,
     sourceType: "gpx",
     fileContent: "test content",
-    records: records as any,
+    records,
     metadata: {},
   });
 

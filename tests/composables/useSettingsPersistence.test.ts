@@ -9,7 +9,7 @@ import {
 import { useActivitySettingsStore } from "~/stores/activitySettings";
 import { useChartOptionsStore } from "~/stores/chartOptions";
 import { useChartSeriesStore } from "~/stores/chartSeries";
-import { DEFAULT_CHART_TRANSFORM_SETTINGS } from "~/utils/chart-settings";
+import { DEFAULT_OUTLIER_SETTINGS } from "~/utils/chart-settings";
 import { DEFAULT_GPS_DISTANCE_OPTIONS } from "~/utils/gps-distance";
 
 describe("useSettingsPersistence", () => {
@@ -122,7 +122,7 @@ describe("useSettingsPersistence", () => {
     wrapper.vm.saveSettings();
     await nextTick();
 
-    const saved = JSON.parse(localStorageMock["activity-viewer:settings"]);
+    const saved = JSON.parse(localStorageMock["activity-viewer:settings"]!);
     expect(saved.activitySettings.outlierSettings.mode).toBe("drop");
     expect(saved.activitySettings.outlierSettings.maxPercentChange).toBe(150);
     expect(saved.chartOptions.selectedMetrics).toEqual(["hr"]);
@@ -192,7 +192,7 @@ describe("useSettingsPersistence", () => {
     const settingsStore = useActivitySettingsStore();
     const chartOptionsStore = useChartOptionsStore();
 
-    expect(settingsStore.outlierSettings.mode).toBe(DEFAULT_CHART_TRANSFORM_SETTINGS.outliers.mode);
+    expect(settingsStore.outlierSettings.mode).toBe(DEFAULT_OUTLIER_SETTINGS.mode);
     expect(chartOptionsStore.selectedMetrics).toBeDefined();
   });
 

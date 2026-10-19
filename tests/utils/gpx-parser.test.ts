@@ -27,9 +27,9 @@ describe("parseGPX", () => {
       d: 0,
       alt: 10,
     });
-    expect(result.records[1].t).toBeGreaterThan(0);
-    expect(result.records[1].d).toBeGreaterThan(0);
-    expect(result.records[1].alt).toBe(12);
+    expect(result.records[1]!.t).toBeGreaterThan(0);
+    expect(result.records[1]!.d).toBeGreaterThan(0);
+    expect(result.records[1]!.alt).toBe(12);
     expect(result.startTime).toBeInstanceOf(Date);
   });
 
@@ -54,7 +54,7 @@ describe("parseGPX", () => {
     const result = parseGPX(gpx);
 
     expect(result.records).toHaveLength(1);
-    expect(result.records[0].hr).toBe(150);
+    expect(result.records[0]!.hr).toBe(150);
   });
 
   it("should throw error for invalid XML", () => {
@@ -153,8 +153,8 @@ describe("parseGPX", () => {
 
     const result = parseGPX(gpx, { minMoveMeters: 10 });
     expect(result.records).toHaveLength(3);
-    expect(result.records[1].d).toBe(0);
-    expect(result.records[2].d).toBeGreaterThan(10);
-    expect(result.records[2].d).toBeLessThan(20);
+    expect(result.records[1]!.d).toBe(0);
+    expect(result.records[2]!.d).toBeGreaterThan(10);
+    expect(result.records[2]!.d).toBeLessThan(20);
   });
 });

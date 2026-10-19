@@ -6,7 +6,7 @@ import OverviewPanel from "~/components/OverviewPanel.vue";
 import { useRawActivityStore } from "~/stores/rawActivity";
 import { useWindowActivityStore } from "~/stores/windowActivity";
 import { useChartOptionsStore } from "~/stores/chartOptions";
-import type { RawActivity } from "~/types/activity";
+import type { ActivityRecord, RawActivity } from "~/types/activity";
 
 describe("OverviewPanel", () => {
   let pinia: ReturnType<typeof createPinia>;
@@ -19,13 +19,13 @@ describe("OverviewPanel", () => {
   const createRawActivity = (
     id: string,
     name: string,
-    records: Array<{ t: number; d: number; hr?: number; alt?: number }>,
+    records: ActivityRecord[],
   ): RawActivity => ({
     id,
     name,
     sourceType: "gpx",
     fileContent: "test content",
-    records: records as any,
+    records,
     metadata: {},
   });
 

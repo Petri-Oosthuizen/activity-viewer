@@ -113,9 +113,8 @@ The application is a Nuxt 4 single-page app with a modular, store-driven data pi
 
 1. **Import** → Raw files are parsed and stored with original file content
 2. **Process** → Data cleaning, GPS smoothing, pace calculation, metric smoothing, scaling, and derived metric calculation
-3. **Transform** → Store boundary for chart-specific transforms; currently most metric transforms are applied during chart-series generation
-4. **Window** → Data trimming based on visible chart window
-5. **Chart/Map** → Final rendering with ECharts and Leaflet
+3. **Window** → Data trimming based on visible chart window
+4. **Chart/Map** → Final rendering with ECharts and Leaflet
 
 #### Store Architecture
 
@@ -124,7 +123,6 @@ The application uses 7 specialized Pinia stores:
 - **`rawActivity`**: Stores raw file content and initially parsed records (pre-processing)
 - **`activitySettings`**: Manages all user settings (outliers, GPS smoothing, scaling, offsets, comparison settings)
 - **`processedActivity`**: Applies processing pipeline (outliers, GPS smoothing, scaling, derived metrics, offsets)
-- **`transformedActivity`**: Reserved transformation boundary (currently pass-through; chart-specific transforms happen later)
 - **`windowActivity`**: Applies windowing/trimming based on visible chart range
 - **`chartOptions`**: Manages chart display configuration (metric selection, view mode, X-axis type)
 - **`chartSeries`**: Applies chart transforms such as cumulative/pivot-zone behavior and converts data to ECharts-compatible format

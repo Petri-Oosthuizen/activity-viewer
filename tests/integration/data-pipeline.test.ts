@@ -5,7 +5,6 @@ import { join } from "path";
 import { importActivityFile } from "~/utils/activity-importer";
 import { useRawActivityStore } from "~/stores/rawActivity";
 import { useProcessedActivityStore } from "~/stores/processedActivity";
-import { useTransformedActivityStore } from "~/stores/transformedActivity";
 import { useWindowActivityStore } from "~/stores/windowActivity";
 import { useChartOptionsStore } from "~/stores/chartOptions";
 import { useChartSeriesStore } from "~/stores/chartSeries";
@@ -52,14 +51,7 @@ describe("data-pipeline integration", () => {
     expect(processed[0]?.records.length).toBeGreaterThan(0);
     expect(processed[0]?.records.length).toBeLessThanOrEqual(rawActivity.records.length);
 
-    // 5. Verify transformedActivities (pass-through)
-    const transformedStore = useTransformedActivityStore();
-    const transformed = transformedStore.transformedActivities;
-
-    expect(transformed).toHaveLength(1);
-    expect(transformed[0]?.id).toBe(rawActivity.id);
-
-    // 6. Set chart window (full window for this test)
+    // 5. Set chart window (full window for this test)
     const windowStore = useWindowActivityStore();
     windowStore.setChartWindow({
       xStartPercent: 0,
@@ -68,25 +60,25 @@ describe("data-pipeline integration", () => {
       yEndPercent: 100,
     });
 
-    // 7. Verify windowedActivities
+    // 6. Verify windowedActivities
     const windowed = windowStore.windowedActivities;
 
     expect(windowed).toHaveLength(1);
-    expect(windowed[0]?.records.length).toBe(transformed[0]?.records.length);
+    expect(windowed[0]?.records.length).toBe(processed[0]?.records.length);
 
-    // 8. Set chart options
+    // 7. Set chart options
     const chartOptionsStore = useChartOptionsStore();
     chartOptionsStore.setSelectedMetrics(["alt"]);
     chartOptionsStore.setViewMode("timeseries");
     chartOptionsStore.setXAxisType("distance");
 
-    // 9. Verify chartSeries
+    // 8. Verify chartSeries
     const chartSeriesStore = useChartSeriesStore();
     const series = chartSeriesStore.chartSeries;
 
     expect(series.length).toBeGreaterThan(0);
 
-    // 10. Verify final output structure
+    // 9. Verify final output structure
     const chartOption = chartSeriesStore.chartOption;
 
     expect(chartOption).toBeDefined();

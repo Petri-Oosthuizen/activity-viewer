@@ -50,23 +50,23 @@ describe("chart-options", () => {
       const config = buildDataZoomConfig(1, 1);
 
       expect(config.length).toBeGreaterThan(1);
-      expect(config[0].type).toBe("slider");
-      expect(config[1].type).toBe("inside");
+      expect(config[0]!.type).toBe("slider");
+      expect(config[1]!.type).toBe("inside");
     });
 
     it("should configure slider", () => {
       const config = buildDataZoomConfig(1, 1);
       const slider = config[0];
 
-      expect(slider.xAxisIndex).toBe(0);
+      expect(slider!.xAxisIndex).toBe(0);
     });
 
     it("should configure inside zoom", () => {
-      const config = buildDataZoomConfig("time");
+      const config = buildDataZoomConfig(1, 1);
       const inside = config[1];
 
-      expect(inside.zoomOnMouseWheel).toBe(true);
-      expect(inside.moveOnMouseMove).toBe(false);
+      expect(inside!.zoomOnMouseWheel).toBe(true);
+      expect(inside!.moveOnMouseMove).toBe(false);
     });
   });
 
@@ -113,10 +113,10 @@ describe("chart-options", () => {
 
       expect(Array.isArray(config) ? config.length : 1).toBe(1);
       const axis = Array.isArray(config) ? config[0] : config;
-      expect(axis.type).toBe("value");
-      expect(axis.show).toBe(true);
-      expect(axis.scale).toBe(true);
-      expect(axis.axisLabel).toBeDefined();
+      expect(axis!.type).toBe("value");
+      expect(axis!.show).toBe(true);
+      expect(axis!.scale).toBe(true);
+      expect(axis!.axisLabel).toBeDefined();
     });
 
     it("should build multiple y-axis configs", () => {
@@ -125,10 +125,10 @@ describe("chart-options", () => {
       expect(Array.isArray(config)).toBe(true);
       if (Array.isArray(config)) {
         expect(config).toHaveLength(2);
-        expect(config[0].type).toBe("value");
-        expect(config[0].position).toBe("left");
-        expect(config[1].type).toBe("value");
-        expect(config[1].position).toBe("right");
+        expect(config[0]!.type).toBe("value");
+        expect(config[0]!.position).toBe("left");
+        expect(config[1]!.type).toBe("value");
+        expect(config[1]!.position).toBe("right");
       }
     });
 
@@ -138,8 +138,8 @@ describe("chart-options", () => {
       expect(Array.isArray(config)).toBe(true);
       if (Array.isArray(config)) {
         expect(config).toHaveLength(1);
-        expect(config[0].type).toBe("value");
-        expect(config[0].position).toBe("left");
+        expect(config[0]!.type).toBe("value");
+        expect(config[0]!.position).toBe("left");
       }
     });
 
@@ -149,7 +149,7 @@ describe("chart-options", () => {
       expect(Array.isArray(config)).toBe(true);
       if (Array.isArray(config)) {
         expect(config).toHaveLength(2); // Base + delta
-        expect(config[1].position).toBe("right");
+        expect(config[1]!.position).toBe("right");
       }
     });
 
@@ -166,8 +166,8 @@ describe("chart-options", () => {
       const config = buildYAxisConfig(["hr", "alt"], false, "overlay", "hr", true);
 
       if (Array.isArray(config)) {
-        expect(config[0].position).toBe("left");
-        expect(config[1].position).toBe("right");
+        expect(config[0]!.position).toBe("left");
+        expect(config[1]!.position).toBe("right");
       }
     });
   });

@@ -25,18 +25,18 @@ describe("delta-calculator", () => {
       const result = calculateDeltaData(baseData, compareData, "overlay");
       
       expect(result).toHaveLength(3);
-      expect(result[0][1]).toBe(2); // (120 - 100) / 10
-      expect(result[1][1]).toBe(2); // (130 - 110) / 10
-      expect(result[2][1]).toBe(2); // (140 - 120) / 10
+      expect(result[0]![1]).toBe(2); // (120 - 100) / 10
+      expect(result[1]![1]).toBe(2); // (130 - 110) / 10
+      expect(result[2]![1]).toBe(2); // (140 - 120) / 10
     });
 
     it("should calculate delta in delta-only mode (unscaled)", () => {
       const result = calculateDeltaData(baseData, compareData, "delta-only");
       
       expect(result).toHaveLength(3);
-      expect(result[0][1]).toBe(20); // 120 - 100
-      expect(result[1][1]).toBe(20); // 130 - 110
-      expect(result[2][1]).toBe(20); // 140 - 120
+      expect(result[0]![1]).toBe(20); // 120 - 100
+      expect(result[1]![1]).toBe(20); // 130 - 110
+      expect(result[2]![1]).toBe(20); // 140 - 120
     });
 
     it("should handle mismatched x values", () => {
@@ -113,7 +113,7 @@ describe("delta-calculator", () => {
       const result = buildDeltaSeries(config);
 
       expect(result.yAxisIndex).toBe(0); // Always 0 in delta-only mode
-      expect(result.data[0][1]).toBe(20); // Unscaled delta
+      expect(result.data[0]).toEqual([expect.anything(), 20]); // Unscaled delta
     });
 
     it("should have correct series properties", () => {

@@ -3,14 +3,15 @@
  * Extends base FIT mapper with Garmin-specific field names
  */
 
-import { FitFieldMapper, type FieldMapper, type FieldMapping, type FieldMappingContext } from "./fit-mapper";
+import { FitFieldMapper } from "./fit-mapper";
+import type { FieldMapping } from "./types";
 
 /**
  * Garmin-specific FIT field mapper
  * Handles Garmin-specific field names like runcadence
  */
-export class GarminFitFieldMapper extends FitFieldMapper implements FieldMapper {
-  mapField(sourceFieldName: string, value: number, context?: FieldMappingContext): FieldMapping | null {
+export class GarminFitFieldMapper extends FitFieldMapper {
+  override mapField(sourceFieldName: string, value: number): FieldMapping | null {
     const normalized = sourceFieldName.toLowerCase().replace(/[_-]/g, "");
 
     // Garmin-specific cadence mappings
@@ -37,10 +38,10 @@ export class GarminFitFieldMapper extends FitFieldMapper implements FieldMapper 
     }
 
     // Fall back to base FIT mapper for other fields
-    return super.mapField(sourceFieldName, value, context);
+    return super.mapField(sourceFieldName, value);
   }
 
-  getKnownFields(): string[] {
+  override getKnownFields(): string[] {
     return [
       ...super.getKnownFields(),
       "runcadence",
