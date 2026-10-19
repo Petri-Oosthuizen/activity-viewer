@@ -148,7 +148,7 @@
     </div>
 
     <!-- Metric Selector (below chart) -->
-    <div class="mt-4 sm:mt-6">
+    <div class="mt-4 flex flex-col gap-4 sm:mt-6 lg:flex-row lg:items-start">
       <MetricSelector
         :available-metrics="availableMetrics"
         :selected-metric="selectedMetric"
@@ -159,6 +159,11 @@
         :is-multi-select="metricSelectionMode === 'multi'"
         @select="setMetric"
         @toggle="toggleMetric"
+      />
+      <AxisTypeSelector
+        v-if="chartTransforms.viewMode === 'timeseries'"
+        :value="xAxisType"
+        @update:value="chartOptionsStore.setXAxisType"
       />
     </div>
 
@@ -245,6 +250,7 @@ import {
 
 import { useECharts } from "~/composables/useECharts";
 import MetricSelector from "./MetricSelector.vue";
+import AxisTypeSelector from "./AxisTypeSelector.vue";
 
 const chartContainer = ref<HTMLDivElement | null>(null);
 

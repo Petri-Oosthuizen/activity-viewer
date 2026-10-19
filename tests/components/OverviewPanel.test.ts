@@ -391,4 +391,29 @@ describe("OverviewPanel", () => {
       expect(text).toContain("Cadence");
     });
   });
+  describe("sampling", () => {
+    it("shows sampling gaps from raw records in full mode", async () => {
+      const rawStore = useRawActivityStore();
+      rawStore.addRawActivity(
+        createRawActivity("test-1", "test.gpx", [
+          { t: 0, d: 0, hr: 120, lat: 51.5, lon: -0.1 },
+          { t: 1, d: 3, hr: 121, lat: 51.5, lon: -0.09996 },
+          { t: 2, d: 6, hr: 122, lat: 51.5, lon: -0.09992 },
+          { t: 4, d: 12, hr: 123, lat: 51.5, lon: -0.09984 },
+        ]),
+      );
+
+      const wrapper = mount(OverviewPanel, { global: { plugins: [pinia] } });
+      await nextTick();
+      expect(wrapper.text()).not.toContain("Sampling");
+
+      await wrapper.find('button[aria-label="Full details view"]').trigger("click");
+      await nextTick();
+
+      const gpsRow = wrapper.findAll("tbody tr").find((row) => row.find("td").text() === "GPS");
+      expect(wrapper.text()).toContain("Sampling");
+      expect(gpsRow?.text()).toContain("1.3 s · 1.0–2.0 s · p95 2.0 s");
+      expect(gpsRow?.find("td:nth-child(2) div").attributes("title")).toBe("4 samples · p50 1.0 s");
+    });
+  });
 });

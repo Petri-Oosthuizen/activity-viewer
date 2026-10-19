@@ -11,13 +11,18 @@
           <section class="w-full">
             <ActivityList />
           </section>
-          <section v-if="hasActivities" class="w-full">
-            <AdvancedSettings />
+          <section v-if="activities.length >= 2" class="w-full">
+            <AlignmentPanel />
           </section>
           <section v-if="hasActivities" class="w-full">
             <OverviewPanel />
+          </section>
+          <section v-if="hasActivities" class="w-full">
             <SideBySideLayoutToggle />
             <ChartMapLayout />
+          </section>
+          <section v-if="hasActivities" class="w-full">
+            <AdvancedSettings />
           </section>
         </div>
         <template #fallback>
@@ -42,12 +47,13 @@ import AppHeader from "~/components/AppHeader.vue";
 import AppFooter from "~/components/AppFooter.vue";
 import LoadingIndicator from "~/components/LoadingIndicator.vue";
 import ActivityList from "~/components/ActivityList.vue";
+import AlignmentPanel from "~/components/AlignmentPanel.vue";
 import SideBySideLayoutToggle from "~/components/SideBySideLayoutToggle.vue";
 import ChartMapLayout from "~/components/ChartMapLayout.vue";
 import OverviewPanel from "~/components/OverviewPanel.vue";
 import AdvancedSettings from "~/components/AdvancedSettings.vue";
 
-const { hasActivities } = useActivityList();
+const { activities, hasActivities } = useActivityList();
 
 const { isLoading: isLoadingFromStorage } = useLocalStoragePersistence();
 useSettingsPersistence();

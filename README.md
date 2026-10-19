@@ -37,6 +37,7 @@ Everything is processed **locally in your browser**. Files are not uploaded to a
 - Sport type display (when available in TCX/FIT files)
 - Sticky metric column for horizontal scrolling
 - Only displays metrics with available data
+- Sampling gaps per sensor (mean, min/max, p95) from the raw file, in the Full view
 
 ### Chart
 
@@ -61,6 +62,12 @@ Everything is processed **locally in your browser**. Files are not uploaded to a
 - Overlap tooltips when routes share the same area
 - Adjustable map height
 - Advanced Settings below the map (GPS smoothing + window size)
+
+### Alignment
+
+- Per-activity time offset
+- Align by GPS: shifts each enabled activity to match the first one along the shared route
+- Reset all offsets to zero
 
 ### Activity management
 
