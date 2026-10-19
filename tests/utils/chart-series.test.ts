@@ -35,31 +35,31 @@ describe("chart-series", () => {
   describe("generateBaseSeries", () => {
     it("should generate series for active activities", () => {
       const disabledIds = new Set<string>();
-      const series = generateBaseSeries(
-        [mockActivity1, mockActivity2],
-        disabledIds,
-        ["hr"],
-        "time",
-        DEFAULT_CHART_TRANSFORM_SETTINGS
-      );
+      const series = generateBaseSeries({
+        activities: [mockActivity1, mockActivity2],
+        disabledActivityIds: disabledIds,
+        metrics: ["hr"],
+        xAxisType: "time",
+        transforms: DEFAULT_CHART_TRANSFORM_SETTINGS,
+      });
 
       expect(series).toHaveLength(2);
-      expect(series[0].name).toContain("Activity 1");
-      expect(series[1].name).toContain("Activity 2");
+      expect(series[0]!.name).toContain("Activity 1");
+      expect(series[1]!.name).toContain("Activity 2");
     });
 
     it("should exclude disabled activities", () => {
       const disabledIds = new Set<string>(["act-1"]);
-      const series = generateBaseSeries(
-        [mockActivity1, mockActivity2],
-        disabledIds,
-        ["hr"],
-        "time",
-        DEFAULT_CHART_TRANSFORM_SETTINGS
-      );
+      const series = generateBaseSeries({
+        activities: [mockActivity1, mockActivity2],
+        disabledActivityIds: disabledIds,
+        metrics: ["hr"],
+        xAxisType: "time",
+        transforms: DEFAULT_CHART_TRANSFORM_SETTINGS,
+      });
 
       expect(series).toHaveLength(1);
-      expect(series[0].name).toContain("Activity 2");
+      expect(series[0]!.name).toContain("Activity 2");
     });
 
     it("should generate series for multiple metrics", () => {
@@ -71,17 +71,17 @@ describe("chart-series", () => {
         ],
       };
 
-      const series = generateBaseSeries(
-        [activityWithAlt],
-        new Set(),
-        ["hr", "alt"],
-        "time",
-        DEFAULT_CHART_TRANSFORM_SETTINGS
-      );
+      const series = generateBaseSeries({
+        activities: [activityWithAlt],
+        disabledActivityIds: new Set(),
+        metrics: ["hr", "alt"],
+        xAxisType: "time",
+        transforms: DEFAULT_CHART_TRANSFORM_SETTINGS,
+      });
 
       expect(series).toHaveLength(2);
-      expect(series[0].yAxisIndex).toBe(0);
-      expect(series[1].yAxisIndex).toBe(1);
+      expect(series[0]!.yAxisIndex).toBe(0);
+      expect(series[1]!.yAxisIndex).toBe(1);
     });
 
     it("should skip activities without metric", () => {
@@ -90,32 +90,33 @@ describe("chart-series", () => {
         records: [{ t: 0, d: 0, alt: 100 }],
       };
 
-      const series = generateBaseSeries(
-        [activityNoHR],
-        new Set(),
-        ["hr"],
-        "time",
-        DEFAULT_CHART_TRANSFORM_SETTINGS
-      );
+      const series = generateBaseSeries({
+        activities: [activityNoHR],
+        disabledActivityIds: new Set(),
+        metrics: ["hr"],
+        xAxisType: "time",
+        transforms: DEFAULT_CHART_TRANSFORM_SETTINGS,
+      });
 
       expect(series).toHaveLength(0);
     });
 
     it("should have correct series properties", () => {
-      const series = generateBaseSeries(
-        [mockActivity1],
-        new Set(),
-        ["hr"],
-        "time",
-        DEFAULT_CHART_TRANSFORM_SETTINGS
-      );
+      const series = generateBaseSeries({
+        activities: [mockActivity1],
+        disabledActivityIds: new Set(),
+        metrics: ["hr"],
+        xAxisType: "time",
+        transforms: DEFAULT_CHART_TRANSFORM_SETTINGS,
+      });
 
-      expect(series[0].type).toBe("line");
-      expect(series[0].smooth).toBe(false);
-      expect(series[0].large).toBe(true);
-      expect(series[0].itemStyle.color).toBe("#5470c6");
-      expect(series[0].data).toHaveLength(2);
+      expect(series[0]!.type).toBe("line");
+      expect(series[0]!.smooth).toBe(false);
+      expect(series[0]!.large).toBe(true);
+      expect(series[0]!.itemStyle.color).toBe("#5470c6");
+      expect(series[0]!.data).toHaveLength(2);
     });
+
   });
 
   describe("generateChartSeries", () => {
@@ -169,7 +170,7 @@ describe("chart-series", () => {
 
       const series = generateChartSeries(config);
       expect(series).toHaveLength(3); // 2 base + 1 delta
-      expect(series[2].name).toContain("Δ");
+      expect(series[2]!.name).toContain("Δ");
     });
 
     it("should return only delta series in delta-only mode", () => {
@@ -187,7 +188,7 @@ describe("chart-series", () => {
 
       const series = generateChartSeries(config);
       expect(series).toHaveLength(1);
-      expect(series[0].name).toContain("Δ");
+      expect(series[0]!.name).toContain("Δ");
     });
 
     it("should not add delta if base/compare activities not found", () => {
@@ -243,8 +244,8 @@ describe("chart-series", () => {
 
       const series = generateChartSeries(config);
       expect(series.length).toBeGreaterThan(0);
-      expect(series[0].type).toBe("bar");
-      expect(series[0].data).toBeDefined();
+      expect(series[0]!.type).toBe("bar");
+      expect(series[0]!.data).toBeDefined();
     });
 
     it("should return empty array for pivot zones when no pivot data", () => {

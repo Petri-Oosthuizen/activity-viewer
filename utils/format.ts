@@ -140,3 +140,74 @@ export function formatMetricValue(value: number, metricType: string): string {
   }
 }
 
+/**
+ * Format a sampling gap in seconds, without unit: one decimal under 10 s, else whole seconds
+ */
+export function formatGapSeconds(seconds: number): string {
+  return Math.abs(seconds) < 10 ? seconds.toFixed(1) : Math.round(seconds).toString();
+}
+
+/**
+ * Format a value of an additional file field (running dynamics, GPS accuracy, etc.)
+ */
+export function formatAdditionalMetricValue(fieldName: string, value: number): string {
+  if (fieldName.includes("stance_time_ms")) return `${Math.round(value)} ms`;
+  if (fieldName.includes("vertical_oscillation_mm")) return `${Math.round(value)} mm`;
+  if (fieldName.includes("step_length_cm")) return `${value.toFixed(1)} cm`;
+  if (fieldName.includes("gct_balance")) return `${value.toFixed(1)}%`;
+  if (fieldName.includes("atemp_c")) return `${Math.round(value)}°C`;
+  if (fieldName === "satellites") return `${Math.round(value)}`;
+  if (fieldName === "hdop" || fieldName === "vdop") return value.toFixed(2);
+  return value.toFixed(1);
+}
+
+const KNOWN_ADDITIONAL_NAMES: Record<string, string> = {
+  stance_time_ms: "Stance Time",
+  vertical_oscillation_mm: "Vertical Oscillation",
+  step_length_cm: "Step Length",
+  gct_balance: "GCT Balance",
+  atemp_c: "Ambient Temperature",
+  satellites: "Satellites",
+  hdop: "HDOP",
+  vdop: "VDOP",
+};
+
+const UNIT_SUFFIXES: Record<string, string> = {
+  _ms: " (ms)",
+  _mm: " (mm)",
+  _cm: " (cm)",
+  _m: " (m)",
+  _s: " (s)",
+  _c: " (°C)",
+  _f: " (°F)",
+  _bpm: " (bpm)",
+  _rpm: " (rpm)",
+  _w: " (W)",
+  _watts: " (W)",
+};
+
+/**
+ * Display name for an additional file field, with unit taken from its suffix
+ */
+export function getAdditionalMetricDisplayName(fieldName: string): string {
+  const known = KNOWN_ADDITIONAL_NAMES[fieldName];
+  if (known) return known;
+
+  let displayName = fieldName;
+  let unit = "";
+  for (const [suffix, unitLabel] of Object.entries(UNIT_SUFFIXES)) {
+    if (fieldName.endsWith(suffix)) {
+      displayName = fieldName.slice(0, -suffix.length);
+      unit = unitLabel;
+      break;
+    }
+  }
+
+  return (
+    displayName
+      .replace(/([a-z])([A-Z])/g, "$1 $2")
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (l) => l.toUpperCase())
+      .replace(/\b(Gps|Hr|Cad|Pwr|Temp|Alt|Sat|Hdop|Vdop|Gct|Atemp)\b/gi, (m) => m.toUpperCase()) + unit
+  );
+}

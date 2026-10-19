@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import type { Activity } from "~/types/activity";
+import type { Activity, ActivityRecord } from "~/types/activity";
+
+type NullableRecord = { [K in keyof ActivityRecord]: ActivityRecord[K] | null };
+const withNulls = (records: NullableRecord[]): ActivityRecord[] => records as ActivityRecord[];
 import { DEFAULT_CHART_TRANSFORM_SETTINGS } from "~/utils/chart-settings";
 import {
   buildPivotZonesForActivities,
@@ -45,39 +48,47 @@ describe("series-transforms", () => {
 
     const data = buildTransformedChartData(activityWithNulls, "hr", "time", transforms);
     // Null value should be preserved
-    expect(data[2][1]).toBeNull();
+    expect(data[2]![1]).toBeNull();
+  });
+
+  it("rebuilds localTime x values when timelineStart changes", () => {
+    const startTime = new Date("2024-01-02T10:00:00Z");
+    const timelineStart = new Date("2024-01-01T10:00:00Z");
+    const own = { ...baseActivity, id: "timeline", startTime };
+
+    const before = buildTransformedChartData(own, "hr", "localTime", DEFAULT_CHART_TRANSFORM_SETTINGS);
+    const after = buildTransformedChartData({ ...own, timelineStart }, "hr", "localTime", DEFAULT_CHART_TRANSFORM_SETTINGS);
+
+    expect(before[0]?.[0]).toBe(startTime.getTime());
+    expect(after[0]?.[0]).toBe(timelineStart.getTime());
   });
 
   it("applies cumulative sum", () => {
     const transforms = {
       ...DEFAULT_CHART_TRANSFORM_SETTINGS,
-      outliers: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.outliers },
-      smoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.smoothing, mode: "off" },
       cumulative: { mode: "sum" },
     } as const;
 
     const data = buildTransformedChartData(baseActivity, "alt", "time", transforms);
     // alt: 10 + 11 + 30 + 12 = 63
-    expect(data[0][1]).toBeCloseTo(10, 6);
-    expect(data[1][1]).toBeCloseTo(21, 6); // 10 + 11
-    expect(data[2][1]).toBeCloseTo(51, 6); // 10 + 11 + 30
-    expect(data[3][1]).toBeCloseTo(63, 6); // 10 + 11 + 30 + 12
+    expect(data[0]![1]).toBeCloseTo(10, 6);
+    expect(data[1]![1]).toBeCloseTo(21, 6); // 10 + 11
+    expect(data[2]![1]).toBeCloseTo(51, 6); // 10 + 11 + 30
+    expect(data[3]![1]).toBeCloseTo(63, 6); // 10 + 11 + 30 + 12
   });
 
   it("applies cumulative positive delta sum", () => {
     const transforms = {
       ...DEFAULT_CHART_TRANSFORM_SETTINGS,
-      outliers: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.outliers },
-      smoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.smoothing, mode: "off" },
       cumulative: { mode: "positiveDeltaSum" },
     } as const;
 
     const data = buildTransformedChartData(baseActivity, "alt", "time", transforms);
     // alt: 10 -> 11 (+1) -> 30 (+19) -> 12 (-18, ignored) => total = 20
-    expect(data[0][1]).toBeCloseTo(0, 6); // First value, no previous
-    expect(data[1][1]).toBeCloseTo(1, 6); // +1 from 10 to 11
-    expect(data[2][1]).toBeCloseTo(20, 6); // +1 + 19 = 20
-    expect(data[3][1]).toBeCloseTo(20, 6); // No change (negative delta ignored)
+    expect(data[0]![1]).toBeCloseTo(0, 6); // First value, no previous
+    expect(data[1]![1]).toBeCloseTo(1, 6); // +1 from 10 to 11
+    expect(data[2]![1]).toBeCloseTo(20, 6); // +1 + 19 = 20
+    expect(data[3]![1]).toBeCloseTo(20, 6); // No change (negative delta ignored)
   });
 
   it("applies cumulative positive delta sum with decreasing values", () => {
@@ -97,17 +108,15 @@ describe("series-transforms", () => {
 
     const transforms = {
       ...DEFAULT_CHART_TRANSFORM_SETTINGS,
-      outliers: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.outliers },
-      smoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.smoothing, mode: "off" },
       cumulative: { mode: "positiveDeltaSum" },
     } as const;
 
     const data = buildTransformedChartData(activity, "alt", "time", transforms);
     // alt: 100 -> 90 (-10, ignored) -> 95 (+5) -> 80 (-15, ignored) => total = 5
-    expect(data[0][1]).toBeCloseTo(0, 6);
-    expect(data[1][1]).toBeCloseTo(0, 6); // -10 ignored
-    expect(data[2][1]).toBeCloseTo(5, 6); // +5 from 90 to 95
-    expect(data[3][1]).toBeCloseTo(5, 6); // -15 ignored
+    expect(data[0]![1]).toBeCloseTo(0, 6);
+    expect(data[1]![1]).toBeCloseTo(0, 6); // -10 ignored
+    expect(data[2]![1]).toBeCloseTo(5, 6); // +5 from 90 to 95
+    expect(data[3]![1]).toBeCloseTo(5, 6); // -15 ignored
   });
 
   it("builds pivot zones across activities", () => {
@@ -115,10 +124,7 @@ describe("series-transforms", () => {
       ...DEFAULT_CHART_TRANSFORM_SETTINGS,
       viewMode: "pivotZones",
       pivotZones: { zoneCount: 3, strategy: "equalRange" },
-      smoothing: { mode: "off", windowPoints: 1 },
-      outliers: { mode: "off", maxPercentChange: 200 },
       cumulative: { mode: "off" },
-      gpsSmoothing: { enabled: false, windowPoints: 1 },
     } as const;
 
     const a2: Activity = {
@@ -138,9 +144,9 @@ describe("series-transforms", () => {
     expect(pivot!.bucketLabels).toBeDefined();
     expect(pivot!.bucketLabels.length).toBe(3); // zoneCount is 3
     expect(pivot!.totalsSecondsByActivityId["a1"]).toBeDefined();
-    expect(pivot!.totalsSecondsByActivityId["a1"].length).toBe(3);
+    expect(pivot!.totalsSecondsByActivityId["a1"]!.length).toBe(3);
     expect(pivot!.totalsSecondsByActivityId["a2"]).toBeDefined();
-    expect(pivot!.totalsSecondsByActivityId["a2"].length).toBe(3);
+    expect(pivot!.totalsSecondsByActivityId["a2"]!.length).toBe(3);
   });
 
   describe("buildTransformedChartData", () => {
@@ -164,15 +170,13 @@ describe("series-transforms", () => {
 
       const transforms = {
         ...DEFAULT_CHART_TRANSFORM_SETTINGS,
-        outliers: { mode: "off", maxPercentChange: 200 },
-        smoothing: { mode: "off", windowPoints: 1 },
         cumulative: { mode: "off" },
       } as const;
 
       const data = buildTransformedChartData(activity, "hr", "time", transforms);
       expect(data.length).toBe(activity.records.length);
-      expect(data[0][0]).toBe(0); // time
-      expect(data[0][1]).toBe(100); // hr value
+      expect(data[0]![0]).toBe(0); // time
+      expect(data[0]![1]).toBe(100); // hr value
     });
 
     it("should apply pace smoothing when enabled", () => {
@@ -191,15 +195,12 @@ describe("series-transforms", () => {
 
       const transforms = {
         ...DEFAULT_CHART_TRANSFORM_SETTINGS,
-        outliers: { mode: "off", maxPercentChange: 200 },
-        smoothing: { mode: "off", windowPoints: 1 },
-        paceSmoothing: { enabled: true, windowSeconds: 10 },
         cumulative: { mode: "off" },
       } as const;
 
       const data = buildTransformedChartData(activity, "pace", "time", transforms);
       expect(data.length).toBe(3);
-      expect(data[0][1]).toBeCloseTo(5, 1); // ~5 min/km
+      expect(data[0]![1]).toBeCloseTo(5, 1); // ~5 min/km
     });
 
     it("should apply scaling", () => {
@@ -217,14 +218,12 @@ describe("series-transforms", () => {
 
       const transforms = {
         ...DEFAULT_CHART_TRANSFORM_SETTINGS,
-        outliers: { mode: "off", maxPercentChange: 200 },
-        smoothing: { mode: "off", windowPoints: 1 },
         cumulative: { mode: "off" },
       } as const;
 
       const data = buildTransformedChartData(activity, "hr", "time", transforms);
-      expect(data[0][1]).toBeCloseTo(200, 1); // 100 * 2
-      expect(data[1][1]).toBeCloseTo(220, 1); // 110 * 2
+      expect(data[0]![1]).toBeCloseTo(200, 1); // 100 * 2
+      expect(data[1]![1]).toBeCloseTo(220, 1); // 110 * 2
     });
 
     it("should use distance as x-axis", () => {
@@ -243,16 +242,14 @@ describe("series-transforms", () => {
 
       const transforms = {
         ...DEFAULT_CHART_TRANSFORM_SETTINGS,
-        outliers: { mode: "off", maxPercentChange: 200 },
-        smoothing: { mode: "off", windowPoints: 1 },
         cumulative: { mode: "off" },
       } as const;
 
       const data = buildTransformedChartData(activity, "hr", "distance", transforms);
       expect(data.length).toBe(3);
-      expect(data[0][0]).toBe(0); // distance
-      expect(data[1][0]).toBe(100);
-      expect(data[2][0]).toBe(200);
+      expect(data[0]![0]).toBe(0); // distance
+      expect(data[1]![0]).toBe(100);
+      expect(data[2]![0]).toBe(200);
     });
 
     it("should use localTime as x-axis", () => {
@@ -272,15 +269,13 @@ describe("series-transforms", () => {
 
       const transforms = {
         ...DEFAULT_CHART_TRANSFORM_SETTINGS,
-        outliers: { mode: "off", maxPercentChange: 200 },
-        smoothing: { mode: "off", windowPoints: 1 },
         cumulative: { mode: "off" },
       } as const;
 
       const data = buildTransformedChartData(activity, "hr", "localTime", transforms);
       expect(data.length).toBe(2);
-      expect(data[0][0]).toBe(startTime.getTime());
-      expect(data[1][0]).toBe(startTime.getTime() + 10000);
+      expect(data[0]![0]).toBe(startTime.getTime());
+      expect(data[1]![0]).toBe(startTime.getTime() + 10000);
     });
 
     // Outlier clamping is tested in activity-processor.test.ts
@@ -302,8 +297,6 @@ describe("series-transforms", () => {
 
       const transforms = {
         ...DEFAULT_CHART_TRANSFORM_SETTINGS,
-        outliers: { mode: "off", maxPercentChange: 200 },
-        smoothing: { mode: "off", windowPoints: 1 },
         cumulative: { mode: "off" },
       } as const;
 
@@ -330,16 +323,14 @@ describe("series-transforms", () => {
 
       const transforms = {
         ...DEFAULT_CHART_TRANSFORM_SETTINGS,
-        outliers: { mode: "off", maxPercentChange: 200 },
-        smoothing: { mode: "off", windowPoints: 1 },
         cumulative: { mode: "off" },
       } as const;
 
       const data = buildTransformedChartData(activity, "speed", "time", transforms);
       expect(data.length).toBe(3);
-      expect(data[0][1]).toBeCloseTo(11.988, 1); // 3.33 * 3.6
-      expect(data[1][1]).toBeCloseTo(18.0, 1); // 5.0 * 3.6
-      expect(data[2][1]).toBeCloseTo(10.008, 1); // 2.78 * 3.6
+      expect(data[0]![1]).toBeCloseTo(11.988, 1); // 3.33 * 3.6
+      expect(data[1]![1]).toBeCloseTo(18.0, 1); // 5.0 * 3.6
+      expect(data[2]![1]).toBeCloseTo(10.008, 1); // 2.78 * 3.6
     });
 
     it("should handle null speed values", () => {
@@ -349,24 +340,22 @@ describe("series-transforms", () => {
         offset: 0,
         scale: 1,
         color: "#000",
-        records: [
+        records: withNulls([
           { t: 0, d: 0, speed: 3.33 },
           { t: 10, d: 0, speed: null },
           { t: 20, d: 0, speed: undefined },
-        ],
+        ]),
       };
 
       const transforms = {
         ...DEFAULT_CHART_TRANSFORM_SETTINGS,
-        outliers: { mode: "off", maxPercentChange: 200 },
-        smoothing: { mode: "off", windowPoints: 1 },
         cumulative: { mode: "off" },
       } as const;
 
       const data = buildTransformedChartData(activity, "speed", "time", transforms);
-      expect(data[0][1]).toBeCloseTo(11.988, 1); // 3.33 * 3.6
-      expect(data[1][1]).toBeNull();
-      expect(data[2][1]).toBeNull();
+      expect(data[0]![1]).toBeCloseTo(11.988, 1); // 3.33 * 3.6
+      expect(data[1]![1]).toBeNull();
+      expect(data[2]![1]).toBeNull();
     });
 
     it("should apply scaling to converted speed values", () => {
@@ -383,13 +372,11 @@ describe("series-transforms", () => {
 
       const transforms = {
         ...DEFAULT_CHART_TRANSFORM_SETTINGS,
-        outliers: { mode: "off", maxPercentChange: 200 },
-        smoothing: { mode: "off", windowPoints: 1 },
         cumulative: { mode: "off" },
       } as const;
 
       const data = buildTransformedChartData(activity, "speed", "time", transforms);
-      expect(data[0][1]).toBeCloseTo(23.976, 1); // 3.33 * 3.6 * 2.0
+      expect(data[0]![1]).toBeCloseTo(23.976, 1); // 3.33 * 3.6 * 2.0
     });
 
     it("should transform altitude metric", () => {
@@ -408,16 +395,14 @@ describe("series-transforms", () => {
 
       const transforms = {
         ...DEFAULT_CHART_TRANSFORM_SETTINGS,
-        outliers: { mode: "off", maxPercentChange: 200 },
-        smoothing: { mode: "off", windowPoints: 1 },
         cumulative: { mode: "off" },
       } as const;
 
       const data = buildTransformedChartData(activity, "alt", "time", transforms);
       expect(data.length).toBe(3);
-      expect(data[0][1]).toBe(100);
-      expect(data[1][1]).toBe(150);
-      expect(data[2][1]).toBe(200);
+      expect(data[0]![1]).toBe(100);
+      expect(data[1]![1]).toBe(150);
+      expect(data[2]![1]).toBe(200);
     });
 
     it("should transform power metric", () => {
@@ -436,16 +421,14 @@ describe("series-transforms", () => {
 
       const transforms = {
         ...DEFAULT_CHART_TRANSFORM_SETTINGS,
-        outliers: { mode: "off", maxPercentChange: 200 },
-        smoothing: { mode: "off", windowPoints: 1 },
         cumulative: { mode: "off" },
       } as const;
 
       const data = buildTransformedChartData(activity, "pwr", "time", transforms);
       expect(data.length).toBe(3);
-      expect(data[0][1]).toBe(200);
-      expect(data[1][1]).toBe(250);
-      expect(data[2][1]).toBe(300);
+      expect(data[0]![1]).toBe(200);
+      expect(data[1]![1]).toBe(250);
+      expect(data[2]![1]).toBe(300);
     });
 
     it("should transform cadence metric", () => {
@@ -464,16 +447,14 @@ describe("series-transforms", () => {
 
       const transforms = {
         ...DEFAULT_CHART_TRANSFORM_SETTINGS,
-        outliers: { mode: "off", maxPercentChange: 200 },
-        smoothing: { mode: "off", windowPoints: 1 },
         cumulative: { mode: "off" },
       } as const;
 
       const data = buildTransformedChartData(activity, "cad", "time", transforms);
       expect(data.length).toBe(3);
-      expect(data[0][1]).toBe(80);
-      expect(data[1][1]).toBe(90);
-      expect(data[2][1]).toBe(100);
+      expect(data[0]![1]).toBe(80);
+      expect(data[1]![1]).toBe(90);
+      expect(data[2]![1]).toBe(100);
     });
 
     it("should transform temperature metric", () => {
@@ -492,16 +473,14 @@ describe("series-transforms", () => {
 
       const transforms = {
         ...DEFAULT_CHART_TRANSFORM_SETTINGS,
-        outliers: { mode: "off", maxPercentChange: 200 },
-        smoothing: { mode: "off", windowPoints: 1 },
         cumulative: { mode: "off" },
       } as const;
 
       const data = buildTransformedChartData(activity, "temp", "time", transforms);
       expect(data.length).toBe(3);
-      expect(data[0][1]).toBe(20);
-      expect(data[1][1]).toBe(22);
-      expect(data[2][1]).toBe(25);
+      expect(data[0]![1]).toBe(20);
+      expect(data[1]![1]).toBe(22);
+      expect(data[2]![1]).toBe(25);
     });
 
     it("should transform grade metric", () => {
@@ -520,16 +499,14 @@ describe("series-transforms", () => {
 
       const transforms = {
         ...DEFAULT_CHART_TRANSFORM_SETTINGS,
-        outliers: { mode: "off", maxPercentChange: 200 },
-        smoothing: { mode: "off", windowPoints: 1 },
         cumulative: { mode: "off" },
       } as const;
 
       const data = buildTransformedChartData(activity, "grade", "time", transforms);
       expect(data.length).toBe(3);
-      expect(data[0][1]).toBe(0);
-      expect(data[1][1]).toBe(5);
-      expect(data[2][1]).toBe(-2);
+      expect(data[0]![1]).toBe(0);
+      expect(data[1]![1]).toBe(5);
+      expect(data[2]![1]).toBe(-2);
     });
 
     it("should transform vertical speed metric", () => {
@@ -548,16 +525,14 @@ describe("series-transforms", () => {
 
       const transforms = {
         ...DEFAULT_CHART_TRANSFORM_SETTINGS,
-        outliers: { mode: "off", maxPercentChange: 200 },
-        smoothing: { mode: "off", windowPoints: 1 },
         cumulative: { mode: "off" },
       } as const;
 
       const data = buildTransformedChartData(activity, "verticalSpeed", "time", transforms);
       expect(data.length).toBe(3);
-      expect(data[0][1]).toBe(100);
-      expect(data[1][1]).toBe(200);
-      expect(data[2][1]).toBe(150);
+      expect(data[0]![1]).toBe(100);
+      expect(data[1]![1]).toBe(200);
+      expect(data[2]![1]).toBe(150);
     });
 
     it("should handle null values for all metrics", () => {
@@ -567,17 +542,15 @@ describe("series-transforms", () => {
         offset: 0,
         scale: 1,
         color: "#000",
-        records: [
+        records: withNulls([
           { t: 0, d: 0, hr: 100, alt: 100, pwr: 200, cad: 80, temp: 20, grade: 5, verticalSpeed: 100 },
           { t: 10, d: 100, hr: null, alt: null, pwr: null, cad: null, temp: null, grade: null, verticalSpeed: null },
           { t: 20, d: 200, hr: undefined, alt: undefined, pwr: undefined, cad: undefined, temp: undefined, grade: undefined, verticalSpeed: undefined },
-        ],
+        ]),
       };
 
       const transforms = {
         ...DEFAULT_CHART_TRANSFORM_SETTINGS,
-        outliers: { mode: "off", maxPercentChange: 200 },
-        smoothing: { mode: "off", windowPoints: 1 },
         cumulative: { mode: "off" },
       } as const;
 
@@ -593,9 +566,9 @@ describe("series-transforms", () => {
 
       metrics.forEach((metric) => {
         const data = buildTransformedChartData(activity, metric, "time", transforms);
-        expect(data[0][1]).not.toBeNull();
-        expect(data[1][1]).toBeNull();
-        expect(data[2][1]).toBeNull();
+        expect(data[0]![1]).not.toBeNull();
+        expect(data[1]![1]).toBeNull();
+        expect(data[2]![1]).toBeNull();
       });
     });
 
@@ -613,8 +586,6 @@ describe("series-transforms", () => {
 
       const transforms = {
         ...DEFAULT_CHART_TRANSFORM_SETTINGS,
-        outliers: { mode: "off", maxPercentChange: 200 },
-        smoothing: { mode: "off", windowPoints: 1 },
         cumulative: { mode: "off" },
       } as const;
 
@@ -631,7 +602,7 @@ describe("series-transforms", () => {
       metrics.forEach((metric) => {
         const data = buildTransformedChartData(activity, metric, "time", transforms);
         const expectedValue = activity.records[0]![metric]! * 2;
-        expect(data[0][1]).toBeCloseTo(expectedValue, 1);
+        expect(data[0]![1]).toBeCloseTo(expectedValue, 1);
       });
     });
   });
@@ -655,8 +626,6 @@ describe("series-transforms", () => {
       const transforms = {
         ...DEFAULT_CHART_TRANSFORM_SETTINGS,
         pivotZones: { zoneCount: 3, strategy: "equalRange" },
-        smoothing: { mode: "off", windowPoints: 1 },
-        outliers: { mode: "off", maxPercentChange: 200 },
         cumulative: { mode: "off" },
       } as const;
 
@@ -685,8 +654,6 @@ describe("series-transforms", () => {
       const transforms = {
         ...DEFAULT_CHART_TRANSFORM_SETTINGS,
         pivotZones: { zoneCount: 3, strategy: "quantiles" },
-        smoothing: { mode: "off", windowPoints: 1 },
-        outliers: { mode: "off", maxPercentChange: 200 },
         cumulative: { mode: "off" },
       } as const;
 
@@ -731,8 +698,6 @@ describe("series-transforms", () => {
       const transforms = {
         ...DEFAULT_CHART_TRANSFORM_SETTINGS,
         pivotZones: { zoneCount: 3, strategy: "equalRange" },
-        smoothing: { mode: "off", windowPoints: 1 },
-        outliers: { mode: "off", maxPercentChange: 200 },
       } as const;
 
       const pivot = buildPivotZones(activity, "hr", transforms);
@@ -757,9 +722,6 @@ describe("series-transforms", () => {
       const transforms = {
         ...DEFAULT_CHART_TRANSFORM_SETTINGS,
         pivotZones: { zoneCount: 3, strategy: "equalRange" },
-        smoothing: { mode: "off", windowPoints: 1 },
-        paceSmoothing: { enabled: true, windowSeconds: 10 },
-        outliers: { mode: "off", maxPercentChange: 200 },
       } as const;
 
       const pivot = buildPivotZones(activity, "pace", transforms);
@@ -970,7 +932,7 @@ describe("series-transforms", () => {
       
       // Smaller window (larger alpha) should follow values more closely
       // Larger window (smaller alpha) should be smoother
-      expect(smoothedSmall[4]).toBeGreaterThan(smoothedLarge[4]);
+      expect(smoothedSmall[4]).toBeGreaterThan(smoothedLarge[4] ?? Number.POSITIVE_INFINITY);
     });
   });
 });

@@ -15,6 +15,10 @@ import {
   DELTA_COLOR,
 } from "~/utils/chart-config";
 import type { Activity, ActivityRecord } from "~/types/activity";
+import { processActivityRecords } from "~/utils/activity-processor";
+
+type NullableRecord = { [K in keyof ActivityRecord]: ActivityRecord[K] | null };
+const withNulls = (records: NullableRecord[]): ActivityRecord[] => records as ActivityRecord[];
 
 describe("chart-config utilities", () => {
   const mockRecords: ActivityRecord[] = [
@@ -143,11 +147,36 @@ describe("chart-config utilities", () => {
       expect(value).toBe(mockActivity.startTime!.getTime() + 100000);
     });
 
+    it("should use timelineStart as the localTime origin when set", () => {
+      const timelineStart = new Date("2023-12-30T00:00:00Z");
+      const aligned: Activity = { ...mockActivity, timelineStart, offset: 5 };
+      const record = { t: 100, d: 1000 };
+      const value = calculateXValue(record, aligned, "localTime");
+      expect(value).toBe(timelineStart.getTime() + 105000);
+    });
+
     it("should apply offset for time", () => {
       const activityWithOffset = { ...mockActivity, offset: 50 };
       const record = { t: 100, d: 1000 };
       const value = calculateXValue(record, activityWithOffset, "time");
       expect(value).toBe(150);
+    });
+
+    it("should add the offset exactly once to a processed record on the time axis", () => {
+      const [record] = processActivityRecords([{ t: 100, d: 1000 }], {
+        outliers: { mode: "off", maxPercentChange: 200 },
+        gpsSmoothing: { enabled: false, windowPoints: 5 },
+        gpsPaceSmoothing: { enabled: false, windowPoints: 5 },
+        smoothing: { mode: "off", windowPoints: 5 },
+        scaling: 1,
+      });
+      expect(calculateXValue(record!, { ...mockActivity, offset: 50 }, "time")).toBe(150);
+    });
+
+    it("should give negative x for a negative offset without clamping", () => {
+      const activity: Activity = { ...mockActivity, offset: -30 };
+      expect(calculateXValue({ t: 0, d: 0 }, activity, "time")).toBe(-30);
+      expect(calculateXValue({ t: 10, d: 100 }, activity, "time")).toBe(-20);
     });
   });
 
@@ -224,8 +253,8 @@ describe("chart-config utilities", () => {
       };
 
       const data = transformToChartData(unsortedActivity, "hr", "time");
-      expect(data[0][0]).toBe(10);
-      expect(data[1][0]).toBe(0);
+      expect(data[0]![0]).toBe(10);
+      expect(data[1]![0]).toBe(0);
     });
 
     it("should calculate pace from speed", () => {
@@ -238,7 +267,7 @@ describe("chart-config utilities", () => {
       };
 
       const data = transformToChartData(activityWithSpeed, "pace", "time");
-      expect(data[0][1]).toBeCloseTo(5, 1); // ~5 min/km
+      expect(data[0]![1]).toBeCloseTo(5, 1); // ~5 min/km
     });
 
     it("should calculate pace from distance/time when speed not available", () => {
@@ -251,8 +280,8 @@ describe("chart-config utilities", () => {
       };
 
       const data = transformToChartData(activityNoSpeed, "pace", "time");
-      expect(data[0][1]).toBeNull(); // First record has no previous
-      expect(data[1][1]).toBeCloseTo(5, 1);
+      expect(data[0]![1]).toBeNull(); // First record has no previous
+      expect(data[1]![1]).toBeCloseTo(5, 1);
     });
 
     it("should return null for pace when calculation invalid", () => {
@@ -265,7 +294,7 @@ describe("chart-config utilities", () => {
       };
 
       const data = transformToChartData(activityInvalid, "pace", "time");
-      expect(data[1][1]).toBeNull();
+      expect(data[1]![1]).toBeNull();
     });
 
     it("should convert speed from m/s to km/h", () => {
@@ -278,24 +307,24 @@ describe("chart-config utilities", () => {
       };
 
       const data = transformToChartData(activityWithSpeed, "speed", "time");
-      expect(data[0][1]).toBeCloseTo(11.988, 1); // 3.33 * 3.6
-      expect(data[1][1]).toBeCloseTo(18.0, 1); // 5.0 * 3.6
+      expect(data[0]![1]).toBeCloseTo(11.988, 1); // 3.33 * 3.6
+      expect(data[1]![1]).toBeCloseTo(18.0, 1); // 5.0 * 3.6
     });
 
     it("should handle null speed values", () => {
       const activityWithNullSpeed: Activity = {
         ...mockActivity,
-        records: [
+        records: withNulls([
           { t: 0, d: 0, speed: 3.33 },
           { t: 10, d: 100, speed: null },
           { t: 20, d: 200, speed: undefined },
-        ],
+        ]),
       };
 
       const data = transformToChartData(activityWithNullSpeed, "speed", "time");
-      expect(data[0][1]).toBeCloseTo(11.988, 1); // 3.33 * 3.6
-      expect(data[1][1]).toBeNull();
-      expect(data[2][1]).toBeNull();
+      expect(data[0]![1]).toBeCloseTo(11.988, 1); // 3.33 * 3.6
+      expect(data[1]![1]).toBeNull();
+      expect(data[2]![1]).toBeNull();
     });
 
     it("should transform altitude metric", () => {
@@ -309,9 +338,9 @@ describe("chart-config utilities", () => {
       };
 
       const data = transformToChartData(activityWithAlt, "alt", "time");
-      expect(data[0][1]).toBe(100);
-      expect(data[1][1]).toBe(150);
-      expect(data[2][1]).toBe(200);
+      expect(data[0]![1]).toBe(100);
+      expect(data[1]![1]).toBe(150);
+      expect(data[2]![1]).toBe(200);
     });
 
     it("should transform power metric", () => {
@@ -325,9 +354,9 @@ describe("chart-config utilities", () => {
       };
 
       const data = transformToChartData(activityWithPower, "pwr", "time");
-      expect(data[0][1]).toBe(200);
-      expect(data[1][1]).toBe(250);
-      expect(data[2][1]).toBe(300);
+      expect(data[0]![1]).toBe(200);
+      expect(data[1]![1]).toBe(250);
+      expect(data[2]![1]).toBe(300);
     });
 
     it("should transform cadence metric", () => {
@@ -341,9 +370,9 @@ describe("chart-config utilities", () => {
       };
 
       const data = transformToChartData(activityWithCadence, "cad", "time");
-      expect(data[0][1]).toBe(80);
-      expect(data[1][1]).toBe(90);
-      expect(data[2][1]).toBe(100);
+      expect(data[0]![1]).toBe(80);
+      expect(data[1]![1]).toBe(90);
+      expect(data[2]![1]).toBe(100);
     });
 
     it("should transform temperature metric", () => {
@@ -357,9 +386,9 @@ describe("chart-config utilities", () => {
       };
 
       const data = transformToChartData(activityWithTemp, "temp", "time");
-      expect(data[0][1]).toBe(20);
-      expect(data[1][1]).toBe(22);
-      expect(data[2][1]).toBe(25);
+      expect(data[0]![1]).toBe(20);
+      expect(data[1]![1]).toBe(22);
+      expect(data[2]![1]).toBe(25);
     });
 
     it("should transform grade metric", () => {
@@ -373,9 +402,9 @@ describe("chart-config utilities", () => {
       };
 
       const data = transformToChartData(activityWithGrade, "grade", "time");
-      expect(data[0][1]).toBe(0);
-      expect(data[1][1]).toBe(5);
-      expect(data[2][1]).toBe(-2);
+      expect(data[0]![1]).toBe(0);
+      expect(data[1]![1]).toBe(5);
+      expect(data[2]![1]).toBe(-2);
     });
 
     it("should transform vertical speed metric", () => {
@@ -389,19 +418,19 @@ describe("chart-config utilities", () => {
       };
 
       const data = transformToChartData(activityWithVerticalSpeed, "verticalSpeed", "time");
-      expect(data[0][1]).toBe(100);
-      expect(data[1][1]).toBe(200);
-      expect(data[2][1]).toBe(150);
+      expect(data[0]![1]).toBe(100);
+      expect(data[1]![1]).toBe(200);
+      expect(data[2]![1]).toBe(150);
     });
 
     it("should handle null values for all metrics", () => {
       const activityWithNulls: Activity = {
         ...mockActivity,
-        records: [
+        records: withNulls([
           { t: 0, d: 0, hr: 100, alt: 100, pwr: 200, cad: 80, temp: 20, grade: 5, verticalSpeed: 100 },
           { t: 10, d: 100, hr: null, alt: null, pwr: null, cad: null, temp: null, grade: null, verticalSpeed: null },
           { t: 20, d: 200, hr: undefined, alt: undefined, pwr: undefined, cad: undefined, temp: undefined, grade: undefined, verticalSpeed: undefined },
-        ],
+        ]),
       };
 
       const metrics: Array<"hr" | "alt" | "pwr" | "cad" | "temp" | "grade" | "verticalSpeed"> = [
@@ -416,9 +445,9 @@ describe("chart-config utilities", () => {
 
       metrics.forEach((metric) => {
         const data = transformToChartData(activityWithNulls, metric, "time");
-        expect(data[0][1]).not.toBeNull();
-        expect(data[1][1]).toBeNull();
-        expect(data[2][1]).toBeNull();
+        expect(data[0]![1]).not.toBeNull();
+        expect(data[1]![1]).toBeNull();
+        expect(data[2]![1]).toBeNull();
       });
     });
   });

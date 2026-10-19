@@ -36,12 +36,6 @@ export interface GpsPaceSmoothingSettings {
   windowPoints: number;
 }
 
-export interface PaceSmoothingSettings {
-  enabled: boolean;
-  /** Window size in seconds used for smoothing pace values. */
-  windowSeconds: number;
-}
-
 export type CumulativeMode = "off" | "sum" | "positiveDeltaSum";
 export interface CumulativeSettings {
   mode: CumulativeMode;
@@ -55,32 +49,12 @@ export interface PivotZonesSettings {
 
 export interface ChartTransformSettings {
   viewMode: ChartViewMode;
-  outliers: OutlierSettings;
-  smoothing: SmoothingSettings;
-  gpsSmoothing: GpsSmoothingSettings;
-  paceSmoothing: PaceSmoothingSettings;
   cumulative: CumulativeSettings;
   pivotZones: PivotZonesSettings;
 }
 
 export const DEFAULT_CHART_TRANSFORM_SETTINGS: Readonly<ChartTransformSettings> = {
   viewMode: "timeseries",
-  outliers: {
-    mode: "off",
-    maxPercentChange: 200,
-  },
-  smoothing: {
-    mode: "off",
-    windowPoints: 5,
-  },
-  gpsSmoothing: {
-    enabled: false,
-    windowPoints: 5,
-  },
-  paceSmoothing: {
-    enabled: true,
-    windowSeconds: 10,
-  },
   cumulative: {
     mode: "off",
   },
@@ -88,6 +62,21 @@ export const DEFAULT_CHART_TRANSFORM_SETTINGS: Readonly<ChartTransformSettings> 
     zoneCount: 5,
     strategy: "equalRange",
   },
+};
+
+export const DEFAULT_OUTLIER_SETTINGS: Readonly<OutlierSettings> = {
+  mode: "off",
+  maxPercentChange: 200,
+};
+
+export const DEFAULT_SMOOTHING_SETTINGS: Readonly<SmoothingSettings> = {
+  mode: "off",
+  windowPoints: 5,
+};
+
+export const DEFAULT_GPS_SMOOTHING_SETTINGS: Readonly<GpsSmoothingSettings> = {
+  enabled: false,
+  windowPoints: 5,
 };
 
 export const DEFAULT_GPS_PACE_SMOOTHING_SETTINGS: Readonly<GpsPaceSmoothingSettings> = {

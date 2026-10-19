@@ -1,13 +1,13 @@
 /**
  * Window Store
- * Applies windowing/trimming to transformed data
+ * Applies windowing/trimming to processed data
  */
 
 import { defineStore } from "pinia";
 import { computed, shallowRef } from "vue";
 import { storeToRefs } from "pinia";
 import type { Activity } from "~/types/activity";
-import { useTransformedActivityStore } from "./transformedActivity";
+import { useProcessedActivityStore } from "./processedActivity";
 import { useChartOptionsStore } from "./chartOptions";
 import { filterRecordsByXRange, computeGlobalXExtent, percentWindowToXRange } from "~/utils/windowing";
 
@@ -19,9 +19,9 @@ export interface ChartWindow {
 }
 
 export const useWindowActivityStore = defineStore("windowActivity", () => {
-  const transformedStore = useTransformedActivityStore();
+  const processedStore = useProcessedActivityStore();
   const chartOptionsStore = useChartOptionsStore();
-  const { transformedActivities } = storeToRefs(transformedStore);
+  const { processedActivities } = storeToRefs(processedStore);
   const { xAxisType } = storeToRefs(chartOptionsStore);
 
   const chartWindow = shallowRef<ChartWindow>({
@@ -37,12 +37,12 @@ export const useWindowActivityStore = defineStore("windowActivity", () => {
     const isWindowActive = window.xStartPercent > 0 || window.xEndPercent < 100;
 
     if (!isWindowActive) {
-      return transformedActivities.value;
+      return processedActivities.value;
     }
 
-    const extent = computeGlobalXExtent(transformedActivities.value, xAxisType.value);
+    const extent = computeGlobalXExtent(processedActivities.value, xAxisType.value);
     if (!extent) {
-      return transformedActivities.value;
+      return processedActivities.value;
     }
 
     const range = percentWindowToXRange(extent, {
@@ -50,7 +50,7 @@ export const useWindowActivityStore = defineStore("windowActivity", () => {
       endPercent: window.xEndPercent,
     });
 
-    return transformedActivities.value.map((activity) => {
+    return processedActivities.value.map((activity) => {
       const filteredRecords = filterRecordsByXRange(activity, xAxisType.value, range);
       return {
         ...activity,

@@ -8,7 +8,14 @@ import { shallowRef } from "vue";
 import type { GpsDistanceOptions } from "~/utils/gps-distance";
 import { DEFAULT_GPS_DISTANCE_OPTIONS } from "~/utils/gps-distance";
 import type { GpsSmoothingSettings, GpsPaceSmoothingSettings, OutlierSettings, SmoothingSettings } from "~/utils/chart-settings";
-import { DEFAULT_CHART_TRANSFORM_SETTINGS, DEFAULT_GPS_PACE_SMOOTHING_SETTINGS } from "~/utils/chart-settings";
+import {
+  DEFAULT_GPS_PACE_SMOOTHING_SETTINGS,
+  DEFAULT_GPS_SMOOTHING_SETTINGS,
+  DEFAULT_OUTLIER_SETTINGS,
+  DEFAULT_SMOOTHING_SETTINGS,
+} from "~/utils/chart-settings";
+
+export type AlignmentMode = "none" | "startTime" | "gps";
 
 export interface DeltaSettings {
   enabled: boolean;
@@ -17,10 +24,26 @@ export interface DeltaSettings {
   compareActivityId: string | null;
 }
 
+export interface PersistedActivitySettings {
+  outlierSettings: OutlierSettings;
+  gpsDistanceOptions: GpsDistanceOptions;
+  smoothing: SmoothingSettings;
+  gpsSmoothing: GpsSmoothingSettings;
+  gpsPaceSmoothing: GpsPaceSmoothingSettings;
+  deltaSettings: DeltaSettings;
+  alignmentMode: AlignmentMode;
+}
+
+// Saved settings before alignment modes stored a boolean.
+function legacyAlignStarts(settings: Partial<PersistedActivitySettings>): boolean | undefined {
+  const value = (settings as { alignStarts?: unknown }).alignStarts;
+  return typeof value === "boolean" ? value : undefined;
+}
+
 export const useActivitySettingsStore = defineStore("activitySettings", () => {
   // Data Cleaning Settings
   const outlierSettings = shallowRef<OutlierSettings>({
-    ...DEFAULT_CHART_TRANSFORM_SETTINGS.outliers,
+    ...DEFAULT_OUTLIER_SETTINGS,
   });
 
   const gpsDistanceOptions = shallowRef<GpsDistanceOptions>({
@@ -29,7 +52,7 @@ export const useActivitySettingsStore = defineStore("activitySettings", () => {
 
   // Smoothing Settings
   const gpsSmoothing = shallowRef<GpsSmoothingSettings>({
-    ...DEFAULT_CHART_TRANSFORM_SETTINGS.gpsSmoothing,
+    ...DEFAULT_GPS_SMOOTHING_SETTINGS,
   });
 
   const gpsPaceSmoothing = shallowRef<GpsPaceSmoothingSettings>({
@@ -37,10 +60,11 @@ export const useActivitySettingsStore = defineStore("activitySettings", () => {
   });
 
   const smoothing = shallowRef<SmoothingSettings>({
-    ...DEFAULT_CHART_TRANSFORM_SETTINGS.smoothing,
+    ...DEFAULT_SMOOTHING_SETTINGS,
   });
 
   // Activity Display Settings
+  const alignmentMode = shallowRef<AlignmentMode>("startTime");
   const activityOffsets = shallowRef<Map<string, number>>(new Map());
   const activityScales = shallowRef<Map<string, number>>(new Map());
 
@@ -72,6 +96,10 @@ export const useActivitySettingsStore = defineStore("activitySettings", () => {
 
   function setSmoothing(settings: SmoothingSettings) {
     smoothing.value = { ...settings };
+  }
+
+  function setAlignmentMode(mode: AlignmentMode) {
+    alignmentMode.value = mode;
   }
 
   function setActivityOffset(activityId: string, offset: number) {
@@ -112,12 +140,38 @@ export const useActivitySettingsStore = defineStore("activitySettings", () => {
     };
   }
 
+  function exportSettings(): PersistedActivitySettings {
+    return {
+      outlierSettings: { ...outlierSettings.value },
+      gpsDistanceOptions: { ...gpsDistanceOptions.value },
+      smoothing: { ...smoothing.value },
+      gpsSmoothing: { ...gpsSmoothing.value },
+      gpsPaceSmoothing: { ...gpsPaceSmoothing.value },
+      deltaSettings: { ...deltaSettings.value },
+      alignmentMode: alignmentMode.value,
+    };
+  }
+
+  function importSettings(settings: Partial<PersistedActivitySettings>) {
+    if (settings.outlierSettings) setOutlierSettings(settings.outlierSettings);
+    if (settings.gpsDistanceOptions) setGpsDistanceOptions(settings.gpsDistanceOptions);
+    if (settings.smoothing) setSmoothing(settings.smoothing);
+    if (settings.gpsSmoothing) setGpsSmoothing(settings.gpsSmoothing);
+    if (settings.gpsPaceSmoothing) setGpsPaceSmoothing(settings.gpsPaceSmoothing);
+    if (settings.deltaSettings) setDeltaSettings(settings.deltaSettings);
+    if (settings.alignmentMode) setAlignmentMode(settings.alignmentMode);
+    else if (legacyAlignStarts(settings) !== undefined) {
+      setAlignmentMode(legacyAlignStarts(settings) ? "startTime" : "none");
+    }
+  }
+
   function clearAll() {
-    outlierSettings.value = { ...DEFAULT_CHART_TRANSFORM_SETTINGS.outliers };
+    outlierSettings.value = { ...DEFAULT_OUTLIER_SETTINGS };
     gpsDistanceOptions.value = { ...DEFAULT_GPS_DISTANCE_OPTIONS };
-    gpsSmoothing.value = { ...DEFAULT_CHART_TRANSFORM_SETTINGS.gpsSmoothing };
+    gpsSmoothing.value = { ...DEFAULT_GPS_SMOOTHING_SETTINGS };
     gpsPaceSmoothing.value = { ...DEFAULT_GPS_PACE_SMOOTHING_SETTINGS };
-    smoothing.value = { ...DEFAULT_CHART_TRANSFORM_SETTINGS.smoothing };
+    smoothing.value = { ...DEFAULT_SMOOTHING_SETTINGS };
+    alignmentMode.value = "startTime";
     clearFileSpecificSettings();
   }
 
@@ -128,6 +182,7 @@ export const useActivitySettingsStore = defineStore("activitySettings", () => {
     gpsSmoothing,
     gpsPaceSmoothing,
     smoothing,
+    alignmentMode,
     activityOffsets,
     activityScales,
     disabledActivities,
@@ -139,11 +194,14 @@ export const useActivitySettingsStore = defineStore("activitySettings", () => {
     setGpsSmoothing,
     setGpsPaceSmoothing,
     setSmoothing,
+    setAlignmentMode,
     setActivityOffset,
     setActivityScale,
     toggleActivity,
     setDeltaSettings,
     clearFileSpecificSettings,
     clearAll,
+    exportSettings,
+    importSettings,
   };
 });

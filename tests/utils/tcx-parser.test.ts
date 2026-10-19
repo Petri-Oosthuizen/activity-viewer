@@ -35,8 +35,8 @@ describe("parseTCX", () => {
     const result = parseTCX(tcx);
     expect(result.records).toHaveLength(2);
     // normalized: first becomes 0, second becomes 500
-    expect(result.records[0].d).toBeCloseTo(0, 6);
-    expect(result.records[1].d).toBeCloseTo(500, 6);
+    expect(result.records[0]!.d).toBeCloseTo(0, 6);
+    expect(result.records[1]!.d).toBeCloseTo(500, 6);
   });
 
   it("keeps non-GPS TCX trackpoints when time or distance data exists", () => {

@@ -3,55 +3,38 @@
  * Centralized, type-safe default values for all application settings
  */
 
-import { DEFAULT_CHART_TRANSFORM_SETTINGS, DEFAULT_GPS_PACE_SMOOTHING_SETTINGS } from "./chart-settings";
+import {
+  DEFAULT_CHART_TRANSFORM_SETTINGS,
+  DEFAULT_GPS_PACE_SMOOTHING_SETTINGS,
+  DEFAULT_GPS_SMOOTHING_SETTINGS,
+  DEFAULT_OUTLIER_SETTINGS,
+  DEFAULT_SMOOTHING_SETTINGS,
+} from "./chart-settings";
 import { DEFAULT_GPS_DISTANCE_OPTIONS } from "./gps-distance";
-import type { MetricType, XAxisType } from "./chart-config";
-import type { ChartViewMode, CumulativeSettings, PivotZonesSettings, OutlierSettings, GpsSmoothingSettings, GpsPaceSmoothingSettings, SmoothingSettings } from "./chart-settings";
-import type { GpsDistanceOptions } from "./gps-distance";
-import type { DeltaSettings } from "~/stores/activitySettings";
+import type { PersistedActivitySettings } from "~/stores/activitySettings";
+import type { PersistedChartOptions } from "~/stores/chartOptions";
+import type { PersistedChartSeriesSettings } from "~/stores/chartSeries";
+import type { PersistedUISettings } from "~/stores/ui";
 
 /**
- * Strongly-typed interface for all persistable settings
- * This ensures we can't miss any settings when saving/loading/resetting
+ * Persisted settings, stored as JSON in localStorage
  */
 export interface AppSettings {
-  activitySettings: {
-    outlierSettings: OutlierSettings;
-    gpsDistanceOptions: GpsDistanceOptions;
-    smoothing: SmoothingSettings;
-    gpsSmoothing: GpsSmoothingSettings;
-    gpsPaceSmoothing: GpsPaceSmoothingSettings;
-    deltaSettings: DeltaSettings;
-  };
-  chartOptions: {
-    selectedMetrics: MetricType[];
-    xAxisType: XAxisType;
-    viewMode: ChartViewMode;
-    metricSelectionMode: "single" | "multi";
-  };
-  chartSeries: {
-    transformationSettings: {
-      cumulative: CumulativeSettings;
-      pivotZones: PivotZonesSettings;
-    };
-  };
-  ui: {
-    overviewDisplayMode: "light" | "full";
-    overviewBaselineEnabled: boolean;
-    overviewBaselineActivityId: string | null;
-  };
+  activitySettings: PersistedActivitySettings;
+  chartOptions: PersistedChartOptions;
+  chartSeries: PersistedChartSeriesSettings;
+  ui: PersistedUISettings;
 }
 
-/**
- * Default values for all settings
- * TypeScript will enforce that this matches the AppSettings interface exactly
- */
-export const DEFAULT_SETTINGS: AppSettings = {
+/** Settings saved by older releases may lack any section or field. */
+export type StoredAppSettings = { [K in keyof AppSettings]?: Partial<AppSettings[K]> };
+
+export const DEFAULT_SETTINGS: Readonly<AppSettings> = {
   activitySettings: {
-    outlierSettings: DEFAULT_CHART_TRANSFORM_SETTINGS.outliers,
+    outlierSettings: DEFAULT_OUTLIER_SETTINGS,
     gpsDistanceOptions: DEFAULT_GPS_DISTANCE_OPTIONS,
-    smoothing: DEFAULT_CHART_TRANSFORM_SETTINGS.smoothing,
-    gpsSmoothing: DEFAULT_CHART_TRANSFORM_SETTINGS.gpsSmoothing,
+    smoothing: DEFAULT_SMOOTHING_SETTINGS,
+    gpsSmoothing: DEFAULT_GPS_SMOOTHING_SETTINGS,
     gpsPaceSmoothing: DEFAULT_GPS_PACE_SMOOTHING_SETTINGS,
     deltaSettings: {
       enabled: false,
@@ -59,6 +42,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
       baseActivityId: null,
       compareActivityId: null,
     },
+    alignmentMode: "startTime",
   },
   chartOptions: {
     selectedMetrics: ["alt"],
@@ -78,37 +62,3 @@ export const DEFAULT_SETTINGS: AppSettings = {
     overviewBaselineActivityId: null,
   },
 };
-
-/**
- * Type-safe helper to ensure all settings properties are copied
- * This will produce a TypeScript error if any property is missing
- */
-export function cloneSettings(settings: AppSettings): AppSettings {
-  return {
-    activitySettings: {
-      outlierSettings: { ...settings.activitySettings.outlierSettings },
-      gpsDistanceOptions: { ...settings.activitySettings.gpsDistanceOptions },
-      smoothing: { ...settings.activitySettings.smoothing },
-      gpsSmoothing: { ...settings.activitySettings.gpsSmoothing },
-      gpsPaceSmoothing: { ...settings.activitySettings.gpsPaceSmoothing },
-      deltaSettings: { ...settings.activitySettings.deltaSettings },
-    },
-    chartOptions: {
-      selectedMetrics: [...settings.chartOptions.selectedMetrics],
-      xAxisType: settings.chartOptions.xAxisType,
-      viewMode: settings.chartOptions.viewMode,
-      metricSelectionMode: settings.chartOptions.metricSelectionMode,
-    },
-    chartSeries: {
-      transformationSettings: {
-        cumulative: { ...settings.chartSeries.transformationSettings.cumulative },
-        pivotZones: { ...settings.chartSeries.transformationSettings.pivotZones },
-      },
-    },
-    ui: {
-      overviewDisplayMode: settings.ui.overviewDisplayMode,
-      overviewBaselineEnabled: settings.ui.overviewBaselineEnabled,
-      overviewBaselineActivityId: settings.ui.overviewBaselineActivityId,
-    },
-  };
-}

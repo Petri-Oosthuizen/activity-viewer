@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { setActivePinia, createPinia } from "pinia";
 import { useWindowActivityStore } from "~/stores/windowActivity";
-import { useTransformedActivityStore } from "~/stores/transformedActivity";
 import { useChartOptionsStore } from "~/stores/chartOptions";
 import { useProcessedActivityStore } from "~/stores/processedActivity";
 import { useRawActivityStore } from "~/stores/rawActivity";
@@ -157,7 +156,7 @@ describe("useWindowActivityStore", () => {
       expect(windowed2[0]?.records.length).toBeLessThanOrEqual(4);
     });
 
-    it("should handle empty transformed activities", () => {
+    it("should handle empty processed activities", () => {
       const windowStore = useWindowActivityStore();
 
       const windowed = windowStore.windowedActivities;

@@ -12,7 +12,6 @@
  * 6. Apply smoothing to metric values (affects totals, distance calculations, etc.) - includes pace
  * 7. Apply scaling (Y-axis scaling)
  * 8. Calculate other derived metrics (grade, verticalSpeed)
- * 9. Apply offset (time alignment) - LAST
  */
 
 import type { ActivityRecord } from "~/types/activity";
@@ -200,19 +199,6 @@ function applyScalingToRecords(
 }
 
 /**
- * Apply time offset to records
- * Optimized: processes in-place
- */
-function applyOffsetToRecords(records: ActivityRecord[], offset: number): void {
-  if (offset === 0 || !Number.isFinite(offset) || records.length === 0) return;
-
-  for (let i = 0; i < records.length; i++) {
-    const record = records[i]!;
-    record.t = Math.max(0, record.t + offset);
-  }
-}
-
-/**
  * Process activity records through the full pipeline
  *
  * Optimized: Clone records once at entry, then mutate in-place through all steps
@@ -228,7 +214,6 @@ export function processActivityRecords(
     gpsPaceSmoothing: GpsPaceSmoothingSettings;
     smoothing: SmoothingSettings;
     scaling: number;
-    offset: number;
   },
 ): ActivityRecord[] {
   if (records.length === 0) return records;
@@ -268,10 +253,5 @@ export function processActivityRecords(
   applyScalingToRecords(withPace, settings.scaling, metricFieldsWithPace);
 
   // 8. Calculate other derived metrics (grade, verticalSpeed) (returns new array)
-  const withDerived = calculateDerivedMetrics(withPace);
-
-  // 9. Apply offset (time alignment) - LAST - mutates in-place
-  applyOffsetToRecords(withDerived, settings.offset);
-
-  return withDerived;
+  return calculateDerivedMetrics(withPace);
 }

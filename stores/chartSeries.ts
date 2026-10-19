@@ -28,6 +28,15 @@ import { DEFAULT_CHART_TRANSFORM_SETTINGS } from "~/utils/chart-settings";
 import type { MetricType } from "~/utils/chart-config";
 import type { DeltaMode } from "~/utils/chart-config";
 
+export interface TransformationSettings {
+  cumulative: CumulativeSettings;
+  pivotZones: PivotZonesSettings;
+}
+
+export interface PersistedChartSeriesSettings {
+  transformationSettings: TransformationSettings;
+}
+
 export const useChartSeriesStore = defineStore("chartSeries", () => {
   const windowStore = useWindowActivityStore();
   const chartOptionsStore = useChartOptionsStore();
@@ -37,33 +46,19 @@ export const useChartSeriesStore = defineStore("chartSeries", () => {
   const { selectedMetrics, viewMode, xAxisType } = storeToRefs(chartOptionsStore);
   const { disabledActivities, deltaSettings } = storeToRefs(settingsStore);
 
-  // Transformation settings (cumulative, pivot zones)
-  // Note: Smoothing is now handled in the processing pipeline (activitySettingsStore)
-  // Note: viewMode comes from chartOptionsStore
-  const transformationSettings = shallowRef<{
-    cumulative: CumulativeSettings;
-    pivotZones: PivotZonesSettings;
-  }>({
+  const transformationSettings = shallowRef<TransformationSettings>({
     cumulative: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.cumulative },
     pivotZones: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.pivotZones },
   });
 
-  // Chart series (ECharts format)
+  const chartTransforms = computed<ChartTransformSettings>(() => ({
+    viewMode: viewMode.value,
+    cumulative: transformationSettings.value.cumulative,
+    pivotZones: transformationSettings.value.pivotZones,
+  }));
+
   const chartSeries = computed<EChartsSeries[]>(() => {
     const metrics = selectedMetrics.value.length > 0 ? selectedMetrics.value : ["hr" as MetricType];
-
-    // Build full ChartTransformSettings for generateChartSeries
-    // (includes viewMode from chartOptionsStore and transformation settings)
-    // Note: Smoothing and outliers are now handled in the processing pipeline
-    const transforms: ChartTransformSettings = {
-      viewMode: viewMode.value,
-      outliers: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.outliers }, // Outliers handled in processing pipeline
-      smoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.smoothing }, // Smoothing handled in processing pipeline
-      gpsSmoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.gpsSmoothing }, // GPS smoothing handled in processing pipeline
-      paceSmoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.paceSmoothing }, // Pace smoothing handled in processing pipeline
-      cumulative: transformationSettings.value.cumulative,
-      pivotZones: transformationSettings.value.pivotZones,
-    };
 
     const config: SeriesConfig = {
       activities: windowedActivities.value,
@@ -74,7 +69,7 @@ export const useChartSeriesStore = defineStore("chartSeries", () => {
       deltaMode: deltaSettings.value.mode as DeltaMode,
       deltaBaseActivityId: deltaSettings.value.baseActivityId,
       deltaCompareActivityId: deltaSettings.value.compareActivityId,
-      transforms,
+      transforms: chartTransforms.value,
     };
 
     return generateChartSeries(config);
@@ -84,17 +79,7 @@ export const useChartSeriesStore = defineStore("chartSeries", () => {
   const chartOption = computed(() => {
     const metrics = selectedMetrics.value.length > 0 ? selectedMetrics.value : ["hr" as MetricType];
 
-    // Build full ChartTransformSettings for chart option building
-    // Note: Smoothing and outliers are now handled in the processing pipeline
-    const transforms: ChartTransformSettings = {
-      viewMode: viewMode.value,
-      outliers: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.outliers },
-      smoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.smoothing }, // Smoothing handled in processing pipeline
-      gpsSmoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.gpsSmoothing },
-      paceSmoothing: { ...DEFAULT_CHART_TRANSFORM_SETTINGS.paceSmoothing },
-      cumulative: transformationSettings.value.cumulative,
-      pivotZones: transformationSettings.value.pivotZones,
-    };
+    const transforms = chartTransforms.value;
 
     if (transforms.viewMode === "pivotZones") {
       const metric =
@@ -191,14 +176,24 @@ export const useChartSeriesStore = defineStore("chartSeries", () => {
     };
   });
 
-  function setTransformationSettings(settings: {
-    cumulative: CumulativeSettings;
-    pivotZones: PivotZonesSettings;
-  }) {
+  function setTransformationSettings(settings: TransformationSettings) {
     transformationSettings.value = {
       cumulative: { ...settings.cumulative },
       pivotZones: { ...settings.pivotZones },
     };
+  }
+
+  function exportSettings(): PersistedChartSeriesSettings {
+    return {
+      transformationSettings: {
+        cumulative: { ...transformationSettings.value.cumulative },
+        pivotZones: { ...transformationSettings.value.pivotZones },
+      },
+    };
+  }
+
+  function importSettings(settings: Partial<PersistedChartSeriesSettings>) {
+    if (settings.transformationSettings) setTransformationSettings(settings.transformationSettings);
   }
 
   return {
@@ -206,5 +201,7 @@ export const useChartSeriesStore = defineStore("chartSeries", () => {
     chartOption,
     transformationSettings,
     setTransformationSettings,
+    exportSettings,
+    importSettings,
   };
 });

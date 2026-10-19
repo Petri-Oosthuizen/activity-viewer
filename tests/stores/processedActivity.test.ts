@@ -121,8 +121,8 @@ describe("useProcessedActivityStore", () => {
         () => {
           const processed = processedStore.processedActivities;
           expect(processed[0]?.offset).toBe(5);
-          expect(processed[0]?.records[0]?.t).toBe(5); // 0 + 5
-          expect(processed[0]?.records[1]?.t).toBe(15); // 10 + 5
+          expect(processed[0]?.records[0]?.t).toBe(0);
+          expect(processed[0]?.records[1]?.t).toBe(10);
         },
         { timeout: 500 }
       );
@@ -225,6 +225,59 @@ describe("useProcessedActivityStore", () => {
       expect(processed[0]?.startTime).toEqual(startTime);
       expect(processed[0]?.calories).toBe(500);
       expect(processed[0]?.sport).toBe("running");
+    });
+  });
+
+  describe("timelineStart", () => {
+    const withStart = (id: string, startTime?: Date): RawActivity => ({
+      ...createRawActivity(id, id, [{ t: 0, d: 0 }]),
+      metadata: { startTime },
+    });
+
+    it("should set the earliest raw startTime on every activity when alignStarts is on", () => {
+      const rawStore = useRawActivityStore();
+      const processedStore = useProcessedActivityStore();
+      const early = new Date("2024-01-01T08:00:00Z");
+      const late = new Date("2024-01-03T17:30:00Z");
+
+      rawStore.addRawActivity(withStart("late", late));
+      rawStore.addRawActivity(withStart("early", early));
+      rawStore.addRawActivity(withStart("none"));
+
+      const processed = processedStore.processedActivities;
+
+      expect(processed.map((a) => a.timelineStart)).toEqual([early, early, early]);
+      expect(processed[0]?.startTime).toEqual(late);
+    });
+
+    it("should leave timelineStart undefined when no raw activity has a startTime", () => {
+      const rawStore = useRawActivityStore();
+      const processedStore = useProcessedActivityStore();
+
+      rawStore.addRawActivity(withStart("a"));
+
+      expect(processedStore.processedActivities[0]?.timelineStart).toBeUndefined();
+    });
+
+    it("should leave timelineStart undefined when alignStarts is off", async () => {
+      const rawStore = useRawActivityStore();
+      const settingsStore = useActivitySettingsStore();
+      const processedStore = useProcessedActivityStore();
+
+      rawStore.addRawActivity(withStart("a", new Date("2024-01-01T08:00:00Z")));
+      rawStore.addRawActivity(withStart("b", new Date("2024-01-02T08:00:00Z")));
+      expect(processedStore.processedActivities[0]?.timelineStart).toBeDefined();
+
+      settingsStore.setAlignmentMode("none");
+
+      await vi.waitFor(
+        () => {
+          const processed = processedStore.processedActivities;
+          expect(processed[0]?.timelineStart).toBeUndefined();
+          expect(processed[1]?.timelineStart).toBeUndefined();
+        },
+        { timeout: 500 }
+      );
     });
   });
 

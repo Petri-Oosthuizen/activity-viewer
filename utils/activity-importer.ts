@@ -7,8 +7,6 @@ import type { RawActivity, ParseResult } from "~/types/activity";
 import { parseGPX } from "~/utils/gpx-parser";
 import { parseFIT } from "~/utils/fit-parser";
 import { parseTCX } from "~/utils/tcx-parser";
-// Field mappers are imported but not yet integrated into parsers
-// TODO: Integrate field mappers into point extractors
 import type { GpsDistanceOptions } from "~/utils/gps-distance";
 import { generateActivityId } from "~/utils/chart-config";
 
@@ -23,7 +21,7 @@ export async function importActivityFile(
   const fileType = detectFileType(fileName);
 
   let parseResult: ParseResult;
-  let fileContent: Blob | string;
+  let fileContent: ArrayBuffer | string;
 
   if (fileType === "gpx") {
     fileContent = await file.text();

@@ -18,6 +18,12 @@ export interface ChartHoverPoint {
   recordIndex: number;
 }
 
+export interface PersistedUISettings {
+  overviewDisplayMode: "light" | "full";
+  overviewBaselineEnabled: boolean;
+  overviewBaselineActivityId: string | null;
+}
+
 export const useUIStore = defineStore("ui", () => {
   const mapHoveredPoint = shallowRef<MapHoverPoint | null>(null);
   const chartHoveredPoint = shallowRef<ChartHoverPoint | null>(null);
@@ -76,6 +82,24 @@ export const useUIStore = defineStore("ui", () => {
     overviewBaselineActivityId.value = activityId;
   }
 
+  function exportSettings(): PersistedUISettings {
+    return {
+      overviewDisplayMode: overviewDisplayMode.value,
+      overviewBaselineEnabled: overviewBaselineEnabled.value,
+      overviewBaselineActivityId: overviewBaselineActivityId.value,
+    };
+  }
+
+  function importSettings(settings: Partial<PersistedUISettings>) {
+    if (settings.overviewDisplayMode) setOverviewDisplayMode(settings.overviewDisplayMode);
+    if (settings.overviewBaselineEnabled !== undefined) {
+      setOverviewBaselineEnabled(settings.overviewBaselineEnabled);
+    }
+    if (settings.overviewBaselineActivityId !== undefined) {
+      setOverviewBaselineActivityId(settings.overviewBaselineActivityId);
+    }
+  }
+
   return {
     mapHoveredPoint,
     chartHoveredPoint,
@@ -97,5 +121,7 @@ export const useUIStore = defineStore("ui", () => {
     setOverviewDisplayMode,
     setOverviewBaselineEnabled,
     setOverviewBaselineActivityId,
+    exportSettings,
+    importSettings,
   };
 });

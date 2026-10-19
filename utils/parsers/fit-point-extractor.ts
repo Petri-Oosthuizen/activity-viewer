@@ -86,12 +86,7 @@ function extractFITLaps(data: any, recordsCount: number, startTime?: Date): Lap[
 
 export async function extractFITPoints(arrayBuffer: ArrayBuffer): Promise<{ points: RawPoint[]; calories?: number; sport?: string; laps?: Lap[] }> {
   try {
-    const fitModule = await import("fit-file-parser");
-    const FitParser = (fitModule.default || fitModule) as any;
-
-    if (!FitParser) {
-      throw new Error("Failed to import fit-file-parser");
-    }
+    const { default: FitParser } = await import("fit-file-parser");
 
     const parser = new FitParser({
       force: true,
@@ -103,10 +98,9 @@ export async function extractFITPoints(arrayBuffer: ArrayBuffer): Promise<{ poin
     });
 
     return new Promise((resolve, reject) => {
-      parser.parse(arrayBuffer, (error: string | Error | null | undefined, data: any) => {
+      parser.parse(arrayBuffer, (error, data) => {
         if (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          reject(new Error(`Failed to parse FIT file: ${errorMessage}`));
+          reject(new Error(`Failed to parse FIT file: ${error}`));
           return;
         }
 

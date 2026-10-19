@@ -403,5 +403,18 @@ describe("activity-stats", () => {
       expect(stats.elevationGainMeters).toBe(0);
       expect(stats.elevationLossMeters).toBe(0);
     });
+
+    it("populates sampling stats from records", () => {
+      const records: ActivityRecord[] = [
+        { t: 0, d: 0, hr: 100 },
+        { t: 2, d: 10, hr: 101 },
+        { t: 4, d: 20, hr: 102 },
+      ];
+
+      const stats = computeActivityStatsFromRecords(records);
+      expect(stats.sampling.hr?.count).toBe(3);
+      expect(stats.sampling.hr?.meanGap).toBe(2);
+      expect(stats.sampling.pwr).toBeNull();
+    });
   });
 });
