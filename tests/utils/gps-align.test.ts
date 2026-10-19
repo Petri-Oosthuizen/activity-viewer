@@ -127,6 +127,27 @@ describe("computeGpsAlignment", () => {
     );
   });
 
+  it("matches the start, not the finish, on a route that returns to its start", () => {
+    // Out-and-back: 600 m east at 3 m/s, then back to the origin.
+    const outAndBack = (timeShiftSeconds: number): ActivityRecord[] =>
+      Array.from({ length: 401 }, (_, t) => {
+        const d = 3 * t;
+        const east = d <= 600 ? d : 1200 - d;
+        return { t: t + timeShiftSeconds, d, lat: ORIGIN_LAT, lon: ORIGIN_LON + east / METRES_PER_DEG_LON };
+      });
+    const reference = buildActivity({ id: "ref", records: outAndBack(0) });
+    const targetRecords = outAndBack(37);
+    const first = targetRecords[0]!;
+    // GPS noise: the target's first fix lands 20 m off, so its finish is nearer the reference start.
+    targetRecords[0] = { ...first, lat: first.lat! + 20 / METRES_PER_DEG_LAT };
+    const target = buildActivity({ id: "tgt", records: targetRecords });
+
+    const result = computeGpsAlignment(reference, target);
+
+    expect(result!.matchedAt).toBe("start");
+    expect(result!.offsetSeconds).toBe(-37);
+  });
+
   it("returns null when the target is on a different route", () => {
     const reference = buildActivity({ id: "ref", records: buildTrack() });
     const target = buildActivity({ id: "tgt", records: buildTrack({ eastShiftMeters: 5000, northShiftMeters: 5000 }) });

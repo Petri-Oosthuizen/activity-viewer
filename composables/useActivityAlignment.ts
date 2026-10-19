@@ -16,9 +16,10 @@ export function useActivityAlignment() {
   const { activities, activeActivities } = useActivityList();
   const { activityOffsets } = storeToRefs(settingsStore);
 
+  const noGpsNames = ref<string[]>([]);
   const unmatchedNames = ref<string[]>([]);
 
-  // GPS alignment works on raw records with the current offset, since processed records already have it applied.
+  // GPS alignment uses raw records so smoothing settings do not move the match.
   const alignmentInputs = computed<Activity[]>(() =>
     activeActivities.value.map((activity) => ({
       ...activity,
@@ -27,14 +28,21 @@ export function useActivityAlignment() {
     })),
   );
 
-  const canAlignByGps = computed(() => alignmentInputs.value.filter(hasGpsPoint).length >= 2);
+  const gpsInputs = computed(() => alignmentInputs.value.filter(hasGpsPoint));
+
+  const canAlignByGps = computed(() => gpsInputs.value.length >= 2);
 
   const statusText = computed(() =>
-    unmatchedNames.value.length > 0 ? `No GPS match: ${unmatchedNames.value.join(", ")}` : "",
+    [
+      noGpsNames.value.length > 0 ? `No GPS: ${noGpsNames.value.join(", ")}` : "",
+      unmatchedNames.value.length > 0 ? `No GPS match: ${unmatchedNames.value.join(", ")}` : "",
+    ]
+      .filter(Boolean)
+      .join(". "),
   );
 
   function alignByGps(): void {
-    const [reference, ...targets] = alignmentInputs.value;
+    const [reference, ...targets] = gpsInputs.value;
     if (!reference) return;
     const unmatched: string[] = [];
     for (const target of targets) {
@@ -45,6 +53,7 @@ export function useActivityAlignment() {
         unmatched.push(target.name);
       }
     }
+    noGpsNames.value = alignmentInputs.value.filter((a) => !hasGpsPoint(a)).map((a) => a.name);
     unmatchedNames.value = unmatched;
   }
 
@@ -52,6 +61,7 @@ export function useActivityAlignment() {
     for (const activity of activities.value) {
       settingsStore.setActivityOffset(activity.id, 0);
     }
+    noGpsNames.value = [];
     unmatchedNames.value = [];
   }
 

@@ -15,6 +15,7 @@ import {
   DELTA_COLOR,
 } from "~/utils/chart-config";
 import type { Activity, ActivityRecord } from "~/types/activity";
+import { processActivityRecords } from "~/utils/activity-processor";
 
 type NullableRecord = { [K in keyof ActivityRecord]: ActivityRecord[K] | null };
 const withNulls = (records: NullableRecord[]): ActivityRecord[] => records as ActivityRecord[];
@@ -159,6 +160,23 @@ describe("chart-config utilities", () => {
       const record = { t: 100, d: 1000 };
       const value = calculateXValue(record, activityWithOffset, "time");
       expect(value).toBe(150);
+    });
+
+    it("should add the offset exactly once to a processed record on the time axis", () => {
+      const [record] = processActivityRecords([{ t: 100, d: 1000 }], {
+        outliers: { mode: "off", maxPercentChange: 200 },
+        gpsSmoothing: { enabled: false, windowPoints: 5 },
+        gpsPaceSmoothing: { enabled: false, windowPoints: 5 },
+        smoothing: { mode: "off", windowPoints: 5 },
+        scaling: 1,
+      });
+      expect(calculateXValue(record!, { ...mockActivity, offset: 50 }, "time")).toBe(150);
+    });
+
+    it("should give negative x for a negative offset without clamping", () => {
+      const activity: Activity = { ...mockActivity, offset: -30 };
+      expect(calculateXValue({ t: 0, d: 0 }, activity, "time")).toBe(-30);
+      expect(calculateXValue({ t: 10, d: 100 }, activity, "time")).toBe(-20);
     });
   });
 

@@ -93,7 +93,7 @@
         </label>
         <select
           v-if="overviewBaselineEnabled"
-          :value="overviewBaselineActivityId || ''"
+          :value="baselineActivityId ?? ''"
           class="baseline-select focus:border-primary focus:ring-primary/10 w-full rounded-sm border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:ring-2 focus:outline-hidden sm:w-auto sm:min-w-[180px] sm:px-3 sm:text-sm"
           @change="handleBaselineActivityChange"
         >
@@ -150,7 +150,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from "vue";
+import { computed } from "vue";
 import { storeToRefs } from "pinia";
 import { useActivityList } from "~/composables/useActivityList";
 import { useOverviewRows } from "~/composables/useOverviewRows";
@@ -164,15 +164,14 @@ import FileNameDisplay from "~/components/FileNameDisplay.vue";
 import OverviewRow from "~/components/OverviewRow.vue";
 
 const { activeActivities } = useActivityList();
-const { rows } = useOverviewRows();
+const { rows, baselineActivityId } = useOverviewRows();
 const chartOptionsStore = useChartOptionsStore();
 const windowStore = useWindowActivityStore();
 const uiStore = useUIStore();
 
 const { xAxisType } = storeToRefs(chartOptionsStore);
 const { chartWindow } = storeToRefs(windowStore);
-const { overviewDisplayMode, overviewBaselineEnabled, overviewBaselineActivityId } =
-  storeToRefs(uiStore);
+const { overviewDisplayMode, overviewBaselineEnabled } = storeToRefs(uiStore);
 
 const showBaseline = computed(() => activeActivities.value.length >= 2);
 const isBaselineActive = computed(() => showBaseline.value && overviewBaselineEnabled.value);
@@ -182,21 +181,6 @@ const descriptionText = computed(() =>
     : showBaseline.value
       ? "Min, average, and max values per activity."
       : "Min, average, and max values for this activity.",
-);
-
-watch(
-  activeActivities,
-  (next) => {
-    const first = next[0];
-    if (!first) {
-      uiStore.setOverviewBaselineActivityId(null);
-      return;
-    }
-    if (!next.some((a) => a.id === overviewBaselineActivityId.value)) {
-      uiStore.setOverviewBaselineActivityId(first.id);
-    }
-  },
-  { immediate: true },
 );
 
 const isChartWindowActive = computed(() => {

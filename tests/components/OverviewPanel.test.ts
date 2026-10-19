@@ -6,6 +6,7 @@ import OverviewPanel from "~/components/OverviewPanel.vue";
 import { useRawActivityStore } from "~/stores/rawActivity";
 import { useWindowActivityStore } from "~/stores/windowActivity";
 import { useChartOptionsStore } from "~/stores/chartOptions";
+import { useUIStore } from "~/stores/ui";
 import type { ActivityRecord, RawActivity } from "~/types/activity";
 
 describe("OverviewPanel", () => {
@@ -266,6 +267,60 @@ describe("OverviewPanel", () => {
 
       const text = wrapper.text();
       expect(text).not.toContain("Enable Baseline Comparison");
+    });
+    it("should fall back to the first active activity when the stored baseline is cleared", async () => {
+      const rawStore = useRawActivityStore();
+      const uiStore = useUIStore();
+
+      rawStore.addRawActivity(
+        createRawActivity("test-1", "activity1.gpx", [
+          { t: 0, d: 0, hr: 120 },
+          { t: 10, d: 1000, hr: 130 },
+        ]),
+      );
+      rawStore.addRawActivity(
+        createRawActivity("test-2", "activity2.gpx", [
+          { t: 0, d: 0, hr: 140 },
+          { t: 10, d: 1000, hr: 150 },
+        ]),
+      );
+      uiStore.setOverviewBaselineEnabled(true);
+
+      const wrapper = mount(OverviewPanel, { global: { plugins: [pinia] } });
+      await nextTick();
+      uiStore.setOverviewBaselineActivityId(null);
+      await nextTick();
+
+      expect((wrapper.find("select.baseline-select").element as HTMLSelectElement).value).toBe("test-1");
+      expect(wrapper.text()).toContain("baseline");
+      expect(wrapper.text()).toContain("+20");
+    });
+    it("should show the light mode elevation baseline once", async () => {
+      const rawStore = useRawActivityStore();
+      const uiStore = useUIStore();
+
+      rawStore.addRawActivity(
+        createRawActivity("test-1", "activity1.gpx", [
+          { t: 0, d: 0, alt: 100 },
+          { t: 10, d: 1000, alt: 150 },
+          { t: 20, d: 2000, alt: 120 },
+        ]),
+      );
+      rawStore.addRawActivity(
+        createRawActivity("test-2", "activity2.gpx", [
+          { t: 0, d: 0, alt: 100 },
+          { t: 10, d: 1000, alt: 180 },
+          { t: 20, d: 2000, alt: 110 },
+        ]),
+      );
+      uiStore.setOverviewBaselineEnabled(true);
+
+      const wrapper = mount(OverviewPanel, { global: { plugins: [pinia] } });
+      await nextTick();
+
+      const elevationRow = wrapper.findAll("tr").find((tr) => tr.text().startsWith("Elevation"));
+      expect(elevationRow?.text()).toContain("baseline");
+      expect(elevationRow?.text()).not.toMatch(/baseline\s+baseline/);
     });
   });
 

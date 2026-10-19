@@ -69,6 +69,24 @@ describe("AlignmentPanel", () => {
     expect(settingsStore.activityOffsets.has("elsewhere")).toBe(false);
   });
 
+  it("uses the first activity with GPS as the reference when the first has none", async () => {
+    const rawStore = useRawActivityStore();
+    const settingsStore = useActivitySettingsStore();
+    rawStore.addRawActivity(rawActivity({ id: "indoor", records: [{ t: 0, d: 0, hr: 120 }, { t: 1, d: 3, hr: 121 }] }));
+    rawStore.addRawActivity(rawActivity({ id: "ref", records: buildTrack({}) }));
+    rawStore.addRawActivity(rawActivity({ id: "late", records: buildTrack({ timeShiftSeconds: 37 }) }));
+
+    const wrapper = mount(AlignmentPanel, { global: { plugins: [pinia] } });
+    await findButton(wrapper, "Align by GPS").trigger("click");
+    await nextTick();
+
+    expect(settingsStore.activityOffsets.get("late")).toBe(-37);
+    expect(settingsStore.activityOffsets.has("ref")).toBe(false);
+    expect(settingsStore.activityOffsets.has("indoor")).toBe(false);
+    expect(wrapper.text()).toContain("No GPS: indoor.gpx");
+    expect(wrapper.text()).not.toContain("No GPS match");
+  });
+
   it("disables GPS alignment when fewer than two activities have GPS points", async () => {
     const rawStore = useRawActivityStore();
     rawStore.addRawActivity(rawActivity({ id: "ref", records: buildTrack({}) }));

@@ -12,7 +12,6 @@ describe("activity-processor", () => {
         gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
         smoothing: { mode: "off", windowPoints: 5 },
         scaling: 1,
-        offset: 0,
       });
       expect(result).toEqual([]);
     });
@@ -29,7 +28,6 @@ describe("activity-processor", () => {
         gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
         smoothing: { mode: "off", windowPoints: 5 },
         scaling: 1,
-        offset: 0,
       });
 
       expect(result).toHaveLength(2);
@@ -65,7 +63,6 @@ describe("activity-processor", () => {
           gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "off", windowPoints: 5 },
           scaling: 1,
-          offset: 0,
         });
 
         // With 50% threshold, 100->10 should be caught (90% change)
@@ -86,7 +83,6 @@ describe("activity-processor", () => {
           gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "off", windowPoints: 5 },
           scaling: 1,
-          offset: 0,
         });
 
         const record = result.find((r) => r.t === 10);
@@ -107,7 +103,6 @@ describe("activity-processor", () => {
           gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "off", windowPoints: 5 },
           scaling: 1,
-          offset: 0,
         });
 
         const record1 = result.find((r) => r.t === 10);
@@ -132,7 +127,6 @@ describe("activity-processor", () => {
           gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "off", windowPoints: 5 },
           scaling: 1,
-          offset: 0,
         });
 
         const recordAt30 = result.find((r) => r.t === 30);
@@ -152,7 +146,6 @@ describe("activity-processor", () => {
           gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "off", windowPoints: 5 },
           scaling: 1,
-          offset: 0,
         });
 
         const recordAt10 = result.find((r) => r.t === 10);
@@ -172,7 +165,6 @@ describe("activity-processor", () => {
           gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "off", windowPoints: 5 },
           scaling: 1,
-          offset: 0,
         });
 
         const recordAt10 = result.find((r) => r.t === 10);
@@ -195,7 +187,6 @@ describe("activity-processor", () => {
           gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "off", windowPoints: 5 },
           scaling: 1,
-          offset: 0,
         });
 
         const recordAt10 = result.find((r) => r.t === 10);
@@ -215,7 +206,6 @@ describe("activity-processor", () => {
           gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "off", windowPoints: 5 },
           scaling: 1,
-          offset: 0,
         });
 
         const recordAt10 = result.find((r) => r.t === 10);
@@ -235,7 +225,6 @@ describe("activity-processor", () => {
           gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "off", windowPoints: 5 },
           scaling: 1,
-          offset: 0,
         });
 
         const recordAt10 = result.find((r) => r.t === 10);
@@ -256,7 +245,6 @@ describe("activity-processor", () => {
           gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "off", windowPoints: 5 },
           scaling: 1,
-          offset: 0,
         });
 
         const recordAt10 = result.find((r) => r.t === 10);
@@ -279,7 +267,6 @@ describe("activity-processor", () => {
           gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "off", windowPoints: 5 },
           scaling: 1,
-          offset: 0,
         });
 
         const recordAt10 = result.find((r) => r.t === 10);
@@ -309,7 +296,6 @@ describe("activity-processor", () => {
           gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "off", windowPoints: 5 },
           scaling: 1,
-          offset: 0,
         });
 
         const recordAt10 = result.find((r) => r.t === 10);
@@ -334,7 +320,6 @@ describe("activity-processor", () => {
           gpsPaceSmoothing: { enabled: false, windowPoints: 5 },
           smoothing: { mode: "off", windowPoints: 5 },
           scaling: 1,
-          offset: 0,
         });
 
         // Find the record with the spike (at t=10)
@@ -365,7 +350,6 @@ describe("activity-processor", () => {
           gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "off", windowPoints: 5 },
           scaling: 1,
-          offset: 0,
         });
 
         const recordAt10 = result.find((r) => r.t === 10);
@@ -391,7 +375,6 @@ describe("activity-processor", () => {
           gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "off", windowPoints: 5 },
           scaling: 1,
-          offset: 0,
         });
 
         expect(result).toHaveLength(2);
@@ -412,7 +395,6 @@ describe("activity-processor", () => {
           gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "off", windowPoints: 5 },
           scaling: 1,
-          offset: 0,
         });
 
         expect(result).toHaveLength(2);
@@ -432,7 +414,6 @@ describe("activity-processor", () => {
           gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "off", windowPoints: 5 },
           scaling: 1,
-          offset: 0,
         });
 
         expect(result).toHaveLength(2);
@@ -456,7 +437,6 @@ describe("activity-processor", () => {
           gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "movingAverage", windowPoints: 3 },
           scaling: 1,
-          offset: 0,
         });
 
         expect(result).toHaveLength(4);
@@ -480,7 +460,6 @@ describe("activity-processor", () => {
           gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "ema", windowPoints: 3 },
           scaling: 1,
-          offset: 0,
         });
 
         expect(result).toHaveLength(3);
@@ -505,7 +484,6 @@ describe("activity-processor", () => {
           gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "off", windowPoints: 5 },
           scaling: 1,
-          offset: 0,
         });
 
         expect(result[0]?.hr).toBe(100);
@@ -525,7 +503,6 @@ describe("activity-processor", () => {
           gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "movingAverage", windowPoints: 3 },
           scaling: 1,
-          offset: 0,
         });
 
         expect(result).toHaveLength(3);
@@ -555,7 +532,6 @@ describe("activity-processor", () => {
           gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "off", windowPoints: 5 },
           scaling: 1,
-          offset: 0,
         });
 
         expect(result).toHaveLength(4);
@@ -576,7 +552,6 @@ describe("activity-processor", () => {
           gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "off", windowPoints: 5 },
           scaling: 1,
-          offset: 0,
         });
 
         expect(result[0]?.lat).toBe(45.0);
@@ -599,7 +574,6 @@ describe("activity-processor", () => {
           gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "off", windowPoints: 5 },
           scaling: 1.5,
-          offset: 0,
         });
 
         expect(result[0]?.hr).toBe(150);
@@ -620,7 +594,6 @@ describe("activity-processor", () => {
           gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "off", windowPoints: 5 },
           scaling: 1,
-          offset: 0,
         });
 
         expect(result[0]?.hr).toBe(100);
@@ -642,7 +615,6 @@ describe("activity-processor", () => {
           gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "off", windowPoints: 5 },
           scaling: 1,
-          offset: 0,
         });
 
         expect(result[1]?.grade).toBeDefined();
@@ -666,7 +638,6 @@ describe("activity-processor", () => {
           gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "off", windowPoints: 5 },
           scaling: 1,
-          offset: 0,
         });
 
         // Speed should be preserved for pace calculation later
@@ -676,53 +647,8 @@ describe("activity-processor", () => {
       });
     });
 
-    describe("offset application", () => {
-      it("should apply time offset as last step", () => {
-        const records: ActivityRecord[] = [
-          { t: 0, d: 0, hr: 100 },
-          { t: 10, d: 100, hr: 110 },
-          { t: 20, d: 200, hr: 120 },
-        ];
-
-        const result = processActivityRecords(records, {
-          outliers: { mode: "off", maxPercentChange: 200 },
-          gpsSmoothing: { enabled: false, windowPoints: 5 },
-          gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
-          smoothing: { mode: "off", windowPoints: 5 },
-          scaling: 1,
-          offset: 5,
-        });
-
-        expect(result[0]?.t).toBe(5);
-        expect(result[1]?.t).toBe(15);
-        expect(result[2]?.t).toBe(25);
-        // HR should still be original (scaling was 1, so no change)
-        expect(result[0]?.hr).toBe(100);
-        expect(result[1]?.hr).toBe(110);
-      });
-
-      it("should not allow negative time after offset", () => {
-        const records: ActivityRecord[] = [
-          { t: 0, d: 0, hr: 100 },
-          { t: 5, d: 100, hr: 110 },
-        ];
-
-        const result = processActivityRecords(records, {
-          outliers: { mode: "off", maxPercentChange: 200 },
-          gpsSmoothing: { enabled: false, windowPoints: 5 },
-          gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
-          smoothing: { mode: "off", windowPoints: 5 },
-          scaling: 1,
-          offset: -10,
-        });
-
-        expect(result[0]?.t).toBe(0); // Clamped to 0
-        expect(result[1]?.t).toBe(0); // Clamped to 0 (5 - 10 = -5, clamped)
-      });
-    });
-
     describe("pipeline order verification", () => {
-      it("should apply processing in correct order: outliers → remove invalid → GPS smooth → smooth → scale → derive → offset", () => {
+      it("should apply processing in correct order: outliers → remove invalid → GPS smooth → smooth → scale → derive", () => {
         // Create records that test the pipeline order
         const records: ActivityRecord[] = [
           { t: 0, d: 0, hr: 100, alt: 10 },
@@ -732,12 +658,11 @@ describe("activity-processor", () => {
         ];
 
         const result = processActivityRecords(records, {
-          outliers: { mode: "drop", maxPercentChange: 200 },
+          outliers: { mode: "drop", maxPercentChange: 50 },
           gpsSmoothing: { enabled: false, windowPoints: 5 },
           gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "off", windowPoints: 5 },
           scaling: 2,
-          offset: 5,
         });
 
         // Invalid record should be removed (step 3)
@@ -753,12 +678,6 @@ describe("activity-processor", () => {
         // Scaling should be applied (step 5)
         const scaledRecord = validRecords.find((r) => r.alt === 40); // 20 * 2
         expect(scaledRecord).toBeDefined();
-
-        // Offset should be applied last (step 7)
-        const offsetRecord = validRecords.find((r) => r.alt === 40);
-        if (offsetRecord) {
-          expect(offsetRecord.t).toBeGreaterThanOrEqual(5); // Offset applied
-        }
       });
     });
 
@@ -772,7 +691,6 @@ describe("activity-processor", () => {
           gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "off", windowPoints: 5 },
           scaling: 1,
-          offset: 0,
         });
 
         expect(result).toHaveLength(1);
@@ -791,7 +709,6 @@ describe("activity-processor", () => {
           gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "off", windowPoints: 5 },
           scaling: 1,
-          offset: 0,
         });
 
         expect(result).toHaveLength(2);
@@ -812,7 +729,6 @@ describe("activity-processor", () => {
           gpsPaceSmoothing: { enabled: true, windowPoints: 5 },
           smoothing: { mode: "off", windowPoints: 5 },
           scaling: 1,
-          offset: 0,
         });
 
         expect(result).toHaveLength(3);

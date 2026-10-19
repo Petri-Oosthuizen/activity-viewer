@@ -823,7 +823,7 @@ watch(
       for (const activity of processedActivities.value) {
         if (disabledActivities.value.has(activity.id)) continue;
 
-        const cached = getActivityXValues(activity as any, currentXAxisType as any);
+        const cached = getActivityXValues(activity, currentXAxisType);
         const idx = cached.isMonotonic
           ? findNearestIndex(cached.values, axisValue)
           : findNearestIndexLinear(cached.values, axisValue);

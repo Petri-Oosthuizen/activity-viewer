@@ -132,7 +132,10 @@ function samplingCell(stats: SamplingStats | null | undefined): OverviewCell {
 const roundedDiff = (unit: string) => (diff: number) => `${Math.round(diff)}${unit}`;
 
 /** Overview table rows for the active activities, honouring display mode, chart window and baseline. */
-export function useOverviewRows(): { rows: ComputedRef<OverviewRowDef[]> } {
+export function useOverviewRows(): {
+  rows: ComputedRef<OverviewRowDef[]>;
+  baselineActivityId: ComputedRef<string | null>;
+} {
   const { activeActivities } = useActivityList();
   const { rawActivities } = storeToRefs(useRawActivityStore());
   const { xAxisType, viewMode } = storeToRefs(useChartOptionsStore());
@@ -143,6 +146,13 @@ export function useOverviewRows(): { rows: ComputedRef<OverviewRowDef[]> } {
   const isBaselineActive = computed(
     () => activeActivities.value.length >= 2 && overviewBaselineEnabled.value,
   );
+
+  // A cleared or inactive stored baseline falls back to the first active activity.
+  const baselineActivityId = computed<string | null>(() => {
+    const stored = overviewBaselineActivityId.value;
+    const acts = activeActivities.value;
+    return acts.some((a) => a.id === stored) ? stored : (acts[0]?.id ?? null);
+  });
 
   const statsById = computed(() => {
     const map: Record<string, ActivityStats> = {};
@@ -186,7 +196,7 @@ export function useOverviewRows(): { rows: ComputedRef<OverviewRowDef[]> } {
 
   function deltasFor({ pick, formatDiff, threshold }: DeltaOptions): string[] | undefined {
     if (!isBaselineActive.value) return undefined;
-    const baselineId = overviewBaselineActivityId.value;
+    const baselineId = baselineActivityId.value;
     const base = baselineId ? pick(baselineId) : null;
     return activeActivities.value.map((a) => {
       const value = pick(a.id);
@@ -318,9 +328,11 @@ export function useOverviewRows(): { rows: ComputedRef<OverviewRowDef[]> } {
           const l = loss.cells?.[i] ?? EMPTY_CELL;
           return { text: `+ ${g.text}  − ${l.text}`, muted: g.muted && l.muted };
         }),
-        deltas: gain.deltas?.map((g, i) =>
-          [g, loss.deltas?.[i] ?? "—"].filter((d) => d !== "—").join("  "),
-        ),
+        deltas: gain.deltas?.map((g, i) => {
+          const parts = [g, loss.deltas?.[i] ?? "—"];
+          if (parts.includes("baseline")) return "baseline";
+          return parts.filter((d) => d !== "—").join("  ");
+        }),
       },
     ];
   }
@@ -462,5 +474,5 @@ export function useOverviewRows(): { rows: ComputedRef<OverviewRowDef[]> } {
     return [...summaryRows(full), ...elevationRows(full), ...metricRows(full), ...detailRows];
   });
 
-  return { rows };
+  return { rows, baselineActivityId };
 }

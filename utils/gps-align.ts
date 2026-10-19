@@ -28,11 +28,6 @@ interface GpsTrack {
   lon: number[];
 }
 
-interface NearestMatch {
-  index: number;
-  distanceMeters: number;
-}
-
 function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const toRad = Math.PI / 180;
   const dLat = (lat2 - lat1) * toRad;
@@ -53,17 +48,32 @@ function extractGpsTrack(activity: Activity): GpsTrack {
   return track;
 }
 
-function findNearestPoint({ track, lat, lon }: { track: GpsTrack; lat: number; lon: number }): NearestMatch {
-  let index = 0;
+/** Nearest point within the earliest pass through the radius, so a loop finish cannot win over the start. */
+function findStartMatch({
+  track,
+  lat,
+  lon,
+  maxDistanceMeters,
+}: {
+  track: GpsTrack;
+  lat: number;
+  lon: number;
+  maxDistanceMeters: number;
+}): number | null {
+  let index: number | null = null;
   let distanceMeters = Infinity;
   for (let i = 0; i < track.t.length; i++) {
     const d = haversineMeters(lat, lon, track.lat[i]!, track.lon[i]!);
+    if (d > maxDistanceMeters) {
+      if (index !== null) break;
+      continue;
+    }
     if (d < distanceMeters) {
       distanceMeters = d;
       index = i;
     }
   }
-  return { index, distanceMeters };
+  return index;
 }
 
 /** Index of the last element <= value, or -1. */
@@ -137,14 +147,14 @@ export function computeGpsAlignment(
 
   let coarse: number;
   let matchedAt: GpsAlignmentResult["matchedAt"];
-  const forward = findNearestPoint({ track: tgt, lat: ref.lat[0]!, lon: ref.lon[0]! });
-  if (forward.distanceMeters <= maxStartDistanceMeters) {
-    coarse = ref.t[0]! + reference.offset - tgt.t[forward.index]!;
+  const forward = findStartMatch({ track: tgt, lat: ref.lat[0]!, lon: ref.lon[0]!, maxDistanceMeters: maxStartDistanceMeters });
+  if (forward !== null) {
+    coarse = ref.t[0]! + reference.offset - tgt.t[forward]!;
     matchedAt = "start";
   } else {
-    const backward = findNearestPoint({ track: ref, lat: tgt.lat[0]!, lon: tgt.lon[0]! });
-    if (backward.distanceMeters > maxStartDistanceMeters) return null;
-    coarse = ref.t[backward.index]! + reference.offset - tgt.t[0]!;
+    const backward = findStartMatch({ track: ref, lat: tgt.lat[0]!, lon: tgt.lon[0]!, maxDistanceMeters: maxStartDistanceMeters });
+    if (backward === null) return null;
+    coarse = ref.t[backward]! + reference.offset - tgt.t[0]!;
     matchedAt = "reverse";
   }
   coarse = Math.round(coarse);

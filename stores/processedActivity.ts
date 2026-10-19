@@ -64,7 +64,6 @@ export const useProcessedActivityStore = defineStore("processedActivity", () => 
         gpsPaceSmoothing: currentSettings.gpsPaceSmoothing,
         smoothing: currentSettings.smoothing,
         scaling: scale,
-        offset: offset,
       });
 
       return {

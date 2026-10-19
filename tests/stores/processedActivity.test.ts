@@ -121,8 +121,8 @@ describe("useProcessedActivityStore", () => {
         () => {
           const processed = processedStore.processedActivities;
           expect(processed[0]?.offset).toBe(5);
-          expect(processed[0]?.records[0]?.t).toBe(5); // 0 + 5
-          expect(processed[0]?.records[1]?.t).toBe(15); // 10 + 5
+          expect(processed[0]?.records[0]?.t).toBe(0);
+          expect(processed[0]?.records[1]?.t).toBe(10);
         },
         { timeout: 500 }
       );
