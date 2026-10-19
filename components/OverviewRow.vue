@@ -28,7 +28,12 @@
       <div :class="{ 'text-gray-400': cells[i]?.muted }" :title="cells[i]?.title">
         {{ cells[i]?.text ?? "—" }}
       </div>
-      <div v-if="cells[i]?.note" class="mt-0.5 text-[10px] text-amber-700 sm:text-xs" :title="cells[i]?.title">
+      <div
+        v-if="cells[i]?.note"
+        class="mt-0.5 text-[10px] sm:text-xs"
+        :class="cells[i]?.warn ? 'text-amber-700' : 'text-gray-400'"
+        :title="cells[i]?.title"
+      >
         {{ cells[i]?.note }}
       </div>
       <div

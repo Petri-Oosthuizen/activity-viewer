@@ -494,10 +494,10 @@ describe("OverviewPanel", () => {
       const gpsRow = wrapper.findAll("tbody tr").find((row) => row.find("td").text() === "GPS");
       expect(wrapper.text()).toContain("Sampling");
       expect(gpsRow?.text()).toContain("every 1.3 s");
+      expect(gpsRow?.text()).toContain("min 1.0 · max 2.0 · p95 2.0 s");
       const title = gpsRow?.find("td:nth-child(2) div").attributes("title") ?? "";
       expect(title).toContain("4 samples");
-      expect(title).toContain("largest gap 2.0 s");
-      expect(gpsRow?.text()).not.toContain("gaps up to");
+      expect(title).toContain("median gap 1.0 s");
     });
   });
 });

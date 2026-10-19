@@ -49,6 +49,18 @@ describe("computeSamplingStats", () => {
     expect(hr?.meanGap).toBeCloseTo(78 / 19, 10);
   });
 
+  it("sorts samples by time before measuring gaps", () => {
+    const records = makeRecords([0, 10, 5, 15], () => ({ hr: 120 }));
+    expect(computeSamplingStats(records).hr).toEqual({
+      count: 4,
+      meanGap: 5,
+      minGap: 5,
+      maxGap: 5,
+      p50Gap: 5,
+      p95Gap: 5,
+    });
+  });
+
   it("returns null for a field with one sample or none", () => {
     const records = makeRecords(range(0, 10), (t) => (t === 3 ? { cad: 90 } : {}));
     const stats = computeSamplingStats(records);

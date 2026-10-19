@@ -37,6 +37,7 @@ export interface OverviewCell {
   muted?: boolean;
   title?: string;
   note?: string;
+  warn?: boolean;
 }
 
 export type OverviewRowVariant = "row" | "sub" | "group";
@@ -124,18 +125,13 @@ function averageLapValue(laps: Lap[] | undefined, pick: LapRowDef["pick"]): numb
 function samplingCell(stats: SamplingStats | null | undefined): OverviewCell {
   if (!stats) return EMPTY_CELL;
   const s = formatGapSeconds;
-  const hasLargeGaps = stats.maxGap > stats.meanGap * 2;
   return {
     text: `every ${s(stats.meanGap)} s`,
-    note: hasLargeGaps ? `gaps up to ${s(stats.maxGap)} s` : undefined,
-    title: [
-      `${stats.count} samples`,
-      `average ${s(stats.meanGap)} s apart`,
-      `smallest gap ${s(stats.minGap)} s`,
-      `largest gap ${s(stats.maxGap)} s`,
-      `median ${s(stats.p50Gap)} s`,
-      `95% of gaps within ${s(stats.p95Gap)} s`,
-    ].join("\n"),
+    note: `min ${s(stats.minGap)} · max ${s(stats.maxGap)} · p95 ${s(stats.p95Gap)} s`,
+    warn: stats.maxGap > stats.meanGap * 2,
+    title: [`${stats.count} samples`, `median gap ${s(stats.p50Gap)} s`, `95% of gaps within ${s(stats.p95Gap)} s`].join(
+      "\n",
+    ),
   };
 }
 
@@ -463,7 +459,7 @@ export function useOverviewRows(): {
       {
         key: "sampling",
         label: "Sampling",
-        description: "How often each sensor recorded a value. Hover a cell for details.",
+        description: "Seconds between samples per sensor: average, then smallest, largest and 95th percentile gap.",
         variant: "group",
       },
       ...fields.map(

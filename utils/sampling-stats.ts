@@ -28,28 +28,22 @@ function nearestRank(sorted: number[], percentile: number): number {
 }
 
 function fieldSamplingStats(records: ActivityRecord[], field: SamplingField): SamplingStats | null {
-  const gaps: number[] = [];
-  let count = 0;
-  let previousT = 0;
-  let sum = 0;
-
+  const times: number[] = [];
   for (const record of records) {
-    if (!hasSample(record, field)) continue;
-    if (count > 0) {
-      const gap = record.t - previousT;
-      gaps.push(gap);
-      sum += gap;
-    }
-    previousT = record.t;
-    count++;
+    if (hasSample(record, field)) times.push(record.t);
   }
+  if (times.length < 2) return null;
 
-  if (count < 2) return null;
-
+  // Files are not guaranteed to be in time order, so gaps come from sorted sample times.
+  times.sort((a, b) => a - b);
+  const gaps: number[] = [];
+  for (let i = 1; i < times.length; i++) gaps.push(times[i]! - times[i - 1]!);
+  const span = times[times.length - 1]! - times[0]!;
   gaps.sort((a, b) => a - b);
+
   return {
-    count,
-    meanGap: sum / gaps.length,
+    count: times.length,
+    meanGap: span / gaps.length,
     minGap: gaps[0] ?? Number.NaN,
     maxGap: gaps[gaps.length - 1] ?? Number.NaN,
     p50Gap: nearestRank(gaps, 50),
