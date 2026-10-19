@@ -467,8 +467,11 @@ describe("OverviewPanel", () => {
 
       const gpsRow = wrapper.findAll("tbody tr").find((row) => row.find("td").text() === "GPS");
       expect(wrapper.text()).toContain("Sampling");
-      expect(gpsRow?.text()).toContain("1.3 s · 1.0–2.0 s · p95 2.0 s");
-      expect(gpsRow?.find("td:nth-child(2) div").attributes("title")).toBe("4 samples · p50 1.0 s");
+      expect(gpsRow?.text()).toContain("every 1.3 s");
+      const title = gpsRow?.find("td:nth-child(2) div").attributes("title") ?? "";
+      expect(title).toContain("4 samples");
+      expect(title).toContain("largest gap 2.0 s");
+      expect(gpsRow?.text()).not.toContain("gaps up to");
     });
   });
 });

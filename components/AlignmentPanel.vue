@@ -5,7 +5,7 @@
       <div class="flex flex-wrap gap-2">
         <button
           type="button"
-          class="bg-primary rounded-sm px-3 py-2 text-sm font-medium text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50 sm:py-1.5"
+          class="rounded-sm border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors active:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 sm:py-1.5 sm:hover:bg-gray-50"
           :disabled="!canAlignByGps"
           @click="alignByGps"
         >
@@ -21,19 +21,6 @@
       </div>
     </div>
 
-    <label
-      v-if="xAxisType === 'localTime'"
-      class="mb-3 flex w-fit cursor-pointer items-center gap-2 text-xs text-gray-700 sm:text-sm"
-      title="Start every activity at the earliest start time on the local time axis"
-    >
-      <input
-        type="checkbox"
-        class="text-primary focus:ring-primary h-4 w-4 cursor-pointer rounded-sm border-gray-300"
-        :checked="alignStarts"
-        @change="setAlignStarts"
-      />
-      Align start times
-    </label>
 
     <p v-if="statusText" class="mt-0 mb-3 text-xs text-amber-700 sm:text-sm">
       {{ statusText }}
@@ -68,19 +55,13 @@
 <script setup lang="ts">
 import { storeToRefs } from "pinia";
 import { useActivitySettingsStore } from "~/stores/activitySettings";
-import { useChartOptionsStore } from "~/stores/chartOptions";
 import { useActivityList } from "~/composables/useActivityList";
 import { useActivityAlignment } from "~/composables/useActivityAlignment";
 import FileNameDisplay from "./FileNameDisplay.vue";
 import TimeOffsetControl from "./TimeOffsetControl.vue";
 
 const settingsStore = useActivitySettingsStore();
-const { activityOffsets, alignStarts } = storeToRefs(settingsStore);
-const { xAxisType } = storeToRefs(useChartOptionsStore());
+const { activityOffsets } = storeToRefs(settingsStore);
 const { activities } = useActivityList();
 const { canAlignByGps, statusText, alignByGps, resetOffsets } = useActivityAlignment();
-
-function setAlignStarts(event: Event) {
-  settingsStore.setAlignStarts((event.target as HTMLInputElement).checked);
-}
 </script>

@@ -28,6 +28,9 @@
       <div :class="{ 'text-gray-400': cells[i]?.muted }" :title="cells[i]?.title">
         {{ cells[i]?.text ?? "—" }}
       </div>
+      <div v-if="cells[i]?.note" class="mt-0.5 text-[10px] text-amber-700 sm:text-xs" :title="cells[i]?.title">
+        {{ cells[i]?.note }}
+      </div>
       <div
         v-if="deltas"
         class="mt-0.5 text-[10px] text-gray-400 sm:text-xs"

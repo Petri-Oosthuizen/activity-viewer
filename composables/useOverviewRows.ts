@@ -36,6 +36,7 @@ export interface OverviewCell {
   text: string;
   muted?: boolean;
   title?: string;
+  note?: string;
 }
 
 export type OverviewRowVariant = "row" | "sub" | "group";
@@ -123,9 +124,18 @@ function averageLapValue(laps: Lap[] | undefined, pick: LapRowDef["pick"]): numb
 function samplingCell(stats: SamplingStats | null | undefined): OverviewCell {
   if (!stats) return EMPTY_CELL;
   const s = formatGapSeconds;
+  const hasLargeGaps = stats.maxGap > stats.meanGap * 2;
   return {
-    text: `${s(stats.meanGap)} s · ${s(stats.minGap)}–${s(stats.maxGap)} s · p95 ${s(stats.p95Gap)} s`,
-    title: `${stats.count} samples · p50 ${s(stats.p50Gap)} s`,
+    text: `every ${s(stats.meanGap)} s`,
+    note: hasLargeGaps ? `gaps up to ${s(stats.maxGap)} s` : undefined,
+    title: [
+      `${stats.count} samples`,
+      `average ${s(stats.meanGap)} s apart`,
+      `smallest gap ${s(stats.minGap)} s`,
+      `largest gap ${s(stats.maxGap)} s`,
+      `median ${s(stats.p50Gap)} s`,
+      `95% of gaps within ${s(stats.p95Gap)} s`,
+    ].join("\n"),
   };
 }
 
@@ -449,7 +459,12 @@ export function useOverviewRows(): {
     const fields = SAMPLING_FIELDS.filter((field) => acts.some((a) => fieldStats(a.id, field)));
     if (fields.length === 0) return [];
     return [
-      { key: "sampling", label: "Sampling", variant: "group" },
+      {
+        key: "sampling",
+        label: "Sampling",
+        description: "How often each sensor recorded a value. Hover a cell for details.",
+        variant: "group",
+      },
       ...fields.map(
         (field): OverviewRowDef => ({
           key: `sampling-${field}`,

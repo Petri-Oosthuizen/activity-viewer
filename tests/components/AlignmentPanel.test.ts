@@ -5,7 +5,6 @@ import { nextTick } from "vue";
 import AlignmentPanel from "~/components/AlignmentPanel.vue";
 import { useRawActivityStore } from "~/stores/rawActivity";
 import { useActivitySettingsStore } from "~/stores/activitySettings";
-import { useChartOptionsStore } from "~/stores/chartOptions";
 import type { ActivityRecord, RawActivity } from "~/types/activity";
 
 const ORIGIN_LAT = 51.5;
@@ -112,23 +111,4 @@ describe("AlignmentPanel", () => {
     expect(settingsStore.activityOffsets.get("b")).toBe(0);
   });
 
-  it("shows the align start times toggle only on the local time axis", async () => {
-    const rawStore = useRawActivityStore();
-    const settingsStore = useActivitySettingsStore();
-    const chartOptionsStore = useChartOptionsStore();
-    rawStore.addRawActivity(rawActivity({ id: "a", records: buildTrack({}) }));
-    rawStore.addRawActivity(rawActivity({ id: "b", records: buildTrack({}) }));
-
-    const wrapper = mount(AlignmentPanel, { global: { plugins: [pinia] } });
-    expect(wrapper.find("input[type=checkbox]").exists()).toBe(false);
-
-    chartOptionsStore.setXAxisType("localTime");
-    await nextTick();
-    const toggle = wrapper.find("input[type=checkbox]");
-    expect(toggle.exists()).toBe(true);
-    expect((toggle.element as HTMLInputElement).checked).toBe(true);
-
-    await toggle.setValue(false);
-    expect(settingsStore.alignStarts).toBe(false);
-  });
 });
