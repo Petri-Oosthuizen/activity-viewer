@@ -41,40 +41,11 @@
     <div class="flex flex-wrap justify-between gap-3">
       <div class="flex items-center gap-2">
         <label class="text-xs font-medium text-gray-700 sm:text-sm">Display:</label>
-        <div
-          class="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white p-0.5"
-        >
-          <button
-            type="button"
-            class="rounded-sm px-2.5 py-1 text-xs font-medium transition-all sm:px-3 sm:py-1.5 sm:text-sm"
-            :class="
-              overviewDisplayMode === 'light'
-                ? 'bg-primary text-white'
-                : 'text-gray-600 active:bg-gray-50 sm:hover:bg-gray-50'
-            "
-            @click="uiStore.setOverviewDisplayMode('light')"
-            title="Show only key metrics with averages: heart rate, altitude, and power"
-            aria-label="Light view"
-            :aria-pressed="overviewDisplayMode === 'light'"
-          >
-            Light
-          </button>
-          <button
-            type="button"
-            class="rounded-sm px-2.5 py-1 text-xs font-medium transition-all sm:px-3 sm:py-1.5 sm:text-sm"
-            :class="
-              overviewDisplayMode === 'full'
-                ? 'bg-primary text-white'
-                : 'text-gray-600 active:bg-gray-50 sm:hover:bg-gray-50'
-            "
-            @click="uiStore.setOverviewDisplayMode('full')"
-            title="Show all available metrics and details"
-            aria-label="Full details view"
-            :aria-pressed="overviewDisplayMode === 'full'"
-          >
-            Full
-          </button>
-        </div>
+        <SegmentedControl
+          :model-value="overviewDisplayMode"
+          :options="displayOptions"
+          @update:model-value="uiStore.setOverviewDisplayMode"
+        />
       </div>
       <div v-if="showBaseline" class="flex flex-col gap-2 sm:flex-row sm:items-center">
         <label
@@ -162,12 +133,18 @@ import { computeGlobalXExtent, percentWindowToXRange } from "~/utils/windowing";
 import CollapsibleSection from "~/components/CollapsibleSection.vue";
 import FileNameDisplay from "~/components/FileNameDisplay.vue";
 import OverviewRow from "~/components/OverviewRow.vue";
+import SegmentedControl, { type SegmentedOption } from "~/components/SegmentedControl.vue";
 
 const { activeActivities } = useActivityList();
 const { rows, baselineActivityId } = useOverviewRows();
 const chartOptionsStore = useChartOptionsStore();
 const windowStore = useWindowActivityStore();
 const uiStore = useUIStore();
+
+const displayOptions: SegmentedOption<"light" | "full">[] = [
+  { value: "light", label: "Light", ariaLabel: "Light view", title: "Key metrics only" },
+  { value: "full", label: "Full", ariaLabel: "Full details view", title: "All metrics and details" },
+];
 
 const { xAxisType } = storeToRefs(chartOptionsStore);
 const { chartWindow } = storeToRefs(windowStore);

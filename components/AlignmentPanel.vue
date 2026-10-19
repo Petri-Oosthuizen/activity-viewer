@@ -2,33 +2,7 @@
   <div class="rounded-lg bg-white p-4 shadow-xs sm:p-6">
     <div class="mb-3 flex flex-wrap items-center justify-between gap-2 sm:mb-4">
       <h3 class="m-0 text-base font-semibold text-gray-800 sm:text-lg">Alignment</h3>
-      <div class="flex flex-wrap gap-2">
-        <button
-          type="button"
-          class="rounded-sm border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors active:bg-gray-100 sm:py-1.5 sm:hover:bg-gray-50"
-          :class="alignStarts ? 'bg-gray-100' : 'bg-white'"
-          :aria-pressed="alignStarts"
-          title="Start every activity at the same clock time on the local time axis"
-          @click="toggleAlignStarts"
-        >
-          <span v-if="alignStarts" aria-hidden="true">✓ </span>Align by start time
-        </button>
-        <button
-          type="button"
-          class="rounded-sm border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors active:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 sm:py-1.5 sm:hover:bg-gray-50"
-          :disabled="!canAlignByGps"
-          @click="alignByGps"
-        >
-          Align by GPS
-        </button>
-        <button
-          type="button"
-          class="rounded-sm border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors active:bg-gray-100 sm:py-1.5 sm:hover:bg-gray-50"
-          @click="resetOffsets"
-        >
-          Reset offsets
-        </button>
-      </div>
+      <SegmentedControl :model-value="alignmentMode" :options="modeOptions" @update:model-value="setMode" />
     </div>
 
     <p v-if="statusText" class="mt-0 mb-3 text-xs text-amber-700 sm:text-sm">
@@ -63,22 +37,23 @@
 
 <script setup lang="ts">
 import { storeToRefs } from "pinia";
+import { computed } from "vue";
 import { useActivitySettingsStore } from "~/stores/activitySettings";
-import { useChartOptionsStore } from "~/stores/chartOptions";
+import type { AlignmentMode } from "~/stores/activitySettings";
 import { useActivityList } from "~/composables/useActivityList";
 import { useActivityAlignment } from "~/composables/useActivityAlignment";
 import FileNameDisplay from "./FileNameDisplay.vue";
 import TimeOffsetControl from "./TimeOffsetControl.vue";
+import SegmentedControl, { type SegmentedOption } from "./SegmentedControl.vue";
 
 const settingsStore = useActivitySettingsStore();
-const chartOptionsStore = useChartOptionsStore();
-const { activityOffsets, alignStarts } = storeToRefs(settingsStore);
+const { activityOffsets } = storeToRefs(settingsStore);
 const { activities } = useActivityList();
-const { canAlignByGps, statusText, alignByGps, resetOffsets } = useActivityAlignment();
+const { alignmentMode, canAlignByGps, statusText, setMode } = useActivityAlignment();
 
-function toggleAlignStarts() {
-  const next = !alignStarts.value;
-  settingsStore.setAlignStarts(next);
-  if (next) chartOptionsStore.setXAxisType("localTime");
-}
+const modeOptions = computed<SegmentedOption<AlignmentMode>[]>(() => [
+  { value: "none", label: "None", title: "Clear all offsets" },
+  { value: "startTime", label: "Start time", title: "Start every activity at the same clock time" },
+  { value: "gps", label: "GPS", title: "Match the routes by GPS track", disabled: !canAlignByGps.value },
+]);
 </script>

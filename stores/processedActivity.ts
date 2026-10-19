@@ -34,7 +34,7 @@ export const useProcessedActivityStore = defineStore("processedActivity", () => 
     smoothing,
     activityOffsets,
     activityScales,
-    alignStarts,
+    alignmentMode,
   } = storeToRefs(settingsStore);
 
   // Optimized: Keep Maps as Maps to avoid Array.from() overhead
@@ -45,7 +45,7 @@ export const useProcessedActivityStore = defineStore("processedActivity", () => 
     smoothing: smoothing.value,
     offsets: activityOffsets.value,
     scales: activityScales.value,
-    alignStarts: alignStarts.value,
+    alignStarts: alignmentMode.value === "startTime",
   }));
 
   const debouncedSettingsKey = refDebounced(settingsKey, 150);

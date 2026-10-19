@@ -40,6 +40,10 @@ describe("AlignmentPanel", () => {
     setActivePinia(pinia);
   });
 
+  function pick(wrapper: ReturnType<typeof mount>, label: string) {
+    return findButton(wrapper, label).trigger("click");
+  }
+
   it("aligns other activities to the first by GPS and writes offsets", async () => {
     const rawStore = useRawActivityStore();
     const settingsStore = useActivitySettingsStore();
@@ -47,11 +51,12 @@ describe("AlignmentPanel", () => {
     rawStore.addRawActivity(rawActivity({ id: "late", records: buildTrack({ timeShiftSeconds: 37 }) }));
 
     const wrapper = mount(AlignmentPanel, { global: { plugins: [pinia] } });
-    await findButton(wrapper, "Align by GPS").trigger("click");
+    await pick(wrapper, "GPS");
     await nextTick();
 
+    expect(settingsStore.alignmentMode).toBe("gps");
     expect(settingsStore.activityOffsets.get("late")).toBe(-37);
-    expect(settingsStore.activityOffsets.has("ref")).toBe(false);
+    expect(settingsStore.activityOffsets.get("ref")).toBe(0);
     expect(wrapper.text()).not.toContain("No GPS match");
   });
 
@@ -59,80 +64,71 @@ describe("AlignmentPanel", () => {
     const rawStore = useRawActivityStore();
     const settingsStore = useActivitySettingsStore();
     rawStore.addRawActivity(rawActivity({ id: "ref", records: buildTrack({}) }));
-    rawStore.addRawActivity(rawActivity({ id: "elsewhere", records: buildTrack({ lonShift: 1 }) }));
+    rawStore.addRawActivity(rawActivity({ id: "far", records: buildTrack({ lonShift: 0.5 }) }));
 
     const wrapper = mount(AlignmentPanel, { global: { plugins: [pinia] } });
-    await findButton(wrapper, "Align by GPS").trigger("click");
+    await pick(wrapper, "GPS");
     await nextTick();
 
-    expect(wrapper.text()).toContain("No GPS match: elsewhere.gpx");
-    expect(settingsStore.activityOffsets.has("elsewhere")).toBe(false);
+    expect(settingsStore.activityOffsets.get("far")).toBe(0);
+    expect(wrapper.text()).toContain("No GPS match: far.gpx");
   });
 
-  it("uses the first activity with GPS as the reference when the first has none", async () => {
+  it("disables GPS when fewer than two enabled activities have GPS points", () => {
+    const rawStore = useRawActivityStore();
+    rawStore.addRawActivity(rawActivity({ id: "ref", records: buildTrack({}) }));
+    rawStore.addRawActivity(rawActivity({ id: "hr", records: [{ t: 0, d: 0, hr: 120 }, { t: 1, d: 0, hr: 121 }] }));
+
+    const wrapper = mount(AlignmentPanel, { global: { plugins: [pinia] } });
+
+    expect(findButton(wrapper, "GPS").attributes("disabled")).toBeDefined();
+  });
+
+  it("uses the first activity with GPS as the reference", async () => {
     const rawStore = useRawActivityStore();
     const settingsStore = useActivitySettingsStore();
-    rawStore.addRawActivity(rawActivity({ id: "indoor", records: [{ t: 0, d: 0, hr: 120 }, { t: 1, d: 3, hr: 121 }] }));
+    rawStore.addRawActivity(rawActivity({ id: "hr", records: [{ t: 0, d: 0, hr: 120 }, { t: 1, d: 0, hr: 121 }] }));
     rawStore.addRawActivity(rawActivity({ id: "ref", records: buildTrack({}) }));
     rawStore.addRawActivity(rawActivity({ id: "late", records: buildTrack({ timeShiftSeconds: 37 }) }));
 
     const wrapper = mount(AlignmentPanel, { global: { plugins: [pinia] } });
-    await findButton(wrapper, "Align by GPS").trigger("click");
+    await pick(wrapper, "GPS");
     await nextTick();
 
     expect(settingsStore.activityOffsets.get("late")).toBe(-37);
-    expect(settingsStore.activityOffsets.has("ref")).toBe(false);
-    expect(settingsStore.activityOffsets.has("indoor")).toBe(false);
-    expect(wrapper.text()).toContain("No GPS: indoor.gpx");
-    expect(wrapper.text()).not.toContain("No GPS match");
+    expect(wrapper.text()).toContain("No GPS: hr.gpx");
   });
 
-  it("disables GPS alignment when fewer than two activities have GPS points", async () => {
-    const rawStore = useRawActivityStore();
-    rawStore.addRawActivity(rawActivity({ id: "ref", records: buildTrack({}) }));
-    rawStore.addRawActivity(rawActivity({ id: "indoor", records: [{ t: 0, d: 0, hr: 120 }, { t: 1, d: 3, hr: 121 }] }));
-
-    const wrapper = mount(AlignmentPanel, { global: { plugins: [pinia] } });
-
-    expect(findButton(wrapper, "Align by GPS").attributes("disabled")).toBeDefined();
-  });
-
-  it("resets every offset to zero", async () => {
+  it("none clears offsets and start alignment", async () => {
     const rawStore = useRawActivityStore();
     const settingsStore = useActivitySettingsStore();
     rawStore.addRawActivity(rawActivity({ id: "a", records: buildTrack({}) }));
     rawStore.addRawActivity(rawActivity({ id: "b", records: buildTrack({}) }));
     settingsStore.setActivityOffset("a", 12);
-    settingsStore.setActivityOffset("b", -30);
+    settingsStore.setActivityOffset("b", -4);
 
     const wrapper = mount(AlignmentPanel, { global: { plugins: [pinia] } });
-    await findButton(wrapper, "Reset offsets").trigger("click");
+    await pick(wrapper, "None");
 
+    expect(settingsStore.alignmentMode).toBe("none");
     expect(settingsStore.activityOffsets.get("a")).toBe(0);
     expect(settingsStore.activityOffsets.get("b")).toBe(0);
   });
 
-
-  it("toggles align by start time and switches to the local time axis", async () => {
+  it("start time switches to the local time axis", async () => {
     const rawStore = useRawActivityStore();
     const settingsStore = useActivitySettingsStore();
     const chartOptionsStore = useChartOptionsStore();
     rawStore.addRawActivity(rawActivity({ id: "a", records: buildTrack({}) }));
     rawStore.addRawActivity(rawActivity({ id: "b", records: buildTrack({}) }));
-    settingsStore.setAlignStarts(false);
+    settingsStore.setAlignmentMode("none");
     chartOptionsStore.setXAxisType("distance");
 
     const wrapper = mount(AlignmentPanel, { global: { plugins: [pinia] } });
-    const button = findButton(wrapper, "Align by start time");
-    expect(button.attributes("aria-pressed")).toBe("false");
+    await pick(wrapper, "Start time");
 
-    await button.trigger("click");
-    expect(settingsStore.alignStarts).toBe(true);
+    expect(settingsStore.alignmentMode).toBe("startTime");
     expect(chartOptionsStore.xAxisType).toBe("localTime");
-    expect(button.attributes("aria-pressed")).toBe("true");
-
-    await button.trigger("click");
-    expect(settingsStore.alignStarts).toBe(false);
-    expect(chartOptionsStore.xAxisType).toBe("localTime");
+    expect(findButton(wrapper, "Start time").attributes("aria-pressed")).toBe("true");
   });
 });

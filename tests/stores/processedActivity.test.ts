@@ -268,7 +268,7 @@ describe("useProcessedActivityStore", () => {
       rawStore.addRawActivity(withStart("b", new Date("2024-01-02T08:00:00Z")));
       expect(processedStore.processedActivities[0]?.timelineStart).toBeDefined();
 
-      settingsStore.setAlignStarts(false);
+      settingsStore.setAlignmentMode("none");
 
       await vi.waitFor(
         () => {

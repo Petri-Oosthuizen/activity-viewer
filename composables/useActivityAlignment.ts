@@ -3,6 +3,8 @@ import { storeToRefs } from "pinia";
 import type { Activity } from "~/types/activity";
 import { useRawActivityStore } from "~/stores/rawActivity";
 import { useActivitySettingsStore } from "~/stores/activitySettings";
+import type { AlignmentMode } from "~/stores/activitySettings";
+import { useChartOptionsStore } from "~/stores/chartOptions";
 import { useActivityList } from "~/composables/useActivityList";
 import { computeGpsAlignment } from "~/utils/gps-align";
 
@@ -13,8 +15,9 @@ function hasGpsPoint(activity: Activity): boolean {
 export function useActivityAlignment() {
   const rawStore = useRawActivityStore();
   const settingsStore = useActivitySettingsStore();
+  const chartOptionsStore = useChartOptionsStore();
   const { activities, activeActivities } = useActivityList();
-  const { activityOffsets } = storeToRefs(settingsStore);
+  const { activityOffsets, alignmentMode } = storeToRefs(settingsStore);
 
   const noGpsNames = ref<string[]>([]);
   const unmatchedNames = ref<string[]>([]);
@@ -65,10 +68,17 @@ export function useActivityAlignment() {
     unmatchedNames.value = [];
   }
 
+  function setMode(mode: AlignmentMode): void {
+    resetOffsets();
+    settingsStore.setAlignmentMode(mode);
+    if (mode === "startTime") chartOptionsStore.setXAxisType("localTime");
+    if (mode === "gps") alignByGps();
+  }
+
   return {
+    alignmentMode,
     canAlignByGps,
     statusText,
-    alignByGps,
-    resetOffsets,
+    setMode,
   };
 }

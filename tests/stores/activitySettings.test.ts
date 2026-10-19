@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { setActivePinia, createPinia } from "pinia";
 import { useActivitySettingsStore } from "~/stores/activitySettings";
+import type { PersistedActivitySettings } from "~/stores/activitySettings";
 import { DEFAULT_GPS_SMOOTHING_SETTINGS, DEFAULT_OUTLIER_SETTINGS } from "~/utils/chart-settings";
 import { DEFAULT_GPS_DISTANCE_OPTIONS } from "~/utils/gps-distance";
 
@@ -198,32 +199,24 @@ describe("useActivitySettingsStore", () => {
     });
   });
 
-  describe("alignStarts", () => {
-    it("should default to true", () => {
+  describe("alignmentMode", () => {
+    it("should default to startTime", () => {
       const store = useActivitySettingsStore();
 
-      expect(store.alignStarts).toBe(true);
-    });
-
-    it("should set alignStarts", () => {
-      const store = useActivitySettingsStore();
-
-      store.setAlignStarts(false);
-
-      expect(store.alignStarts).toBe(false);
+      expect(store.alignmentMode).toBe("startTime");
     });
 
     it("should round-trip through export and import", () => {
       const store = useActivitySettingsStore();
-      store.setAlignStarts(false);
+      store.setAlignmentMode("gps");
       const exported = store.exportSettings();
 
-      setActivePinia(createPinia());
       const fresh = useActivitySettingsStore();
+      fresh.clearAll();
       fresh.importSettings(exported);
 
-      expect(exported.alignStarts).toBe(false);
-      expect(fresh.alignStarts).toBe(false);
+      expect(exported.alignmentMode).toBe("gps");
+      expect(fresh.alignmentMode).toBe("gps");
     });
 
     it("should keep the default when saved settings lack the key", () => {
@@ -231,16 +224,24 @@ describe("useActivitySettingsStore", () => {
 
       store.importSettings({ outlierSettings: DEFAULT_OUTLIER_SETTINGS });
 
-      expect(store.alignStarts).toBe(true);
+      expect(store.alignmentMode).toBe("startTime");
     });
 
-    it("should reset to true on clearAll", () => {
+    it("should map a saved alignStarts boolean", () => {
       const store = useActivitySettingsStore();
-      store.setAlignStarts(false);
+
+      store.importSettings({ alignStarts: false } as Partial<PersistedActivitySettings>);
+
+      expect(store.alignmentMode).toBe("none");
+    });
+
+    it("should reset to startTime on clearAll", () => {
+      const store = useActivitySettingsStore();
+      store.setAlignmentMode("none");
 
       store.clearAll();
 
-      expect(store.alignStarts).toBe(true);
+      expect(store.alignmentMode).toBe("startTime");
     });
   });
 
