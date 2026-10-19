@@ -8,6 +8,7 @@ import {
 import { calculateGpsSpeed, DEFAULT_GPS_DISTANCE_OPTIONS, type GpsDistanceOptions } from "~/utils/gps-distance";
 import { smoothMovingAverage } from "~/utils/series-transforms";
 import { DEFAULT_GPS_PACE_SMOOTHING_SETTINGS } from "~/utils/chart-settings";
+import { computeSamplingStats, type SamplingField, type SamplingStats } from "~/utils/sampling-stats";
 
 export interface MetricStats {
   count: number;
@@ -32,6 +33,7 @@ export interface ActivityStats {
   bestSplits: Record<string, BestSplit>;
   powerMetrics: PowerMetrics;
   additionalMetrics: Record<string, MetricStats>;
+  sampling: Record<SamplingField, SamplingStats | null>;
 }
 
 function safeMetricStats(records: ActivityRecord[], metric: "hr" | "alt" | "pwr" | "cad" | "speed" | "temp" | "grade" | "verticalSpeed"): MetricStats {
@@ -354,6 +356,7 @@ export function computeActivityStatsFromRecords(records: ActivityRecord[]): Acti
           best20MinPower: null,
         },
     additionalMetrics: computeAdditionalMetrics(records),
+    sampling: computeSamplingStats(records),
   };
 }
 
