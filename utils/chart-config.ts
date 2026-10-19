@@ -161,8 +161,9 @@ export function calculateXValue(
   xAxisType: XAxisType,
 ): number {
   if (xAxisType === "localTime") {
-    if (activity.startTime) {
-      return activity.startTime.getTime() + (record.t + activity.offset) * 1000;
+    const origin = activity.timelineStart ?? activity.startTime;
+    if (origin) {
+      return origin.getTime() + (record.t + activity.offset) * 1000;
     }
     return record.t + activity.offset;
   } else if (xAxisType === "time") {

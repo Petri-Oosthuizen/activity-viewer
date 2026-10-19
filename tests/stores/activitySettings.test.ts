@@ -198,6 +198,52 @@ describe("useActivitySettingsStore", () => {
     });
   });
 
+  describe("alignStarts", () => {
+    it("should default to true", () => {
+      const store = useActivitySettingsStore();
+
+      expect(store.alignStarts).toBe(true);
+    });
+
+    it("should set alignStarts", () => {
+      const store = useActivitySettingsStore();
+
+      store.setAlignStarts(false);
+
+      expect(store.alignStarts).toBe(false);
+    });
+
+    it("should round-trip through export and import", () => {
+      const store = useActivitySettingsStore();
+      store.setAlignStarts(false);
+      const exported = store.exportSettings();
+
+      setActivePinia(createPinia());
+      const fresh = useActivitySettingsStore();
+      fresh.importSettings(exported);
+
+      expect(exported.alignStarts).toBe(false);
+      expect(fresh.alignStarts).toBe(false);
+    });
+
+    it("should keep the default when saved settings lack the key", () => {
+      const store = useActivitySettingsStore();
+
+      store.importSettings({ outlierSettings: DEFAULT_OUTLIER_SETTINGS });
+
+      expect(store.alignStarts).toBe(true);
+    });
+
+    it("should reset to true on clearAll", () => {
+      const store = useActivitySettingsStore();
+      store.setAlignStarts(false);
+
+      store.clearAll();
+
+      expect(store.alignStarts).toBe(true);
+    });
+  });
+
   describe("clearAll", () => {
     it("should reset all settings to defaults", () => {
       const store = useActivitySettingsStore();

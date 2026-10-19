@@ -51,6 +51,18 @@ describe("series-transforms", () => {
     expect(data[2]![1]).toBeNull();
   });
 
+  it("rebuilds localTime x values when timelineStart changes", () => {
+    const startTime = new Date("2024-01-02T10:00:00Z");
+    const timelineStart = new Date("2024-01-01T10:00:00Z");
+    const own = { ...baseActivity, id: "timeline", startTime };
+
+    const before = buildTransformedChartData(own, "hr", "localTime", DEFAULT_CHART_TRANSFORM_SETTINGS);
+    const after = buildTransformedChartData({ ...own, timelineStart }, "hr", "localTime", DEFAULT_CHART_TRANSFORM_SETTINGS);
+
+    expect(before[0]?.[0]).toBe(startTime.getTime());
+    expect(after[0]?.[0]).toBe(timelineStart.getTime());
+  });
+
   it("applies cumulative sum", () => {
     const transforms = {
       ...DEFAULT_CHART_TRANSFORM_SETTINGS,

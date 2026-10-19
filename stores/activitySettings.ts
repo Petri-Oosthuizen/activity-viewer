@@ -29,6 +29,7 @@ export interface PersistedActivitySettings {
   gpsSmoothing: GpsSmoothingSettings;
   gpsPaceSmoothing: GpsPaceSmoothingSettings;
   deltaSettings: DeltaSettings;
+  alignStarts: boolean;
 }
 
 export const useActivitySettingsStore = defineStore("activitySettings", () => {
@@ -55,6 +56,7 @@ export const useActivitySettingsStore = defineStore("activitySettings", () => {
   });
 
   // Activity Display Settings
+  const alignStarts = shallowRef<boolean>(true);
   const activityOffsets = shallowRef<Map<string, number>>(new Map());
   const activityScales = shallowRef<Map<string, number>>(new Map());
 
@@ -86,6 +88,10 @@ export const useActivitySettingsStore = defineStore("activitySettings", () => {
 
   function setSmoothing(settings: SmoothingSettings) {
     smoothing.value = { ...settings };
+  }
+
+  function setAlignStarts(value: boolean) {
+    alignStarts.value = value;
   }
 
   function setActivityOffset(activityId: string, offset: number) {
@@ -134,6 +140,7 @@ export const useActivitySettingsStore = defineStore("activitySettings", () => {
       gpsSmoothing: { ...gpsSmoothing.value },
       gpsPaceSmoothing: { ...gpsPaceSmoothing.value },
       deltaSettings: { ...deltaSettings.value },
+      alignStarts: alignStarts.value,
     };
   }
 
@@ -144,6 +151,7 @@ export const useActivitySettingsStore = defineStore("activitySettings", () => {
     if (settings.gpsSmoothing) setGpsSmoothing(settings.gpsSmoothing);
     if (settings.gpsPaceSmoothing) setGpsPaceSmoothing(settings.gpsPaceSmoothing);
     if (settings.deltaSettings) setDeltaSettings(settings.deltaSettings);
+    if (settings.alignStarts !== undefined) setAlignStarts(settings.alignStarts);
   }
 
   function clearAll() {
@@ -152,6 +160,7 @@ export const useActivitySettingsStore = defineStore("activitySettings", () => {
     gpsSmoothing.value = { ...DEFAULT_GPS_SMOOTHING_SETTINGS };
     gpsPaceSmoothing.value = { ...DEFAULT_GPS_PACE_SMOOTHING_SETTINGS };
     smoothing.value = { ...DEFAULT_SMOOTHING_SETTINGS };
+    alignStarts.value = true;
     clearFileSpecificSettings();
   }
 
@@ -162,6 +171,7 @@ export const useActivitySettingsStore = defineStore("activitySettings", () => {
     gpsSmoothing,
     gpsPaceSmoothing,
     smoothing,
+    alignStarts,
     activityOffsets,
     activityScales,
     disabledActivities,
@@ -173,6 +183,7 @@ export const useActivitySettingsStore = defineStore("activitySettings", () => {
     setGpsSmoothing,
     setGpsPaceSmoothing,
     setSmoothing,
+    setAlignStarts,
     setActivityOffset,
     setActivityScale,
     toggleActivity,

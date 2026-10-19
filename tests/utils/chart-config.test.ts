@@ -146,6 +146,14 @@ describe("chart-config utilities", () => {
       expect(value).toBe(mockActivity.startTime!.getTime() + 100000);
     });
 
+    it("should use timelineStart as the localTime origin when set", () => {
+      const timelineStart = new Date("2023-12-30T00:00:00Z");
+      const aligned: Activity = { ...mockActivity, timelineStart, offset: 5 };
+      const record = { t: 100, d: 1000 };
+      const value = calculateXValue(record, aligned, "localTime");
+      expect(value).toBe(timelineStart.getTime() + 105000);
+    });
+
     it("should apply offset for time", () => {
       const activityWithOffset = { ...mockActivity, offset: 50 };
       const record = { t: 100, d: 1000 };

@@ -44,6 +44,8 @@ export interface Activity {
   scale: number;
   color: string;
   startTime?: Date; // Start time of the activity for local time display
+  /** Origin used on the local time axis; the earliest start among activities when starts are aligned. */
+  timelineStart?: Date;
   calories?: number; // Total calories burned during the activity
   sport?: string; // Sport type (e.g., "Biking", "Running", "Swimming")
   laps?: Lap[]; // Lap data if available

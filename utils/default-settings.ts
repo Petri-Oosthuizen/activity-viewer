@@ -42,6 +42,7 @@ export const DEFAULT_SETTINGS: Readonly<AppSettings> = {
       baseActivityId: null,
       compareActivityId: null,
     },
+    alignStarts: true,
   },
   chartOptions: {
     selectedMetrics: ["alt"],

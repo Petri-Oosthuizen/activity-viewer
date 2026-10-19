@@ -7,11 +7,20 @@ import { defineStore } from "pinia";
 import { computed } from "vue";
 import { storeToRefs } from "pinia";
 import { refDebounced } from "@vueuse/core";
-import type { Activity } from "~/types/activity";
+import type { Activity, RawActivity } from "~/types/activity";
 import { useRawActivityStore } from "./rawActivity";
 import { useActivitySettingsStore } from "./activitySettings";
 import { processActivityRecords } from "~/utils/activity-processor";
 import { getActivityColorByIndex } from "~/utils/chart-config";
+
+function earliestStartTime(activities: readonly RawActivity[]): Date | undefined {
+  let earliest: Date | undefined;
+  for (const activity of activities) {
+    const start = activity.metadata.startTime;
+    if (start && (!earliest || start.getTime() < earliest.getTime())) earliest = start;
+  }
+  return earliest;
+}
 
 export const useProcessedActivityStore = defineStore("processedActivity", () => {
   const rawActivityStore = useRawActivityStore();
@@ -25,6 +34,7 @@ export const useProcessedActivityStore = defineStore("processedActivity", () => 
     smoothing,
     activityOffsets,
     activityScales,
+    alignStarts,
   } = storeToRefs(settingsStore);
 
   // Optimized: Keep Maps as Maps to avoid Array.from() overhead
@@ -35,12 +45,14 @@ export const useProcessedActivityStore = defineStore("processedActivity", () => 
     smoothing: smoothing.value,
     offsets: activityOffsets.value,
     scales: activityScales.value,
+    alignStarts: alignStarts.value,
   }));
 
   const debouncedSettingsKey = refDebounced(settingsKey, 150);
 
   const processedActivities = computed<Activity[]>(() => {
     const currentSettings = debouncedSettingsKey.value;
+    const timelineStart = currentSettings.alignStarts ? earliestStartTime(rawActivities.value) : undefined;
     return rawActivities.value.map((rawActivity, index) => {
       const offset = currentSettings.offsets.get(rawActivity.id) ?? 0;
       const scale = currentSettings.scales.get(rawActivity.id) ?? 1;
@@ -64,6 +76,7 @@ export const useProcessedActivityStore = defineStore("processedActivity", () => 
         scale: scale,
         color: color,
         startTime: rawActivity.metadata.startTime,
+        timelineStart,
         calories: rawActivity.metadata.calories,
         sport: rawActivity.metadata.sport,
         laps: rawActivity.metadata.laps,

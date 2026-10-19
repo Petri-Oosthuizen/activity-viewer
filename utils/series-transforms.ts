@@ -39,6 +39,7 @@ function chartCacheKey(
   transforms: ChartTransformSettings,
 ): string {
   const start = activity.startTime ? activity.startTime.getTime() : 0;
+  const timelineStart = activity.timelineStart ? activity.timelineStart.getTime() : 0;
   const t = transforms;
   // Note: Smoothing is now applied during data processing, so it's not part of the cache key
   // The cache key only needs to track display-only transformations (cumulative)
@@ -49,6 +50,7 @@ function chartCacheKey(
     `off:${activity.offset}`,
     `scale:${activity.scale}`,
     `start:${start}`,
+    `timeline:${timelineStart}`,
     `cum:${t.cumulative.mode}`,
   ].join("|");
 }

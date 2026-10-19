@@ -12,7 +12,8 @@ const cache = new Map<string, CacheEntry>();
 
 function cacheKey(activity: Activity, xAxisType: XAxisType): string {
   const start = activity.startTime ? activity.startTime.getTime() : 0;
-  return `${activity.id}:${xAxisType}:off=${activity.offset}:start=${start}`;
+  const timelineStart = activity.timelineStart ? activity.timelineStart.getTime() : 0;
+  return `${activity.id}:${xAxisType}:off=${activity.offset}:start=${start}:timeline=${timelineStart}`;
 }
 
 /**
