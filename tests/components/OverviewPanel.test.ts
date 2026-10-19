@@ -221,6 +221,32 @@ describe("OverviewPanel", () => {
   });
 
   describe("baseline comparison", () => {
+    it("keeps one sign on the percentage when the baseline is negative", async () => {
+      const rawStore = useRawActivityStore();
+      const uiStore = useUIStore();
+      rawStore.addRawActivity(
+        createRawActivity("base", "base.gpx", [
+          { t: 0, d: 0, alt: 100 },
+          { t: 10, d: 100, alt: 60 },
+        ]),
+      );
+      rawStore.addRawActivity(
+        createRawActivity("other", "other.gpx", [
+          { t: 0, d: 0, alt: 100 },
+          { t: 10, d: 100, alt: 90 },
+        ]),
+      );
+      uiStore.setOverviewBaselineEnabled(true);
+      uiStore.setOverviewBaselineActivityId("base");
+
+      const wrapper = mount(OverviewPanel, { global: { plugins: [pinia] } });
+      await wrapper.find('button[aria-label="Full details view"]').trigger("click");
+      await nextTick();
+
+      expect(wrapper.text()).not.toMatch(/\(\+-|\(-\+/);
+      expect(wrapper.text()).toContain("(-75%)");
+    });
+
     it("should display baseline comparison controls when multiple activities are loaded", async () => {
       const rawStore = useRawActivityStore();
 

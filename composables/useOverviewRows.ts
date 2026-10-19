@@ -217,8 +217,9 @@ export function useOverviewRows(): {
       const absPct = pct === null ? 0 : Math.abs(pct);
       if (Math.abs(diff) < threshold && absPct < 0.05) return "—";
       const sign = diff >= 0 ? "+" : "";
+      const pctSign = pct !== null && pct >= 0 ? "+" : "";
       const pctLabel =
-        pct !== null && absPct >= 0.05 ? ` (${sign}${pct.toFixed(1).replace(/\.0$/, "")}%)` : "";
+        pct !== null && absPct >= 0.05 ? ` (${pctSign}${pct.toFixed(1).replace(/\.0$/, "")}%)` : "";
       return `${sign}${formatDiff(diff)}${pctLabel}`;
     });
   }
