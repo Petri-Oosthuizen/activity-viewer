@@ -78,6 +78,7 @@ export const useProcessedActivityStore = defineStore("processedActivity", () => 
         timelineStart,
         calories: rawActivity.metadata.calories,
         sport: rawActivity.metadata.sport,
+        device: rawActivity.metadata.device,
         laps: rawActivity.metadata.laps,
       };
     });

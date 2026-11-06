@@ -48,6 +48,8 @@ export interface Activity {
   timelineStart?: Date;
   calories?: number; // Total calories burned during the activity
   sport?: string; // Sport type (e.g., "Biking", "Running", "Swimming")
+  /** Device or app that recorded the file. */
+  device?: string;
   laps?: Lap[]; // Lap data if available
 }
 
@@ -56,6 +58,7 @@ export interface ParseResult {
   startTime?: Date;
   calories?: number; // Total calories from the file
   sport?: string; // Sport type
+  device?: string;
   laps?: Lap[]; // Lap data if available
 }
 
@@ -73,6 +76,7 @@ export interface RawActivity {
     startTime?: Date;
     calories?: number;
     sport?: string;
+    device?: string;
     laps?: Lap[];
   };
 }

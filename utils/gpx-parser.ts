@@ -11,6 +11,10 @@ function extractGPXType(doc: Document): string | undefined {
   return typeEl?.textContent?.trim() || undefined;
 }
 
+function extractGPXCreator(doc: Document): string | undefined {
+  return doc.documentElement.getAttribute("creator")?.trim() || undefined;
+}
+
 export function parseGPX(
   xmlText: string,
   distanceOptions: Partial<GpsDistanceOptions> = {},
@@ -21,5 +25,5 @@ export function parseGPX(
   const points = extractGPXPoints(doc);
   const sport = extractGPXType(doc);
   const result = createParseResult(points, distanceOptions);
-  return { ...result, sport };
+  return { ...result, sport, device: extractGPXCreator(doc) };
 }

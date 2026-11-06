@@ -39,6 +39,7 @@ interface StoredRawActivity {
     startTime?: string; // Serialized as ISO string
     calories?: number;
     sport?: string;
+    device?: string;
     laps?: Array<{
       startTime: string; // Serialized as ISO string
       startRecordIndex: number;
@@ -230,6 +231,7 @@ export function useLocalStoragePersistence() {
         startTime: rawActivity.metadata.startTime?.toISOString(),
         calories: rawActivity.metadata.calories,
         sport: rawActivity.metadata.sport,
+        device: rawActivity.metadata.device,
         laps: laps,
       },
     };
@@ -288,6 +290,7 @@ export function useLocalStoragePersistence() {
         startTime: stored.metadata.startTime ? new Date(stored.metadata.startTime) : undefined,
         calories: stored.metadata.calories,
         sport: stored.metadata.sport,
+        device: stored.metadata.device,
         laps: laps,
       },
     };

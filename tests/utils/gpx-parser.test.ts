@@ -157,4 +157,13 @@ describe("parseGPX", () => {
     expect(result.records[2]!.d).toBeGreaterThan(10);
     expect(result.records[2]!.d).toBeLessThan(20);
   });
+
+  it("reads the device from the creator attribute", () => {
+    const gpx = `<?xml version="1.0"?>
+<gpx version="1.1" creator="Garmin Connect">
+  <trk><trkseg><trkpt lat="1" lon="1"><time>2024-01-01T00:00:00Z</time></trkpt></trkseg></trk>
+</gpx>`;
+
+    expect(parseGPX(gpx).device).toBe("Garmin Connect");
+  });
 });

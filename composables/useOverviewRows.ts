@@ -250,7 +250,15 @@ export function useOverviewRows(): {
 
   function summaryRows(full: boolean): OverviewRowDef[] {
     const acts = activeActivities.value;
-    const rows: OverviewRowDef[] = [
+    const rows: OverviewRowDef[] = [];
+    if (full && acts.some((a) => a.device)) {
+      rows.push({
+        key: "device",
+        label: "Device",
+        cells: acts.map((a) => (a.device ? { text: a.device } : EMPTY_CELL)),
+      });
+    }
+    rows.push(
       {
         key: "start",
         label: "Start Time",
@@ -272,7 +280,7 @@ export function useOverviewRows(): {
         format: formatDistance,
         delta: { threshold: 0.5, formatDiff: roundedDiff("m") },
       }),
-    ];
+    );
     if (!full) return rows;
     if (acts.some((a) => a.sport)) {
       rows.push({

@@ -29,6 +29,11 @@ function extractTCXSport(doc: Document): string | undefined {
   return sport || undefined;
 }
 
+function extractTCXCreator(doc: Document): string | undefined {
+  const name = doc.querySelector("Activity > Creator > Name")?.textContent?.trim();
+  return name || undefined;
+}
+
 function extractTCXLaps(doc: Document, recordsCount: number): Lap[] | undefined {
   const lapElements = doc.querySelectorAll("Lap");
   if (lapElements.length === 0) return undefined;
@@ -113,5 +118,5 @@ export function parseTCX(
   const sport = extractTCXSport(doc);
   const result = createParseResult(points, distanceOptions);
   const laps = extractTCXLaps(doc, result.records.length);
-  return { ...result, calories, sport, laps };
+  return { ...result, calories, sport, laps, device: extractTCXCreator(doc) };
 }

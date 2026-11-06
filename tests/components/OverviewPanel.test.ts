@@ -472,6 +472,29 @@ describe("OverviewPanel", () => {
       expect(text).toContain("Cadence");
     });
   });
+  describe("device", () => {
+    it("shows the recording device first in full mode only", async () => {
+      const rawStore = useRawActivityStore();
+      rawStore.addRawActivity({
+        ...createRawActivity("test-1", "test.fit", [
+          { t: 0, d: 0, hr: 120 },
+          { t: 10, d: 100, hr: 130 },
+        ]),
+        metadata: { device: "Garmin Fenix 7" },
+      });
+
+      const wrapper = mount(OverviewPanel, { global: { plugins: [pinia] } });
+      await nextTick();
+      expect(wrapper.text()).not.toContain("Garmin Fenix 7");
+
+      await wrapper.find('button[aria-label="Full details view"]').trigger("click");
+      await nextTick();
+
+      const firstRow = wrapper.find("tbody tr");
+      expect(firstRow.text()).toContain("Device");
+      expect(firstRow.text()).toContain("Garmin Fenix 7");
+    });
+  });
   describe("sampling", () => {
     it("shows sampling gaps from raw records in full mode", async () => {
       const rawStore = useRawActivityStore();

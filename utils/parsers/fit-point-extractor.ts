@@ -84,9 +84,39 @@ function extractFITLaps(data: any, recordsCount: number, startTime?: Date): Lap[
   return laps.length > 0 ? laps : undefined;
 }
 
-export async function extractFITPoints(arrayBuffer: ArrayBuffer): Promise<{ points: RawPoint[]; calories?: number; sport?: string; laps?: Lap[] }> {
+interface FITFileId {
+  manufacturer?: string | number;
+  product?: string | number;
+  product_name?: string;
+}
+
+/** Device label from the FIT file_id message, e.g. "Garmin Forerunner 965". */
+export function describeFITDevice({
+  fileId,
+  garminProductName,
+}: {
+  fileId: FITFileId | undefined;
+  garminProductName: (product: FITFileId["product"]) => string | null;
+}): string | undefined {
+  if (!fileId) return undefined;
+  const productName = fileId.product_name?.trim();
+  if (productName) return productName;
+  const manufacturer = typeof fileId.manufacturer === "string" ? fileId.manufacturer : undefined;
+  const product =
+    manufacturer === "garmin" ? (garminProductName(fileId.product) ?? fileId.product) : fileId.product;
+  const brand = manufacturer ? manufacturer.charAt(0).toUpperCase() + manufacturer.slice(1) : undefined;
+  const label = [brand, product].filter((part) => part !== undefined && part !== "").join(" ");
+  return label || undefined;
+}
+
+export async function extractFITPoints(
+  arrayBuffer: ArrayBuffer,
+): Promise<{ points: RawPoint[]; calories?: number; sport?: string; laps?: Lap[]; device?: string }> {
   try {
-    const { default: FitParser } = await import("fit-file-parser");
+    const [{ default: FitParser }, { getFitGarminProductDisplayName }] = await Promise.all([
+      import("fit-file-parser"),
+      import("fit-file-parser/profile"),
+    ]);
 
     const parser = new FitParser({
       force: true,
@@ -258,7 +288,12 @@ export async function extractFITPoints(arrayBuffer: ArrayBuffer): Promise<{ poin
 
         const laps = extractFITLaps(dataAny, points.length, startTime !== null ? new Date(startTime) : undefined);
 
-        resolve({ points, calories, sport, laps });
+        const device = describeFITDevice({
+          fileId: dataAny.file_ids?.[0],
+          garminProductName: getFitGarminProductDisplayName,
+        });
+
+        resolve({ points, calories, sport, laps, device });
       });
     });
   } catch (error) {

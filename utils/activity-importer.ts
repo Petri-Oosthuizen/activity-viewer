@@ -51,6 +51,7 @@ export async function importActivityFile(
       startTime: parseResult.startTime,
       calories: parseResult.calories,
       sport: parseResult.sport,
+      device: parseResult.device,
       laps: parseResult.laps,
     },
   };

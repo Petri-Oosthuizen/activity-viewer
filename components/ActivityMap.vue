@@ -106,6 +106,8 @@ let isInitializingMap = false;
 let layers: any[] = [];
 let markers: any[] = [];
 let hoverMarker: any = null;
+// The chart echoes map hovers back as chart hovers, so ignore those while the pointer is on the map.
+let isPointerOnMap = false;
 let nearbyActivities: Array<{ activity: Activity; record: ActivityRecord }> = [];
 
 const settingsStore = useActivitySettingsStore();
@@ -235,10 +237,12 @@ const initMap = async () => {
 
   // Add map-wide hover handler to snap to nearest point
   map.on("mousemove", (e: any) => {
+    isPointerOnMap = true;
     handleMapHover(e.latlng);
   });
 
     map.on("mouseout", () => {
+      isPointerOnMap = false;
       uiStore.clearMapHoverPoint();
       nearbyActivities = [];
       updateHoverMarker();
@@ -682,7 +686,7 @@ watch(hoveredPoint, () => {
 
 // Watch for chart hover events to show marker and tooltip on map
 watch(chartHoveredPoint, (point) => {
-  if (!map) return;
+  if (!map || isPointerOnMap) return;
 
   if (point) {
     const activity = activities.value.find((a) => a.id === point.activityId);

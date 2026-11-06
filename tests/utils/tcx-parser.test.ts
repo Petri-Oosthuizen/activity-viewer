@@ -70,4 +70,24 @@ describe("parseTCX", () => {
     expect(result.records[0]?.lat).toBeUndefined();
     expect(result.records[1]).toMatchObject({ t: 10, d: 60, cad: 88 });
   });
+
+  it("reads the device from the activity creator", () => {
+    const tcx = `<?xml version="1.0" encoding="UTF-8"?>
+<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">
+  <Activities>
+    <Activity Sport="Running">
+      <Id>2024-01-01T00:00:00Z</Id>
+      <Lap StartTime="2024-01-01T00:00:00Z">
+        <Track>
+          <Trackpoint><Time>2024-01-01T00:00:00Z</Time><DistanceMeters>0</DistanceMeters></Trackpoint>
+        </Track>
+      </Lap>
+      <Creator><Name>Forerunner 965</Name></Creator>
+    </Activity>
+  </Activities>
+  <Author><Name>Connect Api</Name></Author>
+</TrainingCenterDatabase>`;
+
+    expect(parseTCX(tcx).device).toBe("Forerunner 965");
+  });
 });
